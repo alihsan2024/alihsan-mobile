@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Al-Ihsan Mobile",
+    "slug": "alihsan-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#264B8B",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "org.alihsan.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#264B8B"
+      },
+      "package": "org.alihsan.mobile"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "scheme": "alihsan",
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}
+
