@@ -78,27 +78,53 @@ export default function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {campaigns.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No campaigns available</Text>
-          </View>
-        ) : (
-          campaigns.slice(0, 6).map((campaign) => (
-            <TouchableOpacity
-              key={campaign.id}
-              style={styles.campaignCard}
-              onPress={() => router.push(`/campaign/${campaign.slug}`)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.campaignName}>{campaign.name}</Text>
-              <Text style={styles.campaignDescription} numberOfLines={2}>
-                {campaign.description ||
-                  campaign.descriptionText ||
-                  "No description"}
+        {/* Zakat Calculator Section */}
+        <TouchableOpacity
+          style={styles.zakatSection}
+          onPress={() => router.push("/zakat-calculator")}
+          activeOpacity={0.8}
+        >
+          <View style={styles.zakatSectionContent}>
+            <View style={styles.zakatIconContainer}>
+              <Text style={styles.zakatIcon}>🧮</Text>
+            </View>
+            <View style={styles.zakatTextContainer}>
+              <Text style={styles.zakatSectionTitle}>Zakat Calculator</Text>
+              <Text style={styles.zakatSectionDescription}>
+                Calculate your Zakat Al-Maal in minutes
               </Text>
-            </TouchableOpacity>
-          ))
-        )}
+            </View>
+            <View style={styles.zakatArrowContainer}>
+              <Text style={styles.zakatArrow}>→</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Campaigns Section */}
+        <View style={styles.campaignsSection}>
+          <Text style={styles.sectionTitle}>Featured Campaigns</Text>
+          {campaigns.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No campaigns available</Text>
+            </View>
+          ) : (
+            campaigns.slice(0, 6).map((campaign) => (
+              <TouchableOpacity
+                key={campaign.id}
+                style={styles.campaignCard}
+                onPress={() => router.push(`/campaign/${campaign.slug}`)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.campaignName}>{campaign.name}</Text>
+                <Text style={styles.campaignDescription} numberOfLines={2}>
+                  {campaign.description ||
+                    campaign.descriptionText ||
+                    "No description"}
+                </Text>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
         {campaigns.length > 6 && (
           <TouchableOpacity
             style={styles.viewAllButton}
@@ -180,6 +206,65 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  zakatSection: {
+    backgroundColor: "#264B8B",
+    borderRadius: 16,
+    marginBottom: 24,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  zakatSectionContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 20,
+  },
+  zakatIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
+  },
+  zakatIcon: {
+    fontSize: 32,
+  },
+  zakatTextContainer: {
+    flex: 1,
+  },
+  zakatSectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 4,
+  },
+  zakatSectionDescription: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.9)",
+    lineHeight: 20,
+  },
+  zakatArrowContainer: {
+    marginLeft: 12,
+  },
+  zakatArrow: {
+    fontSize: 24,
+    color: "#fff",
+    fontWeight: "300",
+  },
+  campaignsSection: {
+    marginTop: 8,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#264B8B",
+    marginBottom: 16,
   },
   errorText: {
     fontSize: 16,

@@ -376,4 +376,100 @@ export const bulkAddToBasket = async (
   }
 };
 
+// Metal prices interface
+export interface MetalPrices {
+  goldPriceInUsd: number;
+  goldPriceInAud: number;
+  silverFinePriceInUsd: number;
+  silverFinePriceInAud: number;
+  silverSterlingPriceInUsd: number;
+  silverSterlingPriceInAud: number;
+  updatedAt: string;
+}
+
+export interface MetalPricesResponse {
+  payload: {
+    price?: {
+      goldPriceInUsd?: number;
+      goldPriceInAud?: number;
+      silverPriceInUsd?: number;
+      silverPriceInAud?: number;
+      updatedAt?: string;
+    };
+    goldPriceInUsd?: number;
+    goldPriceInAud?: number;
+    silverFinePriceInUsd?: number;
+    silverFinePriceInAud?: number;
+    silverSterlingPriceInUsd?: number;
+    silverSterlingPriceInAud?: number;
+  };
+}
+
+// Get metal prices for zakat calculation
+export const getMetalPrices = async (): Promise<MetalPrices> => {
+  try {
+    const response = await api.get<MetalPricesResponse>("/metal-price");
+    const payload = response.data?.payload;
+
+    if (!payload) {
+      console.warn("No payload in metal prices response");
+      return {
+        goldPriceInUsd: 0,
+        goldPriceInAud: 0,
+        silverFinePriceInUsd: 0,
+        silverFinePriceInAud: 0,
+        silverSterlingPriceInUsd: 0,
+        silverSterlingPriceInAud: 0,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
+    // Extract prices from payload (they're at the top level of payload)
+    const prices: MetalPrices = {
+      goldPriceInUsd:
+        payload.goldPriceInUsd || payload.price?.goldPriceInUsd || 0,
+      goldPriceInAud:
+        payload.goldPriceInAud || payload.price?.goldPriceInAud || 0,
+      silverFinePriceInUsd:
+        payload.silverFinePriceInUsd || payload.price?.silverPriceInUsd || 0,
+      silverFinePriceInAud:
+        payload.silverFinePriceInAud || payload.price?.silverPriceInAud || 0,
+      silverSterlingPriceInUsd: payload.silverSterlingPriceInUsd || 0,
+      silverSterlingPriceInAud: payload.silverSterlingPriceInAud || 0,
+      updatedAt: payload.price?.updatedAt || new Date().toISOString(),
+    };
+
+    console.log("Metal prices fetched:", prices);
+    return prices;
+  } catch (error: any) {
+    console.error("Error fetching metal prices:", error);
+    console.error("Error details:", error.response?.data || error.message);
+    // Return default values instead of throwing to prevent app crash
+    return {
+      goldPriceInUsd: 0,
+      goldPriceInAud: 0,
+      silverFinePriceInUsd: 0,
+      silverFinePriceInAud: 0,
+      silverSterlingPriceInUsd: 0,
+      silverSterlingPriceInAud: 0,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+};
+
+// Get any zakat campaign
+export const getAnyZakatCampaign = async (): Promise<Campaign | null> => {
+  try {
+    const campaigns = await fetchCampaigns();
+    const zakatCampaign = campaigns.find(
+      (c) =>
+        c.checkoutType === "ZAQAT" || c.name.toLowerCase().includes("zakat")
+    );
+    return zakatCampaign || null;
+  } catch (error) {
+    console.error("Error fetching zakat campaign:", error);
+    return null;
+  }
+};
+
 export default api;
