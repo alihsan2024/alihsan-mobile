@@ -8,7 +8,7 @@ const API_URLS = {
     Platform.OS === "web"
       ? "http://localhost:4000"
       : "http://192.168.1.100:4000", // Update with your local IP
-  production: "http://localhost:4000",
+  production: "https://api.alihsan.org.au",
 };
 
 // Use production URL by default
