@@ -1,23 +1,20 @@
 import { Tabs } from "expo-router";
 import { Platform, View, Text, StyleSheet } from "react-native";
 import { useBasket } from "../../context/BasketContext";
+import { Ionicons } from "@expo/vector-icons";
 
-// Simple icon component using emoji/text to avoid font loading issues
 const TabIcon = ({
-  emoji,
-  focused,
+  name,
   color,
   badge,
 }: {
-  emoji: string;
+  name: keyof typeof Ionicons.glyphMap;
   focused: boolean;
   color: string;
   badge?: number;
 }) => (
   <View style={styles.iconContainer}>
-    <Text style={[styles.iconEmoji, { opacity: focused ? 1 : 0.5 }]}>
-      {emoji}
-    </Text>
+    <Ionicons name={name} size={24} color={color} />
     {badge !== undefined && badge > 0 && (
       <View style={styles.badge}>
         <Text style={styles.badgeText}>{badge > 99 ? "99+" : badge}</Text>
@@ -37,21 +34,12 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: "#999",
         tabBarStyle: {
           backgroundColor: "#fff",
-          borderTopWidth: 1,
-          borderTopColor: "#e0e0e0",
-          height: Platform.OS === "ios" ? 88 : 64,
-          paddingBottom: Platform.OS === "ios" ? 28 : 8,
-          paddingTop: 8,
-          elevation: 8,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
+          position: "absolute",
+          bottom: 10,
         },
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "600",
-          marginTop: 4,
         },
       }}
     >
@@ -60,7 +48,7 @@ export default function TabsLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon emoji="🏠" focused={focused} color={color} />
+            <TabIcon name="home" focused={focused} color={color} />
           ),
         }}
       />
@@ -69,7 +57,7 @@ export default function TabsLayout() {
         options={{
           title: "Campaigns",
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon emoji="❤️" focused={focused} color={color} />
+            <TabIcon name="heart" focused={focused} color={color} />
           ),
         }}
       />
@@ -79,7 +67,7 @@ export default function TabsLayout() {
           title: "Cart",
           tabBarIcon: ({ color, focused }) => (
             <TabIcon
-              emoji="🛒"
+              name="cart"
               focused={focused}
               color={color}
               badge={itemCount}
@@ -92,7 +80,7 @@ export default function TabsLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon emoji="👤" focused={focused} color={color} />
+            <TabIcon name="person" focused={focused} color={color} />
           ),
         }}
       />
@@ -107,9 +95,6 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     position: "relative",
-  },
-  iconEmoji: {
-    fontSize: 24,
   },
   badge: {
     position: "absolute",

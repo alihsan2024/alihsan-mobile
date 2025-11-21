@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -6,19 +6,25 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchCampaigns, Campaign } from "../../services/api";
 import LoadingScreen from "../../components/LoadingScreen";
+import CampaignCard from "@/components/CampaignCard";
 
 export default function CampaignsScreen() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  const lastRefreshRef = useRef(0);
+  const REFRESH_COOLDOWN = 5000;
 
   const loadCampaigns = async () => {
     try {
@@ -39,6 +45,16 @@ export default function CampaignsScreen() {
   }, []);
 
   const onRefresh = () => {
+    const now = Date.now();
+    if (now - lastRefreshRef.current < REFRESH_COOLDOWN) {
+      // Alert.alert(
+      //   "Cooldown",
+      //   "Please wait a few seconds before refreshing again."
+      // );
+      return;
+    }
+
+    lastRefreshRef.current = now;
     setRefreshing(true);
     loadCampaigns();
   };
@@ -74,33 +90,7 @@ export default function CampaignsScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {campaigns.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No campaigns available</Text>
-          </View>
-        ) : (
-          campaigns.map((campaign) => (
-            <TouchableOpacity
-              key={campaign.id}
-              style={styles.campaignCard}
-              onPress={() => router.push(`/campaign/${campaign.slug}`)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.campaignName}>{campaign.name}</Text>
-              <Text style={styles.campaignSlug}>Slug: {campaign.slug}</Text>
-              <Text style={styles.campaignDescription} numberOfLines={2}>
-                {campaign.description ||
-                  campaign.descriptionText ||
-                  "No description"}
-              </Text>
-              {campaign.coverImage && (
-                <Text style={styles.imageUrl}>
-                  Image: {campaign.coverImage.substring(0, 50)}...
-                </Text>
-              )}
-            </TouchableOpacity>
-          ))
-        )}
+        <CampaignCard campaigns={campaigns} />
       </ScrollView>
     </View>
   );

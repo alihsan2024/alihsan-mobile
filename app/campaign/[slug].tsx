@@ -9,12 +9,17 @@ import {
   Alert,
   TextInput,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLocalSearchParams, useRouter, Stack } from "expo-router";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { getCampaignDetails } from "../../services/api";
 import { Image as ExpoImage } from "expo-image";
 import { useBasket } from "../../context/BasketContext";
 import LoadingScreen from "../../components/LoadingScreen";
+import { Ionicons } from "@expo/vector-icons";
+import CustomHeader from "@/components/CustomHeader";
 
 const { width } = Dimensions.get("window");
 
@@ -52,11 +57,8 @@ export default function CampaignDetailsScreen() {
     loadCampaignDetails();
   }, [slug]);
 
-  if (loading) {
-    return <LoadingScreen message="Loading campaign..." />;
-  }
-
-  if (error) {
+  if (loading) return <LoadingScreen message="Loading campaign..." />;
+  if (error)
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>Error: {error}</Text>
@@ -65,9 +67,7 @@ export default function CampaignDetailsScreen() {
         </Text>
       </View>
     );
-  }
-
-  if (!campaign) {
+  if (!campaign)
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>Campaign not found</Text>
@@ -76,13 +76,11 @@ export default function CampaignDetailsScreen() {
         </Text>
       </View>
     );
-  }
 
   const campaignData = campaign.campaign || campaign;
   const media = campaignData?.CampaignMedia || [];
   const posts = campaignData?.Posts || [];
   const category = campaignData?.CampaignCategory;
-
   const isInCart = items.some((item) => item.campaignId === campaignData?.id);
 
   const handleAddToCart = async () => {
@@ -90,29 +88,20 @@ export default function CampaignDetailsScreen() {
       Alert.alert("Error", "Campaign information is missing");
       return;
     }
-
     const donationAmount = parseFloat(amount);
     if (isNaN(donationAmount) || donationAmount <= 0) {
       Alert.alert("Error", "Please enter a valid amount");
       return;
     }
-
     setAddingToCart(true);
     try {
-      // Build the basket item based on checkout type
       const checkoutType = campaignData.checkoutType;
       const basketItem: any = {
         campaignId: campaignData.id,
         amount: donationAmount,
         quantity: 1,
       };
-
-      // Only add donationItem for specific checkout types that require it
-      // For COMMON type, don't send donationItem
-      // For ADEEQAH_GENERAL_SACRIFICE, donationItem is required but we'll handle that separately
       if (checkoutType === "ADEEQAH_GENERAL_SACRIFICE") {
-        // This type requires donationItem, but for now we'll skip it
-        // or we could add a UI to select the donation item type
         Alert.alert(
           "Special Campaign",
           "This campaign requires additional information. Please use the web app for this campaign type."
@@ -120,8 +109,6 @@ export default function CampaignDetailsScreen() {
         setAddingToCart(false);
         return;
       }
-
-      // For other types, don't include donationItem unless it's explicitly needed
       await addItem(basketItem);
       Alert.alert("Success", "Campaign added to cart!", [
         {
@@ -138,198 +125,174 @@ export default function CampaignDetailsScreen() {
   };
 
   return (
-    <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-      {/* Cover Image */}
-      {campaignData?.coverImage && (
-        <ExpoImage
-          source={{ uri: campaignData.coverImage }}
-          style={styles.coverImage}
-          contentFit="cover"
-          transition={200}
-          placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
-        />
-      )}
-
-      <View style={styles.content}>
-        {/* Title */}
-        <Text style={styles.title}>{campaignData?.name}</Text>
-
-        {/* Category */}
-        {category && (
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>{category.name}</Text>
-          </View>
+    <>
+      {/* Configure screen options in Stack.Screen */}
+      <CustomHeader transparent absolute />
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
+        {campaignData?.coverImage && (
+          <ExpoImage
+            source={{ uri: campaignData.coverImage }}
+            style={styles.coverImage}
+            contentFit="cover"
+            transition={200}
+            placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
+          />
         )}
-
-        {/* Description */}
-        {campaignData?.description && (
-          <View style={styles.section}>
-            <Text style={styles.description}>
-              {campaignData.description.replace(/<[^>]*>/g, "")}
-            </Text>
-          </View>
-        )}
-
-        {/* Description Text (Full Content) */}
-        {campaignData?.descriptionText && (
-          <View style={styles.section}>
-            <Text style={styles.descriptionText}>
-              {campaignData.descriptionText.replace(/<[^>]*>/g, "")}
-            </Text>
-          </View>
-        )}
-
-        {/* Campaign Media Gallery */}
-        {media && media.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Gallery</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.mediaScroll}
-              contentContainerStyle={styles.mediaContainer}
-            >
-              {media.map((item: any, index: number) => (
-                <ExpoImage
-                  key={item.id || index}
-                  source={{ uri: item.url }}
-                  style={styles.mediaImage}
-                  contentFit="cover"
-                  transition={200}
-                />
+        <View style={styles.content}>
+          <Text style={styles.title}>{campaignData?.name}</Text>
+          {category && (
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryText}>{category.name}</Text>
+            </View>
+          )}
+          {campaignData?.description && (
+            <View style={styles.section}>
+              <Text style={styles.description}>
+                {campaignData.description.replace(/<[^>]*>/g, "")}
+              </Text>
+            </View>
+          )}
+          {campaignData?.descriptionText && (
+            <View style={styles.section}>
+              <Text style={styles.descriptionText}>
+                {campaignData.descriptionText.replace(/<[^>]*>/g, "")}
+              </Text>
+            </View>
+          )}
+          {media.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Gallery</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.mediaScroll}
+                contentContainerStyle={styles.mediaContainer}
+              >
+                {media.map((item: any, index: number) => (
+                  <ExpoImage
+                    key={item.id || index}
+                    source={{ uri: item.url }}
+                    style={styles.mediaImage}
+                    contentFit="cover"
+                    transition={200}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          )}
+          {posts.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Updates</Text>
+              {posts.map((post: any, index: number) => (
+                <View key={post.id || index} style={styles.postCard}>
+                  {post.PostMedia && post.PostMedia.length > 0 && (
+                    <View style={styles.postMediaContainer}>
+                      {post.PostMedia.map((media: any, mediaIndex: number) => (
+                        <ExpoImage
+                          key={media.id || mediaIndex}
+                          source={{ uri: media.url }}
+                          style={styles.postImage}
+                          contentFit="cover"
+                          transition={200}
+                        />
+                      ))}
+                    </View>
+                  )}
+                  {post.text && (
+                    <Text style={styles.postText}>
+                      {post.text.replace(/<[^>]*>/g, "")}
+                    </Text>
+                  )}
+                  {post.displayTime && (
+                    <Text style={styles.postTime}>{post.displayTime}</Text>
+                  )}
+                </View>
               ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Posts/Updates */}
-        {posts && posts.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Updates</Text>
-            {posts.map((post: any, index: number) => (
-              <View key={post.id || index} style={styles.postCard}>
-                {post.PostMedia && post.PostMedia.length > 0 && (
-                  <View style={styles.postMediaContainer}>
-                    {post.PostMedia.map((media: any, mediaIndex: number) => (
-                      <ExpoImage
-                        key={media.id || mediaIndex}
-                        source={{ uri: media.url }}
-                        style={styles.postImage}
-                        contentFit="cover"
-                        transition={200}
-                      />
-                    ))}
-                  </View>
-                )}
-                {post.text && (
-                  <Text style={styles.postText}>
-                    {post.text.replace(/<[^>]*>/g, "")}
-                  </Text>
-                )}
-                {post.displayTime && (
-                  <Text style={styles.postTime}>{post.displayTime}</Text>
-                )}
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Organizer Info */}
-        {campaignData?.Organizer && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Organizer</Text>
-            <View style={styles.organizerCard}>
-              {campaignData.Organizer.profileImage && (
-                <ExpoImage
-                  source={{ uri: campaignData.Organizer.profileImage }}
-                  style={styles.organizerImage}
-                  contentFit="cover"
-                />
-              )}
-              <View style={styles.organizerInfo}>
-                <Text style={styles.organizerName}>
-                  {campaignData.Organizer.firstName}{" "}
-                  {campaignData.Organizer.lastName}
-                </Text>
-                {campaignData.Organizer.about && (
-                  <Text style={styles.organizerAbout}>
-                    {campaignData.Organizer.about}
-                  </Text>
-                )}
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Metadata */}
-        <View style={styles.metadataSection}>
-          {campaignData?.country && (
-            <View style={styles.metadataItem}>
-              <Text style={styles.metadataLabel}>Country:</Text>
-              <Text style={styles.metadataValue}>{campaignData.country}</Text>
             </View>
           )}
-          {campaignData?.status && (
-            <View style={styles.metadataItem}>
-              <Text style={styles.metadataLabel}>Status:</Text>
-              <Text style={styles.metadataValue}>{campaignData.status}</Text>
+          {campaignData?.Organizer && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Organizer</Text>
+              <View style={styles.organizerCard}>
+                {campaignData.Organizer.profileImage && (
+                  <ExpoImage
+                    source={{ uri: campaignData.Organizer.profileImage }}
+                    style={styles.organizerImage}
+                    contentFit="cover"
+                  />
+                )}
+                <View style={styles.organizerInfo}>
+                  <Text style={styles.organizerName}>
+                    {campaignData.Organizer.firstName}{" "}
+                    {campaignData.Organizer.lastName}
+                  </Text>
+                  {campaignData.Organizer.about && (
+                    <Text style={styles.organizerAbout}>
+                      {campaignData.Organizer.about}
+                    </Text>
+                  )}
+                </View>
+              </View>
             </View>
           )}
-        </View>
-
-        {/* Add to Cart Section */}
-        <View style={styles.addToCartSection}>
-          <Text style={styles.addToCartTitle}>Make a Donation</Text>
-          <View style={styles.amountContainer}>
-            <Text style={styles.amountLabel}>Amount (AUD)</Text>
-            <TextInput
-              style={styles.amountInput}
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="numeric"
-              placeholder="Enter amount"
-              placeholderTextColor="#999"
-            />
+          <View style={styles.metadataSection}>
+            {campaignData?.country && (
+              <View style={styles.metadataItem}>
+                <Text style={styles.metadataLabel}>Country:</Text>
+                <Text style={styles.metadataValue}>{campaignData.country}</Text>
+              </View>
+            )}
+            {campaignData?.status && (
+              <View style={styles.metadataItem}>
+                <Text style={styles.metadataLabel}>Status:</Text>
+                <Text style={styles.metadataValue}>{campaignData.status}</Text>
+              </View>
+            )}
           </View>
-          <TouchableOpacity
-            style={[
-              styles.addToCartButton,
-              isInCart && styles.addToCartButtonInCart,
-            ]}
-            onPress={handleAddToCart}
-            disabled={addingToCart || isInCart}
-          >
-            <Text style={styles.addToCartButtonText}>
-              {addingToCart
-                ? "Adding..."
-                : isInCart
-                ? "Already in Cart"
-                : "Add to Cart"}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.addToCartSection}>
+            <Text style={styles.addToCartTitle}>Make a Donation</Text>
+            <View style={styles.amountContainer}>
+              <Text style={styles.amountLabel}>Amount (AUD)</Text>
+              <TextInput
+                style={styles.amountInput}
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="numeric"
+                placeholder="Enter amount"
+                placeholderTextColor="#999"
+              />
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.addToCartButton,
+                isInCart && styles.addToCartButtonInCart,
+              ]}
+              onPress={handleAddToCart}
+              disabled={addingToCart || isInCart}
+            >
+              <Text style={styles.addToCartButtonText}>
+                {addingToCart
+                  ? "Adding..."
+                  : isInCart
+                  ? "Already in Cart"
+                  : "Add to Cart"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  coverImage: {
-    width: "100%",
-    height: 300,
-    backgroundColor: "#f0f0f0",
-  },
-  content: {
-    padding: 20,
-  },
+  scrollView: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: "#fff" },
+  coverImage: { width: "100%", height: 300, backgroundColor: "#f0f0f0" },
+  content: { padding: 20 },
   title: {
     fontSize: 28,
     fontWeight: "bold",
@@ -345,14 +308,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginBottom: 20,
   },
-  categoryText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  section: {
-    marginBottom: 32,
-  },
+  categoryText: { color: "#fff", fontSize: 12, fontWeight: "600" },
+  section: { marginBottom: 32 },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "600",
@@ -365,26 +322,15 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 16,
   },
-  descriptionText: {
-    fontSize: 16,
-    color: "#333",
-    lineHeight: 24,
-  },
-  // Media Gallery Styles
-  mediaScroll: {
-    marginHorizontal: -20,
-  },
-  mediaContainer: {
-    paddingHorizontal: 20,
-    gap: 12,
-  },
+  descriptionText: { fontSize: 16, color: "#333", lineHeight: 24 },
+  mediaScroll: { marginHorizontal: -20 },
+  mediaContainer: { paddingHorizontal: 20, gap: 12 },
   mediaImage: {
     width: width * 0.7,
     height: 200,
     borderRadius: 12,
     backgroundColor: "#f0f0f0",
   },
-  // Post Styles
   postCard: {
     backgroundColor: "#f9f9f9",
     borderRadius: 12,
@@ -393,10 +339,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: "#264B8B",
   },
-  postMediaContainer: {
-    marginBottom: 12,
-    gap: 8,
-  },
+  postMediaContainer: { marginBottom: 12, gap: 8 },
   postImage: {
     width: "100%",
     height: 200,
@@ -404,18 +347,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
     marginBottom: 8,
   },
-  postText: {
-    fontSize: 15,
-    color: "#333",
-    lineHeight: 22,
-    marginBottom: 8,
-  },
-  postTime: {
-    fontSize: 12,
-    color: "#999",
-    fontStyle: "italic",
-  },
-  // Organizer Styles
+  postText: { fontSize: 15, color: "#333", lineHeight: 22, marginBottom: 8 },
+  postTime: { fontSize: 12, color: "#999", fontStyle: "italic" },
   organizerCard: {
     flexDirection: "row",
     backgroundColor: "#f9f9f9",
@@ -429,31 +362,21 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     backgroundColor: "#e0e0e0",
   },
-  organizerInfo: {
-    flex: 1,
-  },
+  organizerInfo: { flex: 1 },
   organizerName: {
     fontSize: 16,
     fontWeight: "600",
     color: "#264B8B",
     marginBottom: 4,
   },
-  organizerAbout: {
-    fontSize: 14,
-    color: "#666",
-    lineHeight: 20,
-  },
-  // Metadata Styles
+  organizerAbout: { fontSize: 14, color: "#666", lineHeight: 20 },
   metadataSection: {
     backgroundColor: "#f9f9f9",
     borderRadius: 12,
     padding: 16,
     marginTop: 8,
   },
-  metadataItem: {
-    flexDirection: "row",
-    marginBottom: 8,
-  },
+  metadataItem: { flexDirection: "row", marginBottom: 8 },
   metadataLabel: {
     fontSize: 14,
     fontWeight: "600",
@@ -461,11 +384,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
     minWidth: 80,
   },
-  metadataValue: {
-    fontSize: 14,
-    color: "#333",
-    flex: 1,
-  },
+  metadataValue: { fontSize: 14, color: "#333", flex: 1 },
   addToCartSection: {
     marginTop: 32,
     padding: 20,
@@ -480,9 +399,7 @@ const styles = StyleSheet.create({
     color: "#264B8B",
     marginBottom: 16,
   },
-  amountContainer: {
-    marginBottom: 16,
-  },
+  amountContainer: { marginBottom: 16 },
   amountLabel: {
     fontSize: 14,
     fontWeight: "600",
@@ -503,22 +420,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
   },
-  addToCartButtonInCart: {
-    backgroundColor: "#999",
-  },
-  addToCartButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  errorText: {
-    fontSize: 16,
-    color: "#d32f2f",
-    marginBottom: 12,
-  },
-  backText: {
-    fontSize: 16,
-    color: "#264B8B",
-    textDecorationLine: "underline",
-  },
+  addToCartButtonInCart: { backgroundColor: "#999" },
+  addToCartButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  errorText: { fontSize: 16, color: "#d32f2f", marginBottom: 12 },
+  backText: { fontSize: 16, color: "#264B8B", textDecorationLine: "underline" },
 });

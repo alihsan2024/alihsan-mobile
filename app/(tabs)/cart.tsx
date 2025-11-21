@@ -107,7 +107,8 @@ export default function CartScreen() {
     }
 
     // Navigate to checkout (to be implemented)
-    Alert.alert("Checkout", "Checkout functionality coming soon!");
+    // Alert.alert("Checkout", "Checkout functionality coming soon!");
+    router.push("/checkout");
   };
 
   // Calculate totals
@@ -182,8 +183,7 @@ export default function CartScreen() {
               {items.map((item, index) => {
                 const checkoutType =
                   item.checkoutType || item.Campaign?.checkoutType;
-                const isAdeeqah =
-                  checkoutType === "ADEEQAH_GENERAL_SACRIFICE";
+                const isAdeeqah = checkoutType === "ADEEQAH_GENERAL_SACRIFICE";
                 const quantity = isAdeeqah
                   ? parseInt(item.riceQuantity?.toString() || "1")
                   : item.quantity || 1;
@@ -199,10 +199,7 @@ export default function CartScreen() {
                 ].includes(checkoutType || "");
 
                 return (
-                  <View
-                    key={item.id || index}
-                    style={styles.cartItem}
-                  >
+                  <View key={item.id || index} style={styles.cartItem}>
                     <View style={styles.cartItemContent}>
                       <ExpoImage
                         source={{
@@ -220,7 +217,9 @@ export default function CartScreen() {
                         </Text>
 
                         {item.isRecurring && (
-                          <View style={[styles.recurringBadge, { marginTop: 4 }]}>
+                          <View
+                            style={[styles.recurringBadge, { marginTop: 4 }]}
+                          >
                             <Text style={styles.recurringIcon}>🔄</Text>
                             <Text style={styles.recurringText}>
                               {getRecurringLabel(item.periodDays)} donation
@@ -297,9 +296,7 @@ export default function CartScreen() {
 
                 <View style={styles.summaryRow}>
                   <View style={styles.feeRow}>
-                    <Text style={styles.summaryLabel}>
-                      Processing Fee (3%)
-                    </Text>
+                    <Text style={styles.summaryLabel}>Processing Fee (3%)</Text>
                     <Text style={styles.helpIcon}>ℹ️</Text>
                   </View>
                   <Text style={styles.summaryValue}>
@@ -342,7 +339,10 @@ export default function CartScreen() {
                   style={[
                     styles.checkoutButton,
                     (subtotal <= 0 ||
-                      items.some((item) => parseFloat(item.total?.toString() || "0") === 0)) &&
+                      items.some(
+                        (item) =>
+                          parseFloat(item.total?.toString() || "0") === 0
+                      )) &&
                       styles.checkoutButtonDisabled,
                   ]}
                   onPress={handleCheckout}
