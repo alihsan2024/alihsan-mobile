@@ -63,12 +63,38 @@ const ConfirmScreen = () => {
         ).then((m) => m.default.getItem("checkoutDetails"));
         const parsed = stored ? JSON.parse(stored) : null;
         setCheckoutDetails(parsed);
-        setClientSecret(parsed?.clientSecret || null);
+        // Role logic: if not logged in, admin, or superadmin, use stored clientSecret
+        const ROLES = { ADMIN: "ADMIN", SUPERADMIN: "SUPERADMIN" };
+        if (
+          !user?.email ||
+          user?.role === ROLES.ADMIN ||
+          user?.role === ROLES.SUPERADMIN
+        ) {
+          setClientSecret(parsed?.clientSecret || null);
+        } else {
+          // Normal user: fetch new clientSecret from /basket/checkout
+          setStateLoading(true);
+          try {
+            const response = await import("../services/api").then((m) =>
+              m.default.post("/basket/checkout", {
+                ...parsed,
+                paymentGateway: "stripe",
+                isAnonymous: false,
+              })
+            );
+            const payload = response.data?.payload;
+            setClientSecret(payload?.clientSecret || null);
+          } catch (e) {
+            setClientSecret(null);
+          }
+          setStateLoading(false);
+        }
       } catch (e) {
         setCheckoutDetails(null);
         setClientSecret(null);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const totalPoints = items.reduce((acc: number, item: any) => {
