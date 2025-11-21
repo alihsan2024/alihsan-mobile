@@ -18,6 +18,7 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFormik } from "formik";
 import * as yup from "yup";
+import api from "../services/api";
 // import PhoneInput from "react-native-phone-input";
 import LoadingScreen from "@/components/LoadingScreen";
 import { BasketItem } from "@/services/api";
@@ -130,25 +131,56 @@ export default function CheckoutScreen() {
     initialValues: initialState,
     validationSchema,
     onSubmit: async (values) => {
-      console.log("onSubmit called", values);
-      if (!isAuthenticated) {
-        Alert.alert("Login Required", "Please login to continue", [
-          { text: "Cancel", style: "cancel" },
-          { text: "Login", onPress: () => router.push("/login") },
-        ]);
-        return;
+      try {
+        setIsLoading(true);
+        const updatedValues = {
+          ...values,
+          basketItems: items,
+        };
+        const ROLES = { ADMIN: "ADMIN", SUPERADMIN: "SUPERADMIN" };
+        let response;
+        if (
+          !user?.email ||
+          user?.role === ROLES.ADMIN ||
+          user?.role === ROLES.SUPERADMIN
+        ) {
+          // Anonymous/admin/superadmin
+          response = await api.post("/basket/checkout-unknown", {
+            ...updatedValues,
+            paymentGateway: "stripe",
+            isAnonymous: true,
+          });
+          const payload = response.data?.payload;
+          const clientSecret = payload?.clientSecret;
+          await AsyncStorage.setItem(
+            "checkoutDetails",
+            JSON.stringify({
+              ...updatedValues,
+              paymentIntentId: payload?.paymentIntentId,
+              donationIds: payload?.donationIds,
+              clientSecret,
+            })
+          );
+          router.push("/confirm");
+        } else {
+          // Normal user
+          response = await api.patch("/profile", updatedValues);
+          const payload = response.data?.payload;
+          const clientSecret = payload?.clientSecret;
+          await AsyncStorage.setItem(
+            "checkoutDetails",
+            JSON.stringify({
+              ...updatedValues,
+              clientSecret,
+            })
+          );
+          router.push("/confirm");
+        }
+        setIsLoading(false);
+      } catch (error) {
+        Alert.alert("Error", (error as any).message || "Something went wrong");
+        setIsLoading(false);
       }
-
-      if (items.length === 0) {
-        Alert.alert("Empty Cart", "Your cart is empty");
-        return;
-      }
-      // Save form data and items to AsyncStorage
-      await AsyncStorage.setItem(
-        "checkoutDetails",
-        JSON.stringify({ ...values, items })
-      );
-      router.push("/confirm");
     },
   });
 

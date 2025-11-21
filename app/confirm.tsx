@@ -29,23 +29,6 @@ const VisacardIcon = () => <Text>💳</Text>;
 const PayPalIcon = () => <Text>💰</Text>;
 const Edit3Icon = () => <Text>✏️</Text>;
 
-// Real API call to get client secret using shared api instance
-import api from "../services/api";
-const handleBasketCheckout = async (payload: any) => {
-  try {
-    const response = await api.post("/basket/checkout", payload);
-    if (response.status === 200) {
-      return { success: true, payload: response.data };
-    } else {
-      return { success: false, payload: response.data?.payload };
-    }
-  } catch (e: any) {
-    if (e.response && e.response.status === 401) {
-      return { success: false, payload };
-    }
-    return { success: false, payload: e.response?.data };
-  }
-};
 const handlePaypalCheckout = async (data: any) => {
   console.log("Dummy PayPal checkout", data);
   return { success: true, payload: { approvalUrl: "https://paypal.com" } };
@@ -78,9 +61,12 @@ const ConfirmScreen = () => {
         const stored = await import(
           "@react-native-async-storage/async-storage"
         ).then((m) => m.default.getItem("checkoutDetails"));
-        setCheckoutDetails(stored ? JSON.parse(stored) : null);
+        const parsed = stored ? JSON.parse(stored) : null;
+        setCheckoutDetails(parsed);
+        setClientSecret(parsed?.clientSecret || null);
       } catch (e) {
         setCheckoutDetails(null);
+        setClientSecret(null);
       }
     })();
   }, []);
@@ -97,30 +83,6 @@ const ConfirmScreen = () => {
     const recurringItems = items.filter((item: any) => item.isRecurring);
     setRecurringFound(recurringItems.length > 0);
   }, [items]);
-
-  const handleAddCard = async () => {
-    setStateLoading(true);
-    // Call your backend to create a PaymentIntent and get clientSecret
-    const response = await handleBasketCheckout({ isAnonymous });
-    console.log("handleAddCard response:", response);
-    if (response.success) {
-      if (!response.payload.payload.clientSecret) {
-        import("react-native").then(({ Alert }) =>
-          Alert.alert(
-            "Error",
-            "No clientSecret returned from backend! Check API response."
-          )
-        );
-      }
-      setClientSecret(response.payload.payload.clientSecret);
-      setStateLoading(false);
-    } else {
-      setStateLoading(false);
-      import("react-native").then(({ Alert }) =>
-        Alert.alert("Error", "Error adding card")
-      );
-    }
-  };
 
   const handleDonationProcess = async () => {
     if (!cardDetails?.complete) {
@@ -346,21 +308,16 @@ const ConfirmScreen = () => {
                       </TouchableOpacity>
                     </>
                   ) : (
-                    <TouchableOpacity
-                      onPress={handleAddCard}
+                    <Text
                       style={{
-                        padding: 12,
-                        backgroundColor: "#264B8B",
-                        borderRadius: 8,
-                        alignItems: "center",
+                        color: "#888",
+                        textAlign: "center",
+                        marginVertical: 20,
                       }}
                     >
-                      {stateLoading ? (
-                        <ActivityIndicator color="#fff" />
-                      ) : (
-                        <Text style={{ color: "#fff" }}>Add Card</Text>
-                      )}
-                    </TouchableOpacity>
+                      No payment intent found. Please go back and try checkout
+                      again.
+                    </Text>
                   )}
                 </View>
               ) : null}

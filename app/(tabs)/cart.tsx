@@ -90,16 +90,16 @@ export default function CartScreen() {
   };
 
   const handleCheckout = () => {
-    if (!isAuthenticated) {
-      Alert.alert("Login Required", "Please login to proceed with checkout", [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Login",
-          onPress: () => router.push("/login"),
-        },
-      ]);
-      return;
-    }
+    // if (!isAuthenticated) {
+    //   Alert.alert("Login Required", "Please login to proceed with checkout", [
+    //     { text: "Cancel", style: "cancel" },
+    //     {
+    //       text: "Login",
+    //       onPress: () => router.push("/login"),
+    //     },
+    //   ]);
+    //   return;
+    // }
 
     if (items.length === 0) {
       Alert.alert("Empty Cart", "Your cart is empty");
