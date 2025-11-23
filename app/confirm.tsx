@@ -6,6 +6,8 @@ import {
   Switch,
   TouchableOpacity,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBasket } from "@/context/BasketContext";
@@ -165,275 +167,292 @@ const ConfirmScreen = () => {
         process.env.EXPO_PUBLIC_STRIPE_KEY || "YOUR_STRIPE_PUBLISHABLE_KEY"
       }
     >
-      <ScrollView
-        style={{ flex: 1, paddingTop: insets.top, backgroundColor: "#f5f5f5" }}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
       >
-        {/* Stepper */}
-        <View style={{ padding: 16 }}>
-          <Text style={{ fontSize: 18, fontWeight: "600" }}>
-            Step 3: Confirm
-          </Text>
-        </View>
-
-        <View style={{ padding: 16 }}>
-          {/* Personal Info */}
-          <View
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: 12,
-              overflow: "hidden",
-              marginBottom: 16,
-            }}
-          >
-            <LinearGradient
-              colors={["#264B8B", "#5B8FD8"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{
-                padding: 12,
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <View
-                  style={{
-                    padding: 6,
-                    backgroundColor: "rgba(255,255,255,0.6)",
-                    borderRadius: 20,
-                  }}
-                >
-                  <UserIcon />
-                </View>
-                <Text style={{ fontSize: 18, color: "#fff", marginLeft: 8 }}>
-                  Personal Information
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => router.push("/basket/checkout")}>
-                <Edit3Icon />
-              </TouchableOpacity>
-            </LinearGradient>
-            <View style={{ padding: 12 }}>
-              {checkoutDetails ? (
-                <View>
-                  <Text>
-                    Full Name: {checkoutDetails.firstName}{" "}
-                    {checkoutDetails.lastName}
-                  </Text>
-                  <Text>Email: {checkoutDetails.email}</Text>
-                  <Text>Phone: {checkoutDetails.phone}</Text>
-                  <Text>Address: {checkoutDetails.address}</Text>
-                  <Text>City: {checkoutDetails.city}</Text>
-                  <Text>State: {checkoutDetails.state}</Text>
-                  <Text>Zip: {checkoutDetails.zip}</Text>
-                  <Text>Country: {checkoutDetails.country}</Text>
-                </View>
-              ) : (
-                <Text>Loading personal info...</Text>
-              )}
-            </View>
+        <ScrollView
+          style={{
+            flex: 1,
+            paddingTop: insets.top,
+            backgroundColor: "#f5f5f5",
+          }}
+          contentContainerStyle={{
+            paddingBottom: 120, // ensures last button stays above keyboard
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Stepper */}
+          <View style={{ padding: 16 }}>
+            <Text style={{ fontSize: 18, fontWeight: "600" }}>
+              Step 3: Confirm
+            </Text>
           </View>
 
-          {/* Payment */}
-          <View
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: 12,
-              overflow: "hidden",
-              marginBottom: 16,
-            }}
-          >
-            <LinearGradient
-              colors={["#264B8B", "#5B8FD8"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
+          <View style={{ padding: 16 }}>
+            {/* Personal Info */}
+            <View
               style={{
-                padding: 12,
-                flexDirection: "row",
-                alignItems: "center",
+                backgroundColor: "#fff",
+                borderRadius: 12,
+                overflow: "hidden",
+                marginBottom: 16,
               }}
             >
-              <CreditCardIcon />
-              <Text style={{ fontSize: 18, color: "#fff", marginLeft: 8 }}>
-                Payment Details
-              </Text>
-            </LinearGradient>
-
-            <View style={{ padding: 12 }}>
-              <Text>Select Payment Method</Text>
-              <View style={{ flexDirection: "row", marginVertical: 12 }}>
-                <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    padding: 12,
-                    borderWidth: 1,
-                    borderColor: paymentType === "card" ? "#264B8B" : "#ccc",
-                    borderRadius: 8,
-                    marginRight: 8,
-                    alignItems: "center",
-                  }}
-                  onPress={() => {
-                    setPaymentType("card");
-                    setBankDetails(false);
-                  }}
-                >
-                  <Text>Card</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    padding: 12,
-                    borderWidth: 1,
-                    borderColor: paymentType === "paypal" ? "#264B8B" : "#ccc",
-                    borderRadius: 8,
-                    alignItems: "center",
-                  }}
-                  onPress={() => {
-                    setPaymentType("paypal");
-                    setBankDetails(false);
-                  }}
-                >
-                  <Text>PayPal</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Card / PayPal / Bank */}
-              {paymentType === "card" && !bankDetails ? (
-                <View>
-                  {loadingIntent ? (
-                    <View style={{ marginVertical: 20 }}>
-                      <ActivityIndicator size="large" color="#264B8B" />
-                    </View>
-                  ) : clientSecret ? (
-                    <>
-                      <CardField
-                        postalCodeEnabled={true}
-                        placeholders={{
-                          number: "4242 4242 4242 4242",
-                        }}
-                        cardStyle={{
-                          backgroundColor: "#FFFFFF",
-                          textColor: "#000000",
-                        }}
-                        style={{
-                          width: "100%",
-                          height: 50,
-                          marginVertical: 30,
-                        }}
-                        onCardChange={(details) => setCardDetails(details)}
-                      />
-                      <TouchableOpacity
-                        onPress={handleDonationProcess}
-                        style={{
-                          padding: 12,
-                          backgroundColor: "#264B8B",
-                          borderRadius: 8,
-                          alignItems: "center",
-                        }}
-                      >
-                        {stateLoading ? (
-                          <ActivityIndicator color="#fff" />
-                        ) : (
-                          <Text style={{ color: "#fff" }}>Pay Now</Text>
-                        )}
-                      </TouchableOpacity>
-                    </>
-                  ) : (
-                    <Text
-                      style={{
-                        color: "#888",
-                        textAlign: "center",
-                        marginVertical: 20,
-                      }}
-                    >
-                      No payment intent found. Please go back and try checkout
-                      again.
-                    </Text>
-                  )}
-                </View>
-              ) : null}
-
-              {paymentType === "paypal" ? (
-                <TouchableOpacity
-                  onPress={handlePaypalSubmit}
-                  style={{
-                    padding: 12,
-                    backgroundColor: "#003087",
-                    borderRadius: 8,
-                    alignItems: "center",
-                  }}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={{ color: "#fff" }}>Pay with PayPal</Text>
-                  )}
-                </TouchableOpacity>
-              ) : null}
-
-              {bankDetails ? (
-                <View>
-                  <Text>Bank transfer details go here...</Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-
-          {/* Order Summary */}
-          <View
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: 12,
-              overflow: "hidden",
-            }}
-          >
-            <LinearGradient
-              colors={["#264B8B", "#5B8FD8"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{
-                padding: 12,
-                flexDirection: "row",
-                alignItems: "center",
-              }}
-            >
-              <ShieldIcon />
-              <Text style={{ fontSize: 18, color: "#fff", marginLeft: 8 }}>
-                Order Summary
-              </Text>
-            </LinearGradient>
-            <View style={{ padding: 12 }}>
-              {items.map((item: any) => (
-                <View
-                  key={item.id}
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    marginBottom: 8,
-                  }}
-                >
-                  <Text>{item.name}</Text>
-                  <Text>${item.total}</Text>
-                </View>
-              ))}
-              <View
+              <LinearGradient
+                colors={["#264B8B", "#5B8FD8"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
                 style={{
-                  borderTopWidth: 1,
-                  borderColor: "#ccc",
-                  marginTop: 8,
-                  paddingTop: 8,
+                  padding: 12,
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                 }}
               >
-                <Text style={{ fontWeight: "bold" }}>
-                  Total: ${totalPoints.toFixed(2)}
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <View
+                    style={{
+                      padding: 6,
+                      backgroundColor: "rgba(255,255,255,0.6)",
+                      borderRadius: 20,
+                    }}
+                  >
+                    <UserIcon />
+                  </View>
+                  <Text style={{ fontSize: 18, color: "#fff", marginLeft: 8 }}>
+                    Personal Information
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => router.push("/basket/checkout")}
+                >
+                  <Edit3Icon />
+                </TouchableOpacity>
+              </LinearGradient>
+              <View style={{ padding: 12 }}>
+                {checkoutDetails ? (
+                  <View>
+                    <Text>
+                      Full Name: {checkoutDetails.firstName}{" "}
+                      {checkoutDetails.lastName}
+                    </Text>
+                    <Text>Email: {checkoutDetails.email}</Text>
+                    <Text>Phone: {checkoutDetails.phone}</Text>
+                    <Text>Address: {checkoutDetails.address}</Text>
+                    <Text>City: {checkoutDetails.city}</Text>
+                    <Text>State: {checkoutDetails.state}</Text>
+                    <Text>Zip: {checkoutDetails.zip}</Text>
+                    <Text>Country: {checkoutDetails.country}</Text>
+                  </View>
+                ) : (
+                  <Text>Loading personal info...</Text>
+                )}
+              </View>
+            </View>
+
+            {/* Payment */}
+            <View
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: 12,
+                overflow: "hidden",
+                marginBottom: 16,
+              }}
+            >
+              <LinearGradient
+                colors={["#264B8B", "#5B8FD8"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{
+                  padding: 12,
+                  flexDirection: "row",
+                  alignItems: "center",
+                }}
+              >
+                <CreditCardIcon />
+                <Text style={{ fontSize: 18, color: "#fff", marginLeft: 8 }}>
+                  Payment Details
                 </Text>
+              </LinearGradient>
+
+              <View style={{ padding: 12 }}>
+                <Text>Select Payment Method</Text>
+                <View style={{ flexDirection: "row", marginVertical: 12 }}>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      padding: 12,
+                      borderWidth: 1,
+                      borderColor: paymentType === "card" ? "#264B8B" : "#ccc",
+                      borderRadius: 8,
+                      marginRight: 8,
+                      alignItems: "center",
+                    }}
+                    onPress={() => {
+                      setPaymentType("card");
+                      setBankDetails(false);
+                    }}
+                  >
+                    <Text>Card</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      padding: 12,
+                      borderWidth: 1,
+                      borderColor:
+                        paymentType === "paypal" ? "#264B8B" : "#ccc",
+                      borderRadius: 8,
+                      alignItems: "center",
+                    }}
+                    onPress={() => {
+                      setPaymentType("paypal");
+                      setBankDetails(false);
+                    }}
+                  >
+                    <Text>PayPal</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Card / PayPal / Bank */}
+                {paymentType === "card" && !bankDetails ? (
+                  <View>
+                    {loadingIntent ? (
+                      <View style={{ marginVertical: 20 }}>
+                        <ActivityIndicator size="large" color="#264B8B" />
+                      </View>
+                    ) : clientSecret ? (
+                      <>
+                        <CardField
+                          postalCodeEnabled={true}
+                          placeholders={{
+                            number: "4242 4242 4242 4242",
+                          }}
+                          cardStyle={{
+                            backgroundColor: "#FFFFFF",
+                            textColor: "#000000",
+                          }}
+                          style={{
+                            width: "100%",
+                            height: 50,
+                            marginVertical: 30,
+                          }}
+                          onCardChange={(details) => setCardDetails(details)}
+                        />
+                        <TouchableOpacity
+                          onPress={handleDonationProcess}
+                          style={{
+                            padding: 12,
+                            backgroundColor: "#264B8B",
+                            borderRadius: 8,
+                            alignItems: "center",
+                          }}
+                        >
+                          {stateLoading ? (
+                            <ActivityIndicator color="#fff" />
+                          ) : (
+                            <Text style={{ color: "#fff" }}>Pay Now</Text>
+                          )}
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <Text
+                        style={{
+                          color: "#888",
+                          textAlign: "center",
+                          marginVertical: 20,
+                        }}
+                      >
+                        No payment intent found. Please go back and try checkout
+                        again.
+                      </Text>
+                    )}
+                  </View>
+                ) : null}
+
+                {paymentType === "paypal" ? (
+                  <TouchableOpacity
+                    onPress={handlePaypalSubmit}
+                    style={{
+                      padding: 12,
+                      backgroundColor: "#003087",
+                      borderRadius: 8,
+                      alignItems: "center",
+                    }}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={{ color: "#fff" }}>Pay with PayPal</Text>
+                    )}
+                  </TouchableOpacity>
+                ) : null}
+
+                {bankDetails ? (
+                  <View>
+                    <Text>Bank transfer details go here...</Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+
+            {/* Order Summary */}
+            <View
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: 12,
+                overflow: "hidden",
+              }}
+            >
+              <LinearGradient
+                colors={["#264B8B", "#5B8FD8"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{
+                  padding: 12,
+                  flexDirection: "row",
+                  alignItems: "center",
+                }}
+              >
+                <ShieldIcon />
+                <Text style={{ fontSize: 18, color: "#fff", marginLeft: 8 }}>
+                  Order Summary
+                </Text>
+              </LinearGradient>
+              <View style={{ padding: 12 }}>
+                {items.map((item: any) => (
+                  <View
+                    key={item.id}
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <Text>{item.name}</Text>
+                    <Text>${item.total}</Text>
+                  </View>
+                ))}
+                <View
+                  style={{
+                    borderTopWidth: 1,
+                    borderColor: "#ccc",
+                    marginTop: 8,
+                    paddingTop: 8,
+                  }}
+                >
+                  <Text style={{ fontWeight: "bold" }}>
+                    Total: ${totalPoints.toFixed(2)}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </StripeProvider>
   );
 };
