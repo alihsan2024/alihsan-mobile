@@ -127,6 +127,38 @@ export default function CheckoutScreen() {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        if (!isAuthenticated) return;
+
+        const response = await api.get("/profile");
+        const profile = response.data?.payload;
+
+        if (profile) {
+          formik.setValues({
+            ...formik.values,
+            firstName: profile.firstName || "",
+            lastName: profile.lastName || "",
+            email: profile.email || "",
+            phone: profile.phone || "",
+            company: profile.company || "",
+            country: profile.country || "",
+            address: profile.address || "",
+            city: profile.city || "",
+            state: profile.state || "",
+            zip: profile.zip || "",
+            status: true,
+          });
+        }
+      } catch (err) {
+        console.log("Failed to load profile:", err);
+      }
+    };
+
+    loadProfile();
+  }, [isAuthenticated]);
+
   const formik = useFormik({
     initialValues: initialState,
     validationSchema,
@@ -238,7 +270,11 @@ export default function CheckoutScreen() {
           placeholder="First Name"
           value={formik.values.firstName}
           onChangeText={formik.handleChange("firstName")}
+          autoComplete="name-given"
+          textContentType="givenName"
+          autoCapitalize="words"
         />
+
         {formik.touched.firstName && formik.errors.firstName && (
           <Text style={styles.errorText}>{formik.errors.firstName}</Text>
         )}
@@ -248,7 +284,11 @@ export default function CheckoutScreen() {
           placeholder="Last Name"
           value={formik.values.lastName}
           onChangeText={formik.handleChange("lastName")}
+          autoComplete="name-family"
+          textContentType="familyName"
+          autoCapitalize="words"
         />
+
         {formik.touched.lastName && formik.errors.lastName && (
           <Text style={styles.errorText}>{formik.errors.lastName}</Text>
         )}
@@ -259,6 +299,8 @@ export default function CheckoutScreen() {
           placeholder="Company (Optional)"
           value={formik.values.company}
           onChangeText={formik.handleChange("company")}
+          autoComplete="organization"
+          textContentType="organizationName"
         />
 
         {/* Email */}
@@ -268,7 +310,11 @@ export default function CheckoutScreen() {
           keyboardType="email-address"
           value={formik.values.email}
           onChangeText={formik.handleChange("email")}
+          autoComplete="email"
+          textContentType="emailAddress"
+          autoCapitalize="none"
         />
+
         {formik.touched.email && formik.errors.email && (
           <Text style={styles.errorText}>{formik.errors.email}</Text>
         )}
@@ -280,7 +326,10 @@ export default function CheckoutScreen() {
           keyboardType="phone-pad"
           value={formik.values.phone}
           onChangeText={formik.handleChange("phone")}
+          autoComplete="tel"
+          textContentType="telephoneNumber"
         />
+
         {formik.touched.phone && formik.errors.phone && (
           <Text style={styles.errorText}>{formik.errors.phone}</Text>
         )}
@@ -291,7 +340,10 @@ export default function CheckoutScreen() {
           placeholder="Street Address"
           value={formik.values.address}
           onChangeText={formik.handleChange("address")}
+          autoComplete="street-address"
+          textContentType="fullStreetAddress"
         />
+
         {formik.touched.address && formik.errors.address && (
           <Text style={styles.errorText}>{formik.errors.address}</Text>
         )}
@@ -301,7 +353,10 @@ export default function CheckoutScreen() {
           placeholder="City"
           value={formik.values.city}
           onChangeText={formik.handleChange("city")}
+          autoComplete="address-line2"
+          textContentType="addressCity"
         />
+
         {formik.touched.city && formik.errors.city && (
           <Text style={styles.errorText}>{formik.errors.city}</Text>
         )}
@@ -311,7 +366,10 @@ export default function CheckoutScreen() {
           placeholder="State"
           value={formik.values.state}
           onChangeText={formik.handleChange("state")}
+          autoComplete="address-line1"
+          textContentType="addressState"
         />
+
         {formik.touched.state && formik.errors.state && (
           <Text style={styles.errorText}>{formik.errors.state}</Text>
         )}
@@ -321,7 +379,10 @@ export default function CheckoutScreen() {
           placeholder="Post Code"
           value={formik.values.zip}
           onChangeText={formik.handleChange("zip")}
+          autoComplete="postal-code"
+          textContentType="postalCode"
         />
+
         {formik.touched.zip && formik.errors.zip && (
           <Text style={styles.errorText}>{formik.errors.zip}</Text>
         )}
@@ -333,8 +394,11 @@ export default function CheckoutScreen() {
           value={formik.values.country}
           onChangeText={formik.handleChange("country")}
           autoCapitalize="characters"
+          autoComplete="country"
+          textContentType="countryName"
           maxLength={2}
         />
+
         {formik.touched.country && formik.errors.country && (
           <Text style={styles.errorText}>{formik.errors.country}</Text>
         )}

@@ -53,10 +53,12 @@ const ConfirmScreen = () => {
   const [cardDetails, setCardDetails] = useState<CardFieldInput.Details | null>(
     null
   );
+  const [loadingIntent, setLoadingIntent] = useState(true);
 
   // Load checkoutDetails from AsyncStorage (React Native)
   useEffect(() => {
     (async () => {
+      setLoadingIntent(true);
       try {
         const stored = await import(
           "@react-native-async-storage/async-storage"
@@ -93,6 +95,7 @@ const ConfirmScreen = () => {
         setCheckoutDetails(null);
         setClientSecret(null);
       }
+      setLoadingIntent(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -299,7 +302,11 @@ const ConfirmScreen = () => {
               {/* Card / PayPal / Bank */}
               {paymentType === "card" && !bankDetails ? (
                 <View>
-                  {clientSecret ? (
+                  {loadingIntent ? (
+                    <View style={{ marginVertical: 20 }}>
+                      <ActivityIndicator size="large" color="#264B8B" />
+                    </View>
+                  ) : clientSecret ? (
                     <>
                       <CardField
                         postalCodeEnabled={true}
