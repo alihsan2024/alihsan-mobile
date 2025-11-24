@@ -18,36 +18,32 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
 
   const handleLogout = () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await logout();
+            router.replace("/login");
+          } catch (error) {
+            Alert.alert("Error", "Failed to logout. Please try again.");
+          }
         },
-        {
-          text: "Logout",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await logout();
-              router.replace("/login");
-            } catch (error) {
-              Alert.alert("Error", "Failed to logout. Please try again.");
-            }
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
 
   if (!isAuthenticated) {
     return (
       <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
-      <View style={styles.notLoggedInContainer}>
-        <Text style={styles.notLoggedInIcon}>👤</Text>
-        <Text style={styles.notLoggedInText}>You are not logged in</Text>
+        <View style={styles.notLoggedInContainer}>
+          <Text style={styles.notLoggedInIcon}>👤</Text>
+          <Text style={styles.notLoggedInText}>You are not logged in</Text>
           <TouchableOpacity
             style={styles.loginButton}
             onPress={() => router.push("/login")}
@@ -98,9 +94,28 @@ export default function ProfileScreen() {
           <Text style={styles.chevron}>›</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push("/user-donations")}
+        >
           <Text style={styles.menuIcon}>❤️</Text>
           <Text style={styles.menuText}>My Donations</Text>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push("/project-status")}
+        >
+          <Text style={styles.menuIcon}>❤️</Text>
+          <Text style={styles.menuText}>Donation projects</Text>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push("/orphan-sponsorships")}
+        >
+          <Text style={styles.menuIcon}>❤️</Text>
+          <Text style={styles.menuText}>Orphan Sponsorships</Text>
           <Text style={styles.chevron}>›</Text>
         </TouchableOpacity>
 
@@ -250,4 +265,3 @@ const styles = StyleSheet.create({
     color: "#d32f2f",
   },
 });
-

@@ -18,6 +18,14 @@ export default function RootLayout() {
             <Stack.Screen name="login" options={{ headerShown: false }} />
             <Stack.Screen name="signup" options={{ headerShown: false }} />
             <Stack.Screen
+              name="user-donations"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="project-status"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
               name="campaign/[slug]"
               options={{ headerShown: false }}
             />
