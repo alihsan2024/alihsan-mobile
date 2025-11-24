@@ -9,26 +9,29 @@
       "backgroundColor": "#264B8B",
       "resizeMode": "contain"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "org.alihsan.mobile"
+      "bundleIdentifier": "org.alihsan.mobile",
+      "config": {
+        "googleMapsApiKey": "AIzaSyAr-lr0NLXtT58Q53qE53uvLQU5u8wHa9Y"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#264B8B"
       },
-      "package": "org.alihsan.mobile"
+      "package": "org.alihsan.mobile",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAr-lr0NLXtT58Q53qE53uvLQU5u8wHa9Y"
+        }
+      }
     },
     "web": {
       "bundler": "metro"
     },
     "scheme": "alihsan",
-    "plugins": [
-      "expo-router"
-    ]
+    "plugins": ["expo-router"]
   }
 }
-

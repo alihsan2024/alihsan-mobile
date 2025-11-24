@@ -2,17 +2,15 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Modal,
   StyleSheet,
-  Image,
   FlatList,
+  Alert,
 } from "react-native";
-import api from "@/services/api";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome } from "@expo/vector-icons";
-import { Alert } from "react-native";
+import api from "@/services/api";
 import PaymentHistoryModal from "@/components/ui/Modals/PaymentHistoryModal";
 import CancelSponsorshipModal from "@/components/ui/Modals/CancelSponsorshipModal";
 import OrphanProfileDetailsModal from "@/components/ui/Modals/OrphanProfileDetailsModal";
@@ -22,12 +20,10 @@ interface Orphan {
   name: string;
   cover_image?: string;
 }
-
 interface OrphanUserAllocation {
   orphanId: number;
   orphan?: Orphan;
 }
-
 interface Sponsorship {
   id: number;
   subscriptionId: string;
@@ -96,7 +92,6 @@ const OrphanSponsorshipsTab: React.FC = () => {
     setSponsorshipToCancel(sponsorship);
     setShowCancelModal(true);
   };
-
   const openOrphanDetailsModal = (orphan: Orphan) => {
     setSelectedOrphan(orphan);
     setShowOrphanDetailsModal(true);
@@ -123,28 +118,24 @@ const OrphanSponsorshipsTab: React.FC = () => {
     setShowModal(true);
     setSelectedSponsorship(sponsorship);
     const subscriptionId = sponsorship.subscriptionId;
-    if (!paymentCache[subscriptionId]) {
+    if (!paymentCache[subscriptionId])
       await fetchPaymentsForSponsorship(subscriptionId);
-    }
   };
 
-  if (loading) {
+  if (loading)
     return (
-      <View style={styles.center}>
+      <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" />
-      </View>
+      </SafeAreaView>
     );
-  }
 
   const totalOrphans = sponsorships.reduce(
     (total, s) => total + (s.orphanUserAllocations?.length || 0),
     0
   );
-
   const activeSponsorships = sponsorships.filter(
     (s) => s.status === "active"
   ).length;
-
   const totalMonthlyAmount =
     sponsorships
       .filter((s) => s.status === "active")
@@ -154,15 +145,13 @@ const OrphanSponsorshipsTab: React.FC = () => {
         0
       ) / 100;
 
-  return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
+  const renderHeader = () => (
+    <>
       <Text style={styles.title}>Orphan Sponsorships</Text>
       <Text style={styles.subtitle}>
         Manage and view your orphan sponsorships
       </Text>
 
-      {/* Summary Statistics */}
       {sponsorships.length > 0 && (
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: "#E0F2FF" }]}>
@@ -182,14 +171,15 @@ const OrphanSponsorshipsTab: React.FC = () => {
         </View>
       )}
 
-      {/* Error or Empty */}
-      {error ? (
+      {error && (
         <View
           style={[styles.center, { padding: 16, backgroundColor: "#FEE2E2" }]}
         >
           <Text style={{ color: "#B91C1C" }}>{error}</Text>
         </View>
-      ) : sponsorships.length === 0 ? (
+      )}
+
+      {!error && sponsorships.length === 0 && (
         <View
           style={[
             styles.center,
@@ -212,69 +202,73 @@ const OrphanSponsorshipsTab: React.FC = () => {
             today.
           </Text>
         </View>
-      ) : (
-        <FlatList
-          data={sponsorships}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item: s }) => (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => handleCardClick(s)}
-            >
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>
-                  {s.orphanUserAllocations?.length || 0} Orphan
-                  {s.orphanUserAllocations && s.orphanUserAllocations.length > 1
-                    ? "s"
-                    : ""}
-                </Text>
-                <Text style={styles.cardSubtitle}>
-                  $
-                  {(
-                    (s.amountInCents / 100) *
-                    (s.orphanUserAllocations?.length || 1)
-                  ).toFixed(2)}{" "}
-                  / {s.sponsorshipType}
-                </Text>
-              </View>
-              <View style={styles.cardDetails}>
-                <Text>Start: {new Date(s.startDate).toLocaleDateString()}</Text>
-                <Text>
-                  Next Due:{" "}
-                  {s.nextDueDate
-                    ? new Date(s.nextDueDate).toLocaleDateString()
-                    : "N/A"}
-                </Text>
-                <Text>
-                  Subscription ID: #{s.subscriptionId?.slice(0, 8) || "N/A"}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => openCancelModal(s)}
-                  disabled={cancelling === s.id}
-                  style={[
-                    styles.cancelBtn,
-                    cancelling === s.id && { opacity: 0.5 },
-                  ]}
-                >
-                  <Text style={styles.cancelBtnText}>
-                    {cancelling === s.id ? "Cancelling..." : "Cancel"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          )}
-        />
       )}
+    </>
+  );
 
+  return (
+    <SafeAreaView style={{ flex: 1 }}>
+      <FlatList
+        data={sponsorships}
+        keyExtractor={(item) => item.id.toString()}
+        ListHeaderComponent={renderHeader}
+        renderItem={({ item: s }) => (
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => handleCardClick(s)}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>
+                {s.orphanUserAllocations?.length || 0} Orphan
+                {s.orphanUserAllocations && s.orphanUserAllocations.length > 1
+                  ? "s"
+                  : ""}
+              </Text>
+              <Text style={styles.cardSubtitle}>
+                $
+                {(
+                  (s.amountInCents / 100) *
+                  (s.orphanUserAllocations?.length || 1)
+                ).toFixed(2)}{" "}
+                / {s.sponsorshipType}
+              </Text>
+            </View>
+            <View style={styles.cardDetails}>
+              <Text>Start: {new Date(s.startDate).toLocaleDateString()}</Text>
+              <Text>
+                Next Due:{" "}
+                {s.nextDueDate
+                  ? new Date(s.nextDueDate).toLocaleDateString()
+                  : "N/A"}
+              </Text>
+              <Text>
+                Subscription ID: #{s.subscriptionId?.slice(0, 8) || "N/A"}
+              </Text>
+              <TouchableOpacity
+                onPress={() => openCancelModal(s)}
+                disabled={cancelling === s.id}
+                style={[
+                  styles.cancelBtn,
+                  cancelling === s.id && { opacity: 0.5 },
+                ]}
+              >
+                <Text style={styles.cancelBtnText}>
+                  {cancelling === s.id ? "Cancelling..." : "Cancel"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        )}
+      />
       {/* Modals */}
       {showModal && selectedSponsorship && (
         <PaymentHistoryModal
           isOpen={showModal}
           onClose={() => setShowModal(false)}
-          onExport={() => {}} // TODO: implement export logic
+          onExport={() => {}}
           selectedSponsorship={selectedSponsorship}
           loadingPayments={loadingPayments}
-          getGroupedPayments={() => []} // implement similar to web
+          getGroupedPayments={() => []}
           openOrphanDetailsModal={openOrphanDetailsModal}
         />
       )}
@@ -303,7 +297,7 @@ const OrphanSponsorshipsTab: React.FC = () => {
           selectedSponsorship={selectedSponsorship}
         />
       )}
-    </ScrollView>
+    </SafeAreaView>
   );
 };
 
