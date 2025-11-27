@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import api from "../services/api";
+import React, { use, useEffect, useState } from "react";
+import api from "@/utils/api";
 import { useLocalSearchParams } from "expo-router";
 import {
   View,
@@ -17,6 +17,9 @@ import { FontAwesome, Feather } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { getCountryCoordinates } from "@/utils/countryCoordinates";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchDonationProjectById } from "@/store/reduxSlice/donationProjectSlice";
+import { AppDispatch } from "@/store/store";
 
 export interface MediaType {
   id: number;
@@ -74,10 +77,10 @@ const formatStatusText = (status: string) =>
 // ...types now defined above, remove these
 
 const ProjectUpdatesPage = () => {
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [projectDetails, setProjectDetails] =
-    useState<ProjectDetailsType | null>(null);
+  // const [loading, setLoading] = useState<boolean>(false);
+  // const [error, setError] = useState<string | null>(null);
+  // const [projectDetails, setProjectDetails] =
+  //   useState<ProjectDetailsType | null>(null);
   const [selectedMedia, setSelectedMedia] = useState<MediaType | null>(null);
   const [copiedOrderId, setCopiedOrderId] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
@@ -86,21 +89,32 @@ const ProjectUpdatesPage = () => {
   const params = useLocalSearchParams();
   const token = typeof params.token === "string" ? params.token : undefined;
 
+  const { projectDetails, loading, error } = useSelector(
+    (state: any) => state.donationProjects
+  );
+  const dispatch = useDispatch<AppDispatch>();
+
+  // console.log({ projectDetails });
+
   useEffect(() => {
-    if (!token) return;
-    setLoading(true);
-    setError(null);
-    api
-      .get(`/donation-project/project-updates/${token}`)
-      .then((response) => {
-        setProjectDetails(response.data.payload);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.response?.data?.message || "Something went wrong");
-        setLoading(false);
-      });
-  }, [token]);
+    if (token) dispatch(fetchDonationProjectById(token));
+  }, [dispatch, token]);
+
+  // useEffect(() => {
+  //   if (!token) return;
+  //   setLoading(true);
+  //   setError(null);
+  //   api
+  //     .get(`/donation-project/project-updates/${token}`)
+  //     .then((response: any) => {
+  //       setProjectDetails(response.data.payload);
+  //       setLoading(false);
+  //     })
+  //     .catch((err: any) => {
+  //       setError(err.response?.data?.message || "Something went wrong");
+  //       setLoading(false);
+  //     });
+  // }, [token]);
 
   const getShareUrl = () => "https://alihsan.org/project-updates";
 

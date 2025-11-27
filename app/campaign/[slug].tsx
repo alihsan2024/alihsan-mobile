@@ -14,7 +14,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { getCampaignDetails } from "../../services/api";
+import { getCampaignDetails } from "../../utils/api";
 import { Image as ExpoImage } from "expo-image";
 import { useBasket } from "../../context/BasketContext";
 import LoadingScreen from "../../components/LoadingScreen";

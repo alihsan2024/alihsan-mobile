@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   getBasketItems,
@@ -8,7 +14,7 @@ import {
   bulkAddToBasket,
   BasketItem,
   AddToBasketRequest,
-} from "../services/api";
+} from "../utils/api";
 import { useAuth } from "./AuthContext";
 
 interface BasketContextType {
@@ -196,10 +202,7 @@ export const BasketProvider: React.FC<BasketProviderProps> = ({ children }) => {
     await AsyncStorage.removeItem("localBasket");
   };
 
-  const itemCount = items.reduce(
-    (sum, item) => sum + (item.quantity || 1),
-    0
-  );
+  const itemCount = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
 
   const totalAmount = items.reduce((sum, item) => sum + (item.total || 0), 0);
 
@@ -221,4 +224,3 @@ export const BasketProvider: React.FC<BasketProviderProps> = ({ children }) => {
     <BasketContext.Provider value={value}>{children}</BasketContext.Provider>
   );
 };
-

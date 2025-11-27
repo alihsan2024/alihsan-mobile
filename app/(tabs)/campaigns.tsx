@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { fetchCampaigns, Campaign } from "../../services/api";
+import { fetchCampaigns, Campaign } from "../../utils/api";
 import LoadingScreen from "../../components/LoadingScreen";
 import CampaignCard from "@/components/CampaignCard";
 

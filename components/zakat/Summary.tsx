@@ -1,305 +1,265 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { useZakat } from "../../context/ZakatContext";
+import { View, Text, ScrollView } from "react-native";
+import { useSelector, useDispatch } from "react-redux";
+import Button from "@/components/ui/Button";
+import { zakatStep } from "@/store/reduxSlice/zakatSlice";
 
-export default function Summary() {
-  const {
-    amounts,
-    calculateWealth,
-    calculateZakat,
-    calculateNisab,
-    setStep,
-    prices,
-  } = useZakat();
-
-  const wealth = calculateWealth();
-  const zakat = calculateZakat();
-  const nisab = calculateNisab();
-
-  // Ensure nisab values are valid numbers
-  const silverNisab =
-    isFinite(nisab.silver) && !isNaN(nisab.silver) ? nisab.silver : 0;
-  const goldNisab = isFinite(nisab.gold) && !isNaN(nisab.gold) ? nisab.gold : 0;
-
-  const navigateToStep = (step: number) => {
-    setStep(step);
-  };
-
-  const totalSilver = amounts.silver.reduce((sum, item) => sum + item.value, 0);
-  const totalGold = amounts.gold.reduce((sum, item) => sum + item.value, 0);
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Zakatable Wealth</Text>
-          <Text style={styles.wealth}>
-            {amounts.unit}{" "}
-            {wealth.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.zakatSection}>
-          <Text style={styles.zakatLabel}>Your estimated Zakat Payment</Text>
-          <Text style={styles.zakatAmount}>
-            {amounts.unit}{" "}
-            {zakat.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </Text>
-          <Text style={styles.zakatSubtext}>2.5% of Zakatable Wealth</Text>
-        </View>
-
-        {(amounts.cash > 0 ||
-          amounts.bank > 0 ||
-          totalGold > 0 ||
-          totalSilver > 0 ||
-          amounts.investmentProfit > 0 ||
-          amounts.shareResale > 0 ||
-          amounts.merchandise > 0 ||
-          amounts.loan > 0 ||
-          amounts.other > 0) && (
-          <>
-            <View style={styles.divider} />
-            <View style={styles.breakdown}>
-              {amounts.cash > 0 || amounts.bank > 0 ? (
-                <TouchableOpacity
-                  style={styles.breakdownItem}
-                  onPress={() => navigateToStep(2)}
-                >
-                  <Text style={styles.breakdownText}>
-                    Cash: {amounts.unit}{" "}
-                    {(amounts.cash + amounts.bank).toLocaleString()}
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
-
-              {totalGold > 0 ? (
-                <TouchableOpacity
-                  style={styles.breakdownItem}
-                  onPress={() => navigateToStep(2)}
-                >
-                  <Text style={styles.breakdownText}>
-                    Gold: {amounts.unit} {totalGold.toFixed(2)}
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
-
-              {totalSilver > 0 ? (
-                <TouchableOpacity
-                  style={styles.breakdownItem}
-                  onPress={() => navigateToStep(2)}
-                >
-                  <Text style={styles.breakdownText}>
-                    Silver: {amounts.unit} {totalSilver.toFixed(2)}
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
-
-              {amounts.investmentProfit > 0 ||
-              amounts.shareResale > 0 ||
-              amounts.merchandise > 0 ? (
-                <TouchableOpacity
-                  style={styles.breakdownItem}
-                  onPress={() => navigateToStep(3)}
-                >
-                  <Text style={styles.breakdownText}>
-                    Investments: {amounts.unit}{" "}
-                    {(
-                      amounts.investmentProfit +
-                      amounts.shareResale +
-                      amounts.merchandise
-                    ).toLocaleString()}
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
-
-              {amounts.loan > 0 ? (
-                <TouchableOpacity
-                  style={styles.breakdownItem}
-                  onPress={() => navigateToStep(4)}
-                >
-                  <Text style={styles.breakdownText}>
-                    Loans: {amounts.unit} {amounts.loan.toLocaleString()}
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
-
-              {amounts.other > 0 ? (
-                <TouchableOpacity
-                  style={styles.breakdownItem}
-                  onPress={() => navigateToStep(4)}
-                >
-                  <Text style={styles.breakdownText}>
-                    Other: {amounts.unit} {amounts.other.toLocaleString()}
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          </>
-        )}
-
-        {prices &&
-        prices.silverFinePriceInUsd > 0 &&
-        prices.goldPriceInUsd > 0 ? (
-          <>
-            <View style={styles.divider} />
-            <View style={styles.nisabSection}>
-              <Text style={styles.nisabTitle}>
-                Calculation is Based on Silver Nisab
-              </Text>
-              <View style={styles.nisabRow}>
-                <View style={styles.nisabBadge}>
-                  <Text style={styles.nisabLabel}>Gold Nisab</Text>
-                  <Text style={styles.nisabValue}>
-                    {amounts.unit}{" "}
-                    {goldNisab.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </Text>
-                </View>
-                <View style={[styles.nisabBadge, styles.silverBadge]}>
-                  <Text style={styles.nisabLabel}>Silver Nisab</Text>
-                  <Text style={styles.nisabValue}>
-                    {amounts.unit}{" "}
-                    {silverNisab.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </Text>
-                </View>
-              </View>
-              {prices.updatedAt && (
-                <Text style={styles.updateText}>
-                  Prices updated: {new Date(prices.updatedAt).toLocaleString()}
-                </Text>
-              )}
-            </View>
-          </>
-        ) : prices ? (
-          <>
-            <View style={styles.divider} />
-            <View style={styles.nisabSection}>
-              <Text style={styles.updateText}>Loading metal prices...</Text>
-            </View>
-          </>
-        ) : null}
-      </View>
-    </View>
-  );
+interface SummaryProps {
+  zakatTotal: number;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    marginTop: 24,
-  },
-  card: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 16,
-    padding: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: "#264B8B",
-  },
-  header: {
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 8,
-  },
-  wealth: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#264B8B",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#ddd",
-    marginVertical: 16,
-  },
-  zakatSection: {
-    marginBottom: 8,
-  },
-  zakatLabel: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 8,
-  },
-  zakatAmount: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#264B8B",
-    marginBottom: 4,
-  },
-  zakatSubtext: {
-    fontSize: 14,
-    color: "#666",
-  },
-  breakdown: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  breakdownItem: {
-    backgroundColor: "#fff",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-  breakdownText: {
-    fontSize: 12,
-    color: "#264B8B",
-    fontWeight: "600",
-  },
-  nisabSection: {
-    marginTop: 8,
-  },
-  nisabTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 12,
-  },
-  nisabRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 12,
-  },
-  nisabBadge: {
-    flex: 1,
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-  silverBadge: {
-    backgroundColor: "#f5f5f5",
-  },
-  nisabLabel: {
-    fontSize: 12,
-    color: "#666",
-    marginBottom: 4,
-  },
-  nisabValue: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  updateText: {
-    fontSize: 11,
-    color: "#999",
-    marginTop: 8,
-  },
-});
+const Summary = ({ zakatTotal }: SummaryProps) => {
+  const dispatch = useDispatch();
+  const { amounts, prices, step } = useSelector(
+    (state: any) => state.zakatCalculator
+  );
+
+  const total = (arr: { value: number }[]) =>
+    arr.reduce((sum: number, item: { value: number }) => sum + item.value, 0);
+
+  const wealth =
+    amounts.cash +
+    amounts.bank +
+    total(amounts.silver) +
+    total(amounts.gold) +
+    amounts.investmentProfit +
+    amounts.shareResale +
+    amounts.merchandise +
+    amounts.loan +
+    amounts.other;
+
+  const nisabSilver =
+    612.36 *
+    (typeof prices.silverFinePriceInUsd === "number"
+      ? prices.silverFinePriceInUsd
+      : Number(prices.silverFinePriceInUsd) || 0);
+  const nisabGold =
+    87.48 *
+    (typeof prices.price?.goldPriceInUsd === "number"
+      ? prices.price.goldPriceInUsd
+      : Number(prices.price?.goldPriceInUsd) || 0);
+
+  const usdToUnit = (amount: number) =>
+    prices.price?.todayAud
+      ? amount /
+        (typeof prices.price.todayAud === "number"
+          ? prices.price.todayAud
+          : Number(prices.price.todayAud) || 1)
+      : amount;
+
+  const zakatableAmount = (nisab: number, wealth: number) =>
+    usdToUnit(nisab) < wealth ? wealth / 40 : 0;
+
+  const showDate = (d: Date) =>
+    d.toLocaleTimeString() + " " + d.toLocaleDateString();
+
+  const calculateStep = (stepToGo: number) => {
+    const stepsToMove = stepToGo - step;
+    dispatch(zakatStep(stepsToMove));
+  };
+
+  return (
+    <ScrollView
+      contentContainerStyle={{
+        padding: 16,
+        backgroundColor: "#F0F0F0",
+        borderRadius: 16,
+      }}
+    >
+      {/* Zakatable Wealth */}
+      <View
+        style={{
+          padding: 12,
+          backgroundColor: "#E0EFFF",
+          borderRadius: 12,
+          marginBottom: 12,
+        }}
+      >
+        <Text style={{ fontWeight: "600" }}>
+          Zakatable Wealth:{" "}
+          {typeof wealth === "number" ? wealth.toFixed(2) : "0.00"} AUD
+        </Text>
+      </View>
+
+      {/* Estimated Zakat */}
+      <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 4 }}>
+        Your Estimated Zakat Payment
+      </Text>
+      <Text
+        style={{
+          fontSize: 22,
+          fontWeight: "700",
+          color: "#264B8B",
+          marginBottom: 4,
+        }}
+      >
+        {typeof zakatTotal === "number" && zakatTotal > 0
+          ? zakatTotal.toFixed(2)
+          : typeof zakatableAmount(nisabSilver, wealth) === "number"
+          ? zakatableAmount(nisabSilver, wealth).toFixed(2)
+          : "0.00"}{" "}
+        AUD
+      </Text>
+      <Text style={{ fontSize: 14, marginBottom: 12 }}>
+        2.5% of Zakatable Wealth
+      </Text>
+
+      {/* Dynamic Buttons for Editing Steps */}
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          marginBottom: 12,
+        }}
+      >
+        {[
+          (amounts.cash || amounts.bank) && (
+            <View key="cash" style={{ marginRight: 8, marginBottom: 8 }}>
+              <Button
+                variant="secondaryOutline"
+                label={`Cash: $${(
+                  amounts.cash + amounts.bank
+                ).toLocaleString()}`}
+                onPress={() => calculateStep(2)}
+              />
+            </View>
+          ),
+          (amounts.investmentProfit ||
+            amounts.shareResale ||
+            amounts.merchandise) && (
+            <View key="investments" style={{ marginRight: 8, marginBottom: 8 }}>
+              <Button
+                variant="secondaryOutline"
+                label={`Investments: $${(
+                  amounts.investmentProfit +
+                  amounts.shareResale +
+                  amounts.merchandise
+                ).toLocaleString()}`}
+                onPress={() => calculateStep(3)}
+              />
+            </View>
+          ),
+          amounts.loan > 0 && (
+            <View key="loan" style={{ marginRight: 8, marginBottom: 8 }}>
+              <Button
+                variant="secondaryOutline"
+                label={`Loans: $${amounts.loan.toLocaleString()}`}
+                onPress={() => calculateStep(4)}
+              />
+            </View>
+          ),
+          amounts.other > 0 && (
+            <View key="other" style={{ marginRight: 8, marginBottom: 8 }}>
+              <Button
+                variant="secondaryOutline"
+                label={`Other Wealth: $${amounts.other.toLocaleString()}`}
+                onPress={() => calculateStep(4)}
+              />
+            </View>
+          ),
+          total(amounts.gold) > 0 && (
+            <View key="gold" style={{ marginRight: 8, marginBottom: 8 }}>
+              <Button
+                variant="dark"
+                label={`Zakatable Gold: $${
+                  typeof total(amounts.gold) === "number" &&
+                  !isNaN(total(amounts.gold))
+                    ? total(amounts.gold).toFixed(2)
+                    : "0.00"
+                }`}
+                onPress={() => calculateStep(2)}
+              />
+            </View>
+          ),
+          total(amounts.silver) > 0 && (
+            <View key="silver" style={{ marginRight: 8, marginBottom: 8 }}>
+              <Button
+                variant="dark"
+                label={`Zakatable Silver: $${
+                  typeof total(amounts.silver) === "number" &&
+                  !isNaN(total(amounts.silver))
+                    ? total(amounts.silver).toFixed(2)
+                    : "0.00"
+                }`}
+                onPress={() => calculateStep(2)}
+              />
+            </View>
+          ),
+        ].filter(Boolean)}
+      </View>
+
+      {/* Divider */}
+      <View
+        style={{ height: 1, backgroundColor: "#ccc", marginVertical: 12 }}
+      />
+
+      {/* Nisab Info */}
+      <View style={{ padding: 12, backgroundColor: "#FFF", borderRadius: 12 }}>
+        <Text style={{ fontWeight: "600", marginBottom: 6 }}>
+          Calculation is Based on Silver Nisab
+        </Text>
+        <Text style={{ fontSize: 12, marginBottom: 4 }}>
+          Current price of gold per gram (24K):{" "}
+          {typeof usdToUnit(Number(prices.price?.goldPriceInUsd)) ===
+            "number" && !isNaN(usdToUnit(Number(prices.price?.goldPriceInUsd)))
+            ? usdToUnit(Number(prices.price?.goldPriceInUsd)).toFixed(2)
+            : "0.00"}{" "}
+          AUD
+        </Text>
+        <Text style={{ fontSize: 12, marginBottom: 8 }}>
+          Current price of silver per gram (Fine):{" "}
+          {typeof usdToUnit(Number(prices.silverFinePriceInUsd)) === "number" &&
+          !isNaN(usdToUnit(Number(prices.silverFinePriceInUsd)))
+            ? usdToUnit(Number(prices.silverFinePriceInUsd)).toFixed(2)
+            : "0.00"}{" "}
+          AUD
+        </Text>
+
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 4 }}>
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "#DDEEFF",
+              padding: 6,
+              borderRadius: 8,
+            }}
+          >
+            <Text style={{ fontWeight: "600" }}>
+              Gold Nisab:{" "}
+              {typeof usdToUnit(nisabGold) === "number" &&
+              !isNaN(usdToUnit(nisabGold))
+                ? usdToUnit(nisabGold).toFixed(2)
+                : "0.00"}{" "}
+              AUD
+            </Text>
+          </View>
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "#EEE",
+              padding: 6,
+              borderRadius: 8,
+            }}
+          >
+            <Text style={{ fontWeight: "600" }}>
+              Silver Nisab:{" "}
+              {typeof usdToUnit(nisabSilver) === "number" &&
+              !isNaN(usdToUnit(nisabSilver))
+                ? usdToUnit(nisabSilver).toFixed(2)
+                : "0.00"}{" "}
+              AUD
+            </Text>
+          </View>
+        </View>
+
+        {prices.updatedAt && (
+          <Text style={{ fontSize: 12, color: "#555", marginTop: 6 }}>
+            Prices last updated at {showDate(new Date(prices.updatedAt))}
+          </Text>
+        )}
+      </View>
+    </ScrollView>
+  );
+};
+
+export default Summary;

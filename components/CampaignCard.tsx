@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { Campaign } from "../services/api";
+import { Campaign } from "../utils/api";
 import { Image as ExpoImage } from "expo-image";
 
 type Props = {

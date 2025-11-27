@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { register } from "../services/api";
+import { register } from "../utils/api";
 import LoadingScreen from "../components/LoadingScreen";
 
 export default function SignupScreen() {
@@ -91,7 +91,10 @@ export default function SignupScreen() {
       );
     } catch (err: any) {
       setError(err.message || "Registration failed. Please try again.");
-      Alert.alert("Registration Failed", err.message || "Registration failed. Please try again.");
+      Alert.alert(
+        "Registration Failed",
+        err.message || "Registration failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -352,4 +355,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-

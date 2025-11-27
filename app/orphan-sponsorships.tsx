@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome } from "@expo/vector-icons";
-import api from "@/services/api";
+import api from "@/utils/api";
 import PaymentHistoryModal from "@/components/ui/Modals/PaymentHistoryModal";
 import CancelSponsorshipModal from "@/components/ui/Modals/CancelSponsorshipModal";
 import OrphanProfileDetailsModal from "@/components/ui/Modals/OrphanProfileDetailsModal";

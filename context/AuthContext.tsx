@@ -1,5 +1,16 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { login as loginAPI, logout as logoutAPI, initAuth, AuthResponse } from "../services/api";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import {
+  login as loginAPI,
+  logout as logoutAPI,
+  initAuth,
+  AuthResponse,
+} from "../utils/api";
 
 interface AuthContextType {
   user: AuthResponse | null;
@@ -73,4 +84,3 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-

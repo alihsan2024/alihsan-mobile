@@ -1,5 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
-import { getMetalPrices, MetalPrices } from "../services/api";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  ReactNode,
+} from "react";
+import { getMetalPrices, MetalPrices } from "../utils/api";
 
 export interface ZakatAmounts {
   cash: number;
@@ -91,13 +98,18 @@ export const ZakatProvider: React.FC<ZakatProviderProps> = ({ children }) => {
       const metalPrices = await getMetalPrices();
       console.log("Loaded metal prices:", metalPrices);
       // Only set prices if we have valid data
-      if (metalPrices && (metalPrices.goldPriceInUsd > 0 || metalPrices.silverFinePriceInUsd > 0)) {
+      if (
+        metalPrices &&
+        (metalPrices.goldPriceInUsd > 0 || metalPrices.silverFinePriceInUsd > 0)
+      ) {
         setPrices(metalPrices);
         retryCountRef.current = 0; // Reset retry count on success
       } else {
         if (retryCountRef.current < maxRetries) {
           retryCountRef.current += 1;
-          console.warn(`Metal prices are invalid or zero, retrying... (${retryCountRef.current}/${maxRetries})`);
+          console.warn(
+            `Metal prices are invalid or zero, retrying... (${retryCountRef.current}/${maxRetries})`
+          );
           // Retry after a short delay
           setTimeout(() => {
             loadPrices();
@@ -174,7 +186,10 @@ export const ZakatProvider: React.FC<ZakatProviderProps> = ({ children }) => {
   };
 
   const calculateWealth = (): number => {
-    const totalSilver = amounts.silver.reduce((sum, item) => sum + item.value, 0);
+    const totalSilver = amounts.silver.reduce(
+      (sum, item) => sum + item.value,
+      0
+    );
     const totalGold = amounts.gold.reduce((sum, item) => sum + item.value, 0);
 
     return (
@@ -269,7 +284,9 @@ export const ZakatProvider: React.FC<ZakatProviderProps> = ({ children }) => {
         ? wealth / 40
         : 0;
 
-    return isFinite(zakatableAmount) && !isNaN(zakatableAmount) ? zakatableAmount : 0;
+    return isFinite(zakatableAmount) && !isNaN(zakatableAmount)
+      ? zakatableAmount
+      : 0;
   };
 
   const value: ZakatContextType = {
@@ -294,4 +311,3 @@ export const ZakatProvider: React.FC<ZakatProviderProps> = ({ children }) => {
     <ZakatContext.Provider value={value}>{children}</ZakatContext.Provider>
   );
 };
-

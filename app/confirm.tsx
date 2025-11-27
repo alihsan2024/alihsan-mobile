@@ -79,7 +79,7 @@ const ConfirmScreen = () => {
           // Normal user: fetch new clientSecret from /basket/checkout
           setStateLoading(true);
           try {
-            const response = await import("../services/api").then((m) =>
+            const response = await import("../utils/api").then((m) =>
               m.default.post("/basket/checkout", {
                 ...parsed,
                 paymentGateway: "stripe",
@@ -425,7 +425,11 @@ const ConfirmScreen = () => {
               <View style={{ padding: 12 }}>
                 {items.map((item: any) => (
                   <View
-                    key={item.id}
+                    key={
+                      item.id
+                        ? `${item.id}-${item.name}-${item.total}`
+                        : `${item.name}-${item.total}-${Math.random()}`
+                    }
                     style={{
                       flexDirection: "row",
                       justifyContent: "space-between",

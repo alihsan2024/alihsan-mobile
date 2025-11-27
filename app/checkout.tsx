@@ -18,10 +18,10 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFormik } from "formik";
 import * as yup from "yup";
-import api from "../services/api";
+import api from "../utils/api";
 // import PhoneInput from "react-native-phone-input";
 import LoadingScreen from "@/components/LoadingScreen";
-import { BasketItem } from "@/services/api";
+import { BasketItem } from "@/utils/api";
 
 // Initial form values
 const initialState = {

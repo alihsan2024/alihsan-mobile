@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { fetchCampaigns, Campaign } from "../../services/api";
+import { fetchCampaigns, Campaign } from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
 import LoadingScreen from "../../components/LoadingScreen";
 
@@ -67,7 +67,8 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Al-Ihsan</Text>
         <Text style={styles.subtitle}>
-          {campaigns.length} campaign{campaigns.length !== 1 ? "s" : ""} available
+          {campaigns.length} campaign{campaigns.length !== 1 ? "s" : ""}{" "}
+          available
         </Text>
       </View>
 
@@ -277,4 +278,3 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
 });
-

@@ -9,7 +9,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { TabView, SceneMap } from "react-native-tab-view";
-import api from "@/services/api";
+import api from "@/utils/api";
 
 export enum MyDonationTypes {
   ACTIVE_RECURRING = "ACTIVE_RECURRING",

@@ -10,7 +10,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import api from "@/services/api";
+import api from "@/utils/api";
 import { useAuth } from "@/context/AuthContext";
 
 const WATER_WELL_CAMPAIGN_ID = 6;
