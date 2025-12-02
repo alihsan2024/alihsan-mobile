@@ -1,7 +1,12 @@
 import { Tabs } from "expo-router";
 import { Platform, View, Text, StyleSheet } from "react-native";
-import { useBasket } from "../../context/BasketContext";
+import { useSelector } from "react-redux";
+import { useGetBasketQuery } from "@/store/reduxSlice/api/basketApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
 
 const TabIcon = ({
   name,
@@ -24,7 +29,34 @@ const TabIcon = ({
 );
 
 export default function TabsLayout() {
-  const { itemCount } = useBasket();
+  const { user } = useSelector((state: any) => state.authentication);
+  const isAuthenticated = !!user;
+  const { data: basketData } = useGetBasketQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const [guestBasket, setGuestBasket] = useState<any[]>([]);
+  useEffect(() => {
+    if (!isAuthenticated) {
+      AsyncStorage.getItem("guestBasket").then((data) => {
+        setGuestBasket(data ? JSON.parse(data) : []);
+      });
+    }
+  }, [isAuthenticated]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated) {
+        AsyncStorage.getItem("guestBasket").then((data) => {
+          setGuestBasket(data ? JSON.parse(data) : []);
+        });
+      }
+    }, [isAuthenticated])
+  );
+  const basketItems = isAuthenticated ? basketData?.payload ?? [] : guestBasket;
+  const itemCount = basketItems.reduce(
+    (sum: number, item: any) => sum + (item.quantity || 1),
+    0
+  );
 
   return (
     <Tabs

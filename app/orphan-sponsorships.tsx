@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -10,10 +10,16 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome } from "@expo/vector-icons";
-import api from "@/utils/api";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchSponsorships,
+  cancelSponsorship,
+  fetchPaymentsForSponsorship,
+} from "@/store/reduxSlice/orphanSponsorshipSlice";
 import PaymentHistoryModal from "@/components/ui/Modals/PaymentHistoryModal";
 import CancelSponsorshipModal from "@/components/ui/Modals/CancelSponsorshipModal";
 import OrphanProfileDetailsModal from "@/components/ui/Modals/OrphanProfileDetailsModal";
+import { AppDispatch } from "@/store/store";
 
 interface Orphan {
   id: number;
@@ -37,16 +43,19 @@ interface Sponsorship {
 }
 
 const OrphanSponsorshipsTab: React.FC = () => {
-  const [sponsorships, setSponsorships] = useState<Sponsorship[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [cancelling, setCancelling] = useState<number | null>(null);
+  const dispatch = useDispatch<AppDispatch>();
+  const {
+    sponsorships,
+    loading,
+    error,
+    cancelling,
+    paymentCache,
+    loadingPayments,
+  } = useSelector((state: any) => state.orphanSponsorships);
 
   const [selectedSponsorship, setSelectedSponsorship] =
     useState<Sponsorship | null>(null);
-  const [paymentCache, setPaymentCache] = useState<Record<string, any[]>>({});
   const [showModal, setShowModal] = useState(false);
-  const [loadingPayments, setLoadingPayments] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [sponsorshipToCancel, setSponsorshipToCancel] =
     useState<Sponsorship | null>(null);
@@ -54,73 +63,45 @@ const OrphanSponsorshipsTab: React.FC = () => {
   const [selectedOrphan, setSelectedOrphan] = useState<Orphan | null>(null);
 
   useEffect(() => {
-    fetchSponsorships();
-  }, []);
+    dispatch(fetchSponsorships());
+  }, [dispatch]);
 
-  const fetchSponsorships = async () => {
-    try {
-      const response = await api.get("/orphan-sponsorship/list/user");
-      setSponsorships(response.data.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to load sponsorships");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancel = async (id: number, orphanId?: number) => {
-    try {
-      setCancelling(id);
-      await api.post("/orphan-sponsorship/cancel", {
-        orphanId,
-        orphanSponsorshipId: id,
-      });
-      await fetchSponsorships();
-      setShowCancelModal(false);
-      setSponsorshipToCancel(null);
-    } catch (err: any) {
-      Alert.alert(
-        "Error",
-        err.response?.data?.message || "Cancellation failed"
-      );
-    } finally {
-      setCancelling(null);
-    }
-  };
-
-  const openCancelModal = (sponsorship: Sponsorship) => {
+  const openCancelModal = useCallback((sponsorship: Sponsorship) => {
     setSponsorshipToCancel(sponsorship);
     setShowCancelModal(true);
-  };
-  const openOrphanDetailsModal = (orphan: Orphan) => {
+  }, []);
+
+  const openOrphanDetailsModal = useCallback((orphan: Orphan) => {
     setSelectedOrphan(orphan);
     setShowOrphanDetailsModal(true);
-  };
+  }, []);
 
-  const fetchPaymentsForSponsorship = async (subscriptionId: string) => {
-    setLoadingPayments(true);
-    try {
-      const res = await api.get("/orphan-sponsorship/user/payments", {
-        params: { subscriptionId },
-      });
-      setPaymentCache((prev) => ({ ...prev, [subscriptionId]: res.data.data }));
-    } catch (err: any) {
-      Alert.alert(
-        "Error",
-        err.response?.data?.message || "Failed to load payments"
-      );
-    } finally {
-      setLoadingPayments(false);
-    }
-  };
+  const handleCancel = useCallback(
+    (id: number, orphanId?: number) => {
+      dispatch(cancelSponsorship({ id, orphanId }))
+        .unwrap()
+        .then(() => {
+          setShowCancelModal(false);
+          setSponsorshipToCancel(null);
+        })
+        .catch((err: any) => {
+          Alert.alert("Error", err || "Cancellation failed");
+        });
+    },
+    [dispatch]
+  );
 
-  const handleCardClick = async (sponsorship: Sponsorship) => {
-    setShowModal(true);
-    setSelectedSponsorship(sponsorship);
-    const subscriptionId = sponsorship.subscriptionId;
-    if (!paymentCache[subscriptionId])
-      await fetchPaymentsForSponsorship(subscriptionId);
-  };
+  const handleCardClick = useCallback(
+    (sponsorship: Sponsorship) => {
+      setShowModal(true);
+      setSelectedSponsorship(sponsorship);
+      const subscriptionId = sponsorship.subscriptionId;
+      if (!paymentCache[subscriptionId]) {
+        dispatch(fetchPaymentsForSponsorship(subscriptionId));
+      }
+    },
+    [dispatch, paymentCache]
+  );
 
   if (loading)
     return (
@@ -130,17 +111,18 @@ const OrphanSponsorshipsTab: React.FC = () => {
     );
 
   const totalOrphans = sponsorships.reduce(
-    (total, s) => total + (s.orphanUserAllocations?.length || 0),
+    (total: number, s: Sponsorship) =>
+      total + (s.orphanUserAllocations?.length || 0),
     0
   );
   const activeSponsorships = sponsorships.filter(
-    (s) => s.status === "active"
+    (s: Sponsorship) => s.status === "active"
   ).length;
   const totalMonthlyAmount =
     sponsorships
-      .filter((s) => s.status === "active")
+      .filter((s: Sponsorship) => s.status === "active")
       .reduce(
-        (sum, s) =>
+        (sum: number, s: Sponsorship) =>
           sum + s.amountInCents * (s.orphanUserAllocations?.length || 1),
         0
       ) / 100;

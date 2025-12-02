@@ -12,8 +12,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useBasket } from "@/context/BasketContext";
-import { useAuth } from "@/context/AuthContext";
+import { useSelector } from "react-redux";
+import { useGetBasketQuery } from "@/store/reduxSlice/api/basketApi";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFormik } from "formik";
@@ -120,8 +120,20 @@ const validationSchema = yup.object({
 
 export default function CheckoutScreen() {
   const insets = useSafeAreaInsets();
-  const { items } = useBasket();
-  const { user, isAuthenticated } = useAuth();
+  const user = useSelector((state: any) => state.authentication.user);
+  const isAuthenticated = !!user;
+  const { data: basketData } = useGetBasketQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const [guestBasket, setGuestBasket] = useState<any[]>([]);
+  useEffect(() => {
+    if (!isAuthenticated) {
+      AsyncStorage.getItem("guestBasket").then((data) => {
+        setGuestBasket(data ? JSON.parse(data) : []);
+      });
+    }
+  }, [isAuthenticated]);
+  const basketItems = isAuthenticated ? basketData?.payload ?? [] : guestBasket;
   const router = useRouter();
 
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -130,7 +142,7 @@ export default function CheckoutScreen() {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        if (!isAuthenticated) return;
+        if (!isAuthenticated || !user) return;
 
         const response = await api.get("/profile");
         const profile = response.data?.payload;
@@ -167,14 +179,15 @@ export default function CheckoutScreen() {
         setIsLoading(true);
         const updatedValues = {
           ...values,
-          basketItems: items,
+          basketItems: basketItems,
         };
         const ROLES = { ADMIN: "ADMIN", SUPERADMIN: "SUPERADMIN" };
         let response;
         if (
           !user?.email ||
           user?.role === ROLES.ADMIN ||
-          user?.role === ROLES.SUPERADMIN
+          user?.role === ROLES.SUPERADMIN ||
+          !isAuthenticated
         ) {
           // Anonymous/admin/superadmin
           response = await api.post("/basket/checkout-unknown", {
@@ -217,7 +230,7 @@ export default function CheckoutScreen() {
   });
 
   // Totals calculation
-  const subtotal = items.reduce(
+  const subtotal = basketItems.reduce(
     (
       acc: number,
       item: BasketItem // Use the correct BasketItem type
@@ -248,7 +261,7 @@ export default function CheckoutScreen() {
   const processingAmount = subtotal * processingFee;
   const total = subtotal + processingAmount;
 
-  if (!items) {
+  if (!basketItems) {
     return <LoadingScreen message="Loading checkout..." />;
   }
 

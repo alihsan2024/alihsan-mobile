@@ -20,6 +20,14 @@ import { useBasket } from "../../context/BasketContext";
 import LoadingScreen from "../../components/LoadingScreen";
 import { Ionicons } from "@expo/vector-icons";
 import CustomHeader from "@/components/CustomHeader";
+import { useAppDispatch } from "@/hooks/useAppDispatch";
+import { addBasketItem, getBasketItems } from "@/store/reduxSlice/basketSlice";
+import { useSelector } from "react-redux";
+import {
+  useAddToBasketMutation,
+  useGetBasketQuery,
+} from "@/store/reduxSlice/api/basketApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width } = Dimensions.get("window");
 
@@ -33,6 +41,14 @@ export default function CampaignDetailsScreen() {
   const [amount, setAmount] = useState("50");
   const [addingToCart, setAddingToCart] = useState(false);
   const { addItem, items } = useBasket();
+  const dispatch = useAppDispatch();
+  const { user } = useSelector((state: any) => state.authentication);
+  const isAuthenticated = !!user;
+  const [addToBasket] = useAddToBasketMutation();
+  const [guestBasket, setGuestBasket] = useState<any[]>([]);
+  const { data: basketData } = useGetBasketQuery(undefined, {
+    skip: !isAuthenticated,
+  });
 
   useEffect(() => {
     const loadCampaignDetails = async () => {
@@ -56,6 +72,14 @@ export default function CampaignDetailsScreen() {
 
     loadCampaignDetails();
   }, [slug]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      AsyncStorage.getItem("guestBasket").then((data) => {
+        setGuestBasket(data ? JSON.parse(data) : []);
+      });
+    }
+  }, [isAuthenticated]);
 
   if (loading) return <LoadingScreen message="Loading campaign..." />;
   if (error)
@@ -81,7 +105,10 @@ export default function CampaignDetailsScreen() {
   const media = campaignData?.CampaignMedia || [];
   const posts = campaignData?.Posts || [];
   const category = campaignData?.CampaignCategory;
-  const isInCart = items.some((item) => item.campaignId === campaignData?.id);
+  const basketItems = isAuthenticated ? basketData?.payload ?? [] : guestBasket;
+  const isInCart = basketItems.some(
+    (item: any) => item.campaignId === campaignData?.id
+  );
 
   const handleAddToCart = async () => {
     if (!campaignData?.id) {
@@ -100,6 +127,11 @@ export default function CampaignDetailsScreen() {
         campaignId: campaignData.id,
         amount: donationAmount,
         quantity: 1,
+        name: campaignData.name,
+        coverImage: campaignData.coverImage,
+        description: campaignData.description,
+        checkoutType: campaignData.checkoutType,
+        // add other fields as needed for display
       };
       if (checkoutType === "ADEEQAH_GENERAL_SACRIFICE") {
         Alert.alert(
@@ -109,7 +141,13 @@ export default function CampaignDetailsScreen() {
         setAddingToCart(false);
         return;
       }
-      await addItem(basketItem);
+      if (isAuthenticated) {
+        await addToBasket({ body: basketItem });
+      } else {
+        const updated = [...guestBasket, basketItem];
+        setGuestBasket(updated);
+        await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
+      }
       Alert.alert("Success", "Campaign added to cart!", [
         {
           text: "View Cart",

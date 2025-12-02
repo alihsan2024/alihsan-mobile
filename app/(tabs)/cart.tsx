@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,11 +11,16 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useBasket } from "../../context/BasketContext";
 import { Image as ExpoImage } from "expo-image";
 import LoadingScreen from "../../components/LoadingScreen";
-import { useAuth } from "../../context/AuthContext";
 import { LinearGradient } from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useSelector } from "react-redux";
+import {
+  useGetBasketQuery,
+  useAddToBasketMutation,
+  useRemoveFromBasketMutation,
+} from "@/store/reduxSlice/api/basketApi";
 
 // Format price helper
 const formatPrice = (price: number): string => {
@@ -47,28 +52,57 @@ const getRecurringLabel = (periodDays?: number): string => {
 };
 
 export default function CartScreen() {
-  const {
-    items,
-    isLoading,
-    itemCount,
-    totalAmount,
-    removeItem,
-    refreshBasket,
-    clearBasket,
-  } = useBasket();
-  const { isAuthenticated, user } = useAuth();
+  const { user } = useSelector((state: any) => state.authentication);
+  const isAuthenticated = !!user;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [guestBasket, setGuestBasket] = useState<any[]>([]);
+  const [guestLoading, setGuestLoading] = useState(false);
 
-  const onRefresh = async () => {
+  // RTK Query hooks for logged-in users
+  const {
+    data: basketData,
+    isLoading,
+    refetch,
+  } = useGetBasketQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  console.log({ basketData, isAuthenticated, guestBasket });
+  const [addToBasket] = useAddToBasketMutation();
+  const [removeFromBasket] = useRemoveFromBasketMutation();
+
+  // Load guest basket from AsyncStorage
+  const loadGuestBasket = useCallback(async () => {
+    setGuestLoading(true);
+    const data = await AsyncStorage.getItem("guestBasket");
+    setGuestBasket(data ? JSON.parse(data) : []);
+    setGuestLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      loadGuestBasket();
+    }
+  }, [isAuthenticated, loadGuestBasket]);
+
+  // Unified basketItems for rendering
+  const basketItems = isAuthenticated ? basketData?.payload ?? [] : guestBasket;
+
+  // Refresh logic
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refreshBasket();
+    if (isAuthenticated) {
+      await refetch();
+    } else {
+      await loadGuestBasket();
+    }
     setRefreshing(false);
-  };
+  }, [isAuthenticated, refetch, loadGuestBasket]);
 
-  const handleRemoveItem = (campaignId: number, donationItem?: string) => {
+  // Remove item logic
+  const handleRemoveItem = async (id: number, donationItem?: string) => {
     Alert.alert(
       "Remove Item",
       "Are you sure you want to remove this item from your cart?",
@@ -79,7 +113,19 @@ export default function CartScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await removeItem(campaignId, donationItem);
+              if (isAuthenticated) {
+                await removeFromBasket({ campaignId: id, donationItem });
+                await refetch();
+              } else {
+                const updated = guestBasket.filter(
+                  (item) => item.campaignId !== id
+                );
+                setGuestBasket(updated);
+                await AsyncStorage.setItem(
+                  "guestBasket",
+                  JSON.stringify(updated)
+                );
+              }
             } catch (error: any) {
               Alert.alert("Error", error.message || "Failed to remove item");
             }
@@ -89,31 +135,18 @@ export default function CartScreen() {
     );
   };
 
+  // Checkout logic
   const handleCheckout = () => {
-    // if (!isAuthenticated) {
-    //   Alert.alert("Login Required", "Please login to proceed with checkout", [
-    //     { text: "Cancel", style: "cancel" },
-    //     {
-    //       text: "Login",
-    //       onPress: () => router.push("/login"),
-    //     },
-    //   ]);
-    //   return;
-    // }
-
-    if (items.length === 0) {
+    if (basketItems.length === 0) {
       Alert.alert("Empty Cart", "Your cart is empty");
       return;
     }
-
-    // Navigate to checkout (to be implemented)
-    // Alert.alert("Checkout", "Checkout functionality coming soon!");
     router.push("/checkout");
   };
 
   // Calculate totals
   const processingFee = 0.03; // 3%
-  const subtotal = items.reduce((sum, item) => {
+  const subtotal = basketItems.reduce((sum: number, item: any) => {
     const checkoutType = item.checkoutType || item.Campaign?.checkoutType;
     if (checkoutType === "ADEEQAH_GENERAL_SACRIFICE") {
       return sum + parseFloat(item.total?.toString() || "0");
@@ -128,7 +161,7 @@ export default function CartScreen() {
   const processingAmount = (subtotal * processingFee).toFixed(2);
   const total = subtotal + parseFloat(processingAmount);
 
-  if (isLoading) {
+  if (isLoading || guestLoading) {
     return <LoadingScreen message="Loading cart..." />;
   }
 
@@ -141,7 +174,7 @@ export default function CartScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {items.length === 0 ? (
+        {basketItems.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>🛒</Text>
             <Text style={styles.emptyTitle}>Your basket is empty</Text>
@@ -171,7 +204,7 @@ export default function CartScreen() {
                   </View>
                   <View style={{ marginLeft: 8 }}>
                     <Text style={styles.cartHeaderTitle}>
-                      Your Cart ({items.length})
+                      Your Cart ({basketItems.length})
                     </Text>
                   </View>
                 </View>
@@ -180,7 +213,7 @@ export default function CartScreen() {
 
             {/* Cart Items */}
             <View style={styles.cartItemsContainer}>
-              {items.map((item, index) => {
+              {basketItems.map((item: any, index: number) => {
                 const checkoutType =
                   item.checkoutType || item.Campaign?.checkoutType;
                 const isAdeeqah = checkoutType === "ADEEQAH_GENERAL_SACRIFICE";
@@ -282,7 +315,8 @@ export default function CartScreen() {
                   <Text style={styles.summaryHeaderText}>Order Summary</Text>
                   <View style={styles.itemCountBadge}>
                     <Text style={styles.itemCountText}>
-                      {items.length} {items.length === 1 ? "item" : "items"}
+                      {basketItems.length}{" "}
+                      {basketItems.length === 1 ? "item" : "items"}
                     </Text>
                   </View>
                 </View>
@@ -339,17 +373,26 @@ export default function CartScreen() {
                   style={[
                     styles.checkoutButton,
                     (subtotal <= 0 ||
-                      items.some(
-                        (item) =>
-                          parseFloat(item.total?.toString() || "0") === 0
+                      basketItems.some(
+                        (item: any) =>
+                          parseFloat(
+                            isAuthenticated
+                              ? item.total?.toString() || "0"
+                              : item.amount?.toString() || "0"
+                          ) === 0
                       )) &&
                       styles.checkoutButtonDisabled,
                   ]}
                   onPress={handleCheckout}
                   disabled={
                     subtotal <= 0 ||
-                    items.some(
-                      (item) => parseFloat(item.total?.toString() || "0") === 0
+                    basketItems.some(
+                      (item: any) =>
+                        parseFloat(
+                          isAuthenticated
+                            ? item.total?.toString() || "0"
+                            : item.amount?.toString() || "0"
+                        ) === 0
                     )
                   }
                 >

@@ -9,13 +9,19 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuth } from "../../context/AuthContext";
+import { useSelector } from "react-redux";
+import { useAppDispatch } from "../../hooks/useAppDispatch";
+import { logout } from "../../store/reduxSlice/authenticationSlice";
 import { Image as ExpoImage } from "expo-image";
 
 export default function ProfileScreen() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const dispatch = useAppDispatch();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const user = useSelector((state: any) => state.authentication.user);
+  const isAuthenticated = !!user;
+
+  console.log({ isAuthenticated });
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -28,7 +34,7 @@ export default function ProfileScreen() {
         style: "destructive",
         onPress: async () => {
           try {
-            await logout();
+            dispatch(logout());
             router.replace("/login");
           } catch (error) {
             Alert.alert("Error", "Failed to logout. Please try again.");
@@ -40,7 +46,9 @@ export default function ProfileScreen() {
 
   if (!isAuthenticated) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
+      <View
+        style={[styles.container, { paddingTop: insets.top + 20, flex: 1 }]}
+      >
         <View style={styles.notLoggedInContainer}>
           <Text style={styles.notLoggedInIcon}>👤</Text>
           <Text style={styles.notLoggedInText}>You are not logged in</Text>
@@ -60,7 +68,11 @@ export default function ProfileScreen() {
       style={styles.scrollView}
       contentContainerStyle={[
         styles.container,
-        { paddingTop: insets.top + 20 },
+        {
+          paddingTop: insets.top + 20,
+          paddingBottom: insets.bottom + 40,
+          minHeight: "100%",
+        },
       ]}
       showsVerticalScrollIndicator={false}
     >
@@ -146,7 +158,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   container: {
-    flex: 1,
     padding: 20,
     backgroundColor: "#fff",
   },

@@ -12,7 +12,9 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuth } from "../context/AuthContext";
+import { useSelector } from "react-redux";
+import { useAppDispatch } from "../hooks/useAppDispatch";
+import { loginUser } from "../store/reduxSlice/authenticationSlice";
 import LoadingScreen from "../components/LoadingScreen";
 
 export default function LoginScreen() {
@@ -23,7 +25,8 @@ export default function LoginScreen() {
   const [error, setError] = useState("");
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { login } = useAuth();
+  const dispatch = useAppDispatch();
+  const authState = useSelector((state: any) => state.authentication);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -35,11 +38,25 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      await login(email, password);
-      router.replace("/");
+      const resultAction = await dispatch(
+        loginUser({ body: { email, password }, keepSession: true })
+      );
+      if (loginUser.fulfilled.match(resultAction)) {
+        router.replace("/");
+      } else {
+        const errMsg =
+          typeof resultAction.error === "string"
+            ? resultAction.error
+            : resultAction.error?.message || "Login failed. Please try again.";
+        setError(errMsg);
+        Alert.alert("Login Failed", errMsg);
+      }
     } catch (err: any) {
       setError(err.message || "Login failed. Please try again.");
-      Alert.alert("Login Failed", err.message || "Login failed. Please try again.");
+      Alert.alert(
+        "Login Failed",
+        err.message || "Login failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -231,4 +248,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-

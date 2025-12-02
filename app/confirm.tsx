@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useSelector } from "react-redux";
+import { useClearBasketMutation } from "@/store/reduxSlice/api/basketApi";
 import {
   View,
   Text,
@@ -10,8 +13,7 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useBasket } from "@/context/BasketContext";
-import { useAuth } from "@/context/AuthContext";
+// Remove context usage, use Redux selectors
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import {
@@ -37,11 +39,17 @@ const handlePaypalCheckout = async (data: any) => {
 };
 
 const ConfirmScreen = () => {
+  const user = useSelector((state: any) => state.authentication.user);
+  const isAuthenticated = !!user;
+  const basketItems = useSelector((state: any) => {
+    // Use basket from Redux, fallback to AsyncStorage for guests
+    return state.basketItem?.basketItems ?? [];
+  });
+  const [clearBasket] = useClearBasketMutation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   // Removed params, use items from context
-  const { items } = useBasket();
-  const { user, isAuthenticated } = useAuth();
+  // items is now basketItems from Redux
   const stripe = useStripe();
 
   const [paymentType, setPaymentType] = useState<"card" | "paypal">("card");
@@ -102,7 +110,11 @@ const ConfirmScreen = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const totalPoints = items.reduce((acc: number, item: any) => {
+  const summaryItems =
+    basketItems.length > 0 ? basketItems : checkoutDetails?.basketItems ?? [];
+  console.log({ summaryItems });
+
+  const totalPoints = summaryItems.reduce((acc: number, item: any) => {
     if (item.checkoutType === "ADEEQAH_GENERAL_SACRIFICE")
       return acc + Number(item.total ?? 0);
     return (
@@ -111,9 +123,9 @@ const ConfirmScreen = () => {
   }, 0);
 
   useEffect(() => {
-    const recurringItems = items.filter((item: any) => item.isRecurring);
+    const recurringItems = basketItems.filter((item: any) => item.isRecurring);
     setRecurringFound(recurringItems.length > 0);
-  }, [items]);
+  }, [basketItems]);
 
   const handleDonationProcess = async () => {
     if (!cardDetails?.complete) {
@@ -143,6 +155,12 @@ const ConfirmScreen = () => {
         Alert.alert("Payment failed", error.message)
       );
     } else if (paymentIntent) {
+      // Remove cart items for both user types
+      if (isAuthenticated) {
+        await clearBasket();
+      } else {
+        await AsyncStorage.removeItem("guestBasket");
+      }
       router.push("/thank-you");
     }
   };
@@ -423,23 +441,28 @@ const ConfirmScreen = () => {
                 </Text>
               </LinearGradient>
               <View style={{ padding: 12 }}>
-                {items.map((item: any) => (
-                  <View
-                    key={
-                      item.id
-                        ? `${item.id}-${item.name}-${item.total}`
-                        : `${item.name}-${item.total}-${Math.random()}`
-                    }
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      marginBottom: 8,
-                    }}
-                  >
-                    <Text>{item.name}</Text>
-                    <Text>${item.total}</Text>
-                  </View>
-                ))}
+                {summaryItems.map((item: any) => {
+                  // For logged-in users, item.Campaign exists
+                  const displayName = item.Campaign?.name || item.name;
+                  const displayAmount = item.total ?? item.amount;
+                  return (
+                    <View
+                      key={
+                        item.id
+                          ? `${item.id}-${displayName}-${displayAmount}`
+                          : `${displayName}-${displayAmount}-${Math.random()}`
+                      }
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        marginBottom: 8,
+                      }}
+                    >
+                      <Text>{displayName}</Text>
+                      <Text>${displayAmount}</Text>
+                    </View>
+                  );
+                })}
                 <View
                   style={{
                     borderTopWidth: 1,
