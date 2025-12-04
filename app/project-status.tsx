@@ -11,7 +11,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "@/utils/api";
-import { useAuth } from "@/context/AuthContext";
+import { useSelector } from "react-redux";
 
 const WATER_WELL_CAMPAIGN_ID = 6;
 const AQEEQAH_CAMPAIGN_ID = 22;
@@ -37,7 +37,8 @@ interface ProjectType {
 
 const ProjectStatusScreen = () => {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  const user = useSelector((state: any) => state.authentication.user);
+  const isAuthenticated = !!user;
 
   const [activeFilter, setActiveFilter] = useState<
     "all" | "water-well" | "aqeeqah"

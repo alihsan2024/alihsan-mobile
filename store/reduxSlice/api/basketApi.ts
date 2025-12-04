@@ -83,12 +83,12 @@ export const basketApi = createApi({
     // -----------------------------
     removeFromBasket: builder.mutation<
       any,
-      { campaignId: number; donationItem?: any }
+      { campaignId?: number; orphanId?: number; donationItem?: any }
     >({
-      query: ({ campaignId, donationItem }) => ({
+      query: ({ campaignId, orphanId, donationItem }) => ({
         url: "basket",
         method: "DELETE",
-        data: { campaignId, donationItem },
+        data: { campaignId, orphanId, donationItem },
       }),
       invalidatesTags: ["Basket"],
     }),

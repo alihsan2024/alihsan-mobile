@@ -69,7 +69,6 @@ export default function CartScreen() {
   } = useGetBasketQuery(undefined, {
     skip: !isAuthenticated,
   });
-  console.log({ basketData, isAuthenticated, guestBasket });
   const [addToBasket] = useAddToBasketMutation();
   const [removeFromBasket] = useRemoveFromBasketMutation();
 
@@ -90,6 +89,8 @@ export default function CartScreen() {
   // Unified basketItems for rendering
   const basketItems = isAuthenticated ? basketData?.payload ?? [] : guestBasket;
 
+  console.log({ basketItems });
+
   // Refresh logic
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -102,7 +103,11 @@ export default function CartScreen() {
   }, [isAuthenticated, refetch, loadGuestBasket]);
 
   // Remove item logic
-  const handleRemoveItem = async (id: number, donationItem?: string) => {
+  const handleRemoveItem = async (
+    campaignId: number,
+    orphanId: number,
+    donationItem?: string
+  ) => {
     Alert.alert(
       "Remove Item",
       "Are you sure you want to remove this item from your cart?",
@@ -114,11 +119,11 @@ export default function CartScreen() {
           onPress: async () => {
             try {
               if (isAuthenticated) {
-                await removeFromBasket({ campaignId: id, donationItem });
+                await removeFromBasket({ campaignId, orphanId, donationItem });
                 await refetch();
               } else {
                 const updated = guestBasket.filter(
-                  (item) => item.campaignId !== id
+                  (item) => item.campaignId !== campaignId
                 );
                 setGuestBasket(updated);
                 await AsyncStorage.setItem(
@@ -148,14 +153,21 @@ export default function CartScreen() {
   const processingFee = 0.03; // 3%
   const subtotal = basketItems.reduce((sum: number, item: any) => {
     const checkoutType = item.checkoutType || item.Campaign?.checkoutType;
-    if (checkoutType === "ADEEQAH_GENERAL_SACRIFICE") {
-      return sum + parseFloat(item.total?.toString() || "0");
+    if (isAuthenticated) {
+      // Logged-in user: use total
+      if (checkoutType === "ADEEQAH_GENERAL_SACRIFICE") {
+        return sum + parseFloat(item.total?.toString() || "0");
+      } else {
+        return (
+          sum +
+          parseFloat(item.total?.toString() || item.amount?.toString() || "0")
+        );
+      }
     } else {
-      return (
-        sum +
-        parseFloat(item.amount?.toString() || item.total?.toString() || "0") *
-          parseFloat(item.quantity?.toString() || "1")
-      );
+      // Guest user: use amount * quantity
+      const quantity = parseFloat(item.quantity?.toString() || "1");
+      const amount = parseFloat(item.amount?.toString() || "0");
+      return sum + amount * quantity;
     }
   }, 0);
   const processingAmount = (subtotal * processingFee).toFixed(2);
@@ -223,7 +235,11 @@ export default function CartScreen() {
                 const price = parseFloat(
                   item.amount?.toString() || item.ricePrice?.toString() || "0"
                 );
-                const total = parseFloat(item.total?.toString() || "0");
+                // For logged-in user, use item.total; for guest, use amount * quantity
+                const itemTotal =
+                  item.total !== undefined && item.total !== null
+                    ? parseFloat(item.total?.toString() || "0")
+                    : price * quantity;
                 const isCommonORZaqat = [
                   "ZAQAT",
                   "COMMON",
@@ -239,6 +255,7 @@ export default function CartScreen() {
                           uri:
                             item.coverImage ||
                             item.Campaign?.coverImage ||
+                            item.Orphan?.coverImage ||
                             "https://via.placeholder.com/64",
                         }}
                         style={styles.itemImage}
@@ -246,7 +263,10 @@ export default function CartScreen() {
                       />
                       <View style={[styles.itemDetails, { marginLeft: 12 }]}>
                         <Text style={styles.itemName} numberOfLines={2}>
-                          {item.name || item.Campaign?.name || "Campaign"}
+                          {item.name ||
+                            item.Campaign?.name ||
+                            item.Orphan?.name ||
+                            "Campaign"}
                         </Text>
 
                         {item.isRecurring && (
@@ -268,7 +288,7 @@ export default function CartScreen() {
 
                         <View style={styles.itemPriceRow}>
                           <Text style={styles.itemTotalPrice}>
-                            ${formatPrice(total)}
+                            ${formatPrice(itemTotal)}
                           </Text>
                           {isCommonORZaqat && quantity > 1 && (
                             <Text style={styles.itemUnitPrice}>
@@ -282,7 +302,11 @@ export default function CartScreen() {
                     <TouchableOpacity
                       style={styles.removeButton}
                       onPress={() =>
-                        handleRemoveItem(item.campaignId, item.donationItem)
+                        handleRemoveItem(
+                          item.campaignId,
+                          item.orphanId,
+                          item.donationItem
+                        )
                       }
                     >
                       <Text style={styles.removeButtonText}>🗑️</Text>

@@ -3,3 +3,7 @@ export const MyDonationTypes = {
   INACTIVE_RECURRING: "INACTIVE_RECURRING",
   ONETIME: "ONETIME",
 };
+
+export const currencyConfig = {
+  label: process.env.CURRENCY_LABEL || "$",
+};

@@ -443,7 +443,8 @@ const ConfirmScreen = () => {
               <View style={{ padding: 12 }}>
                 {summaryItems.map((item: any) => {
                   // For logged-in users, item.Campaign exists
-                  const displayName = item.Campaign?.name || item.name;
+                  const displayName =
+                    item.Campaign?.name || item.Orphan?.name || item.name;
                   const displayAmount = item.total ?? item.amount;
                   return (
                     <View

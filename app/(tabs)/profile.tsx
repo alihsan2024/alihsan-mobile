@@ -130,6 +130,14 @@ export default function ProfileScreen() {
           <Text style={styles.menuText}>Orphan Sponsorships</Text>
           <Text style={styles.chevron}>›</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push("/orphans-list")}
+        >
+          <Text style={styles.menuIcon}>❤️</Text>
+          <Text style={styles.menuText}>Orphan List</Text>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem}>
           <Text style={styles.menuIcon}>⚙️</Text>

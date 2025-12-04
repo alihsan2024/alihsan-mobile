@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import zakatReducer from "./reduxSlice/zakatSlice";
 import donationProjectsReducer from "./reduxSlice/donationProjectSlice";
 import orphanSponsorshipReducer from "./reduxSlice/orphanSponsorshipSlice";
+import orphansReducer from "./reduxSlice/orphansSlice";
 import projectDetailReducer from "./reduxSlice/projectDetailSlice";
 import authenticationReducer from "./reduxSlice/authenticationSlice";
 import basketItemReducer from "./reduxSlice/basketSlice";
@@ -14,6 +15,7 @@ export const store = configureStore({
     donationProjects: donationProjectsReducer,
     authentication: authenticationReducer,
     orphanSponsorships: orphanSponsorshipReducer,
+    orphans: orphansReducer,
     projectDetail: projectDetailReducer,
     zakatCalculator: zakatReducer,
   },
