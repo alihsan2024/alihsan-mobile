@@ -6,6 +6,7 @@ import orphansReducer from "./reduxSlice/orphansSlice";
 import projectDetailReducer from "./reduxSlice/projectDetailSlice";
 import authenticationReducer from "./reduxSlice/authenticationSlice";
 import basketItemReducer from "./reduxSlice/basketSlice";
+import paymentDetailsReducer from "./reduxSlice/paymentDetailsSlice";
 import { basketApi } from "./reduxSlice/api/basketApi";
 
 export const store = configureStore({
@@ -18,6 +19,7 @@ export const store = configureStore({
     orphans: orphansReducer,
     projectDetail: projectDetailReducer,
     zakatCalculator: zakatReducer,
+    paymentDetails: paymentDetailsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(basketApi.middleware),

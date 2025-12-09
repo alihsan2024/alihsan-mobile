@@ -116,6 +116,14 @@ export default function ProfileScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.menuItem}
+          onPress={() => router.push("/one-time-user-donations")}
+        >
+          <Text style={styles.menuIcon}>❤️</Text>
+          <Text style={styles.menuText}>One Time Donations</Text>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.menuItem}
           onPress={() => router.push("/project-status")}
         >
           <Text style={styles.menuIcon}>❤️</Text>

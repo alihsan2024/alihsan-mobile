@@ -27,7 +27,12 @@ export const getPaymentMethods = createAsyncThunk(
     }
   }
 );
-export const getPaymentsList = createAsyncThunk(
+export interface PaymentsListParams {
+  page: string;
+  fromdate: string;
+  limit: number;
+}
+export const getPaymentsList = createAsyncThunk<any, PaymentsListParams>(
   "payment-details/get-payment-list",
   async (params) => {
     try {
