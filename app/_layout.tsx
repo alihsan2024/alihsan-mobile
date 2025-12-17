@@ -1,12 +1,40 @@
 import { Stack } from "expo-router";
+import React, { useEffect } from "react";
+import {
+  requestUserPermission,
+  onMessageListener,
+  setBackgroundMessageHandler,
+} from "@/utils/notifications";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "../context/AuthContext";
 import { BasketProvider } from "../context/BasketContext";
 import { Provider } from "react-redux";
 import { store } from "@/store/store";
+import { Alert } from "react-native";
 
 export default function RootLayout() {
+  useEffect(() => {
+    requestUserPermission().then((token) => {
+      if (token) {
+        // Send token to your backend for notification targeting
+        console.log("FCM Token:", token);
+      }
+    });
+
+    const unsubscribe = onMessageListener((message) => {
+      // Handle foreground notification
+      Alert.alert("Notification received: " + JSON.stringify(message));
+    });
+
+    // Optional: handle background notifications (Android)
+    setBackgroundMessageHandler((message) => {
+      // You can process background notifications here
+      console.log("Background notification:", message);
+    });
+
+    return unsubscribe;
+  }, []);
   return (
     <SafeAreaProvider>
       <Provider store={store}>

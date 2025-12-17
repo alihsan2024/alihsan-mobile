@@ -42,3 +42,7 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Ignore sensitive config files
+# google-services.json
+# ios/GoogleService-Info.plist
+

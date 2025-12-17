@@ -13,6 +13,7 @@ import { useSelector } from "react-redux";
 import { useAppDispatch } from "../../hooks/useAppDispatch";
 import { logout } from "../../store/reduxSlice/authenticationSlice";
 import { Image as ExpoImage } from "expo-image";
+import { PushTestButton } from "@/components/PushTestButton";
 
 export default function ProfileScreen() {
   const dispatch = useAppDispatch();
@@ -100,6 +101,9 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
+        <TouchableOpacity style={styles.menuItem}>
+          <PushTestButton />
+        </TouchableOpacity>
         <TouchableOpacity style={styles.menuItem}>
           <Text style={styles.menuIcon}>👤</Text>
           <Text style={styles.menuText}>Edit Profile</Text>
