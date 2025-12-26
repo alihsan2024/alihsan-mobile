@@ -110,6 +110,49 @@ export const loginUser = createAsyncThunk(
         })
       );
       api.defaults.headers.common["Authorization"] = `Bearer ${payload.token}`;
+
+      // Device registration logic (copied from api.ts login)
+      try {
+        const { requestUserPermission } = await import("@/utils/notifications");
+        const { getOrCreateGuestId, setLastRegisteredDeviceInfo } =
+          await import("@/utils/deviceRegistration");
+        const { Platform } = await import("react-native");
+        console.log(
+          "[DeviceReg] Starting device registration after login (redux)"
+        );
+        const token = await requestUserPermission();
+        console.log("[DeviceReg] FCM token from requestUserPermission:", token);
+        if (token) {
+          const guest_id = await getOrCreateGuestId();
+          console.log("[DeviceReg] guest_id:", guest_id);
+          const user_id = payload.id;
+          const platform = Platform.OS;
+          const { registerDeviceToken } = await import("@/utils/api");
+          console.log("[DeviceReg] About to call registerDeviceToken with:", {
+            token,
+            user_id,
+            guest_id,
+            platform,
+          });
+          await registerDeviceToken({ token, user_id, guest_id, platform });
+          console.log("[DeviceReg] registerDeviceToken call finished");
+          await setLastRegisteredDeviceInfo({
+            token,
+            user_id,
+            guest_id,
+            platform,
+          });
+          console.log("[DeviceReg] setLastRegisteredDeviceInfo call finished");
+        } else {
+          console.log("[DeviceReg] No FCM token, skipping device registration");
+        }
+      } catch (e) {
+        console.log(
+          "[DeviceReg] Device registration after login (redux) failed",
+          e
+        );
+      }
+
       return response.data;
     } catch (e: any) {
       throw new Error(e?.response?.data?.message || "Something went wrong");
@@ -189,13 +232,58 @@ export const captchaValidation = createAsyncThunk(
 );
 // profile/password
 
+export const logoutUser = createAsyncThunk(
+  "auth/logout",
+  async (_, thunkAPI) => {
+    try {
+      // 1️⃣ Clear auth storage
+      await AsyncStorage.removeItem("loggedIn");
+      api.defaults.headers.common.Authorization = "";
+
+      // 2️⃣ Device re-registration as guest
+      try {
+        const { requestUserPermission } = await import("@/utils/notifications");
+        const { getOrCreateGuestId, setLastRegisteredDeviceInfo } =
+          await import("@/utils/deviceRegistration");
+        const { Platform } = await import("react-native");
+        const { registerDeviceToken } = await import("@/utils/api");
+
+        const token = await requestUserPermission();
+
+        if (token) {
+          const guest_id = await getOrCreateGuestId();
+          const platform = Platform.OS;
+
+          // 🚨 IMPORTANT: user_id is NOT passed
+          await registerDeviceToken({
+            token,
+            user_id: null,
+            guest_id,
+            platform,
+          });
+
+          await setLastRegisteredDeviceInfo({
+            token,
+            guest_id,
+            platform,
+          });
+        }
+      } catch (e) {
+        console.log("[DeviceReg] Guest registration after logout failed", e);
+      }
+
+      return true;
+    } catch (e) {
+      return thunkAPI.rejectWithValue("Logout failed");
+    }
+  }
+);
+
 export const authenticationSlice = createSlice({
   name: "authentication",
   initialState,
   reducers: {
     logout(state) {
-      AsyncStorage.removeItem("loggedIn");
-      api.defaults.headers.common.Authorization = "";
       return {
         ...initialState,
         isReady: true,
@@ -266,6 +354,13 @@ export const authenticationSlice = createSlice({
         state.isFetching = true;
         state.isError = false;
       });
+
+    builder.addCase(logoutUser.fulfilled, (state) => {
+      return {
+        ...initialState,
+        isReady: true,
+      };
+    });
 
     builder
       .addCase(loginUser.fulfilled, (state, action) => {

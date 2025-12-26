@@ -122,6 +122,8 @@ const ConfirmScreen = () => {
     );
   }, 0);
 
+  console.log(process.env.EXPO_PUBLIC_STRIPE_KEY);
+
   useEffect(() => {
     const recurringItems = basketItems.filter((item: any) => item.isRecurring);
     setRecurringFound(recurringItems.length > 0);

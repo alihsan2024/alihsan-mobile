@@ -1,3 +1,30 @@
+// Register device token (guest or user)
+export const registerDeviceToken = async ({
+  token,
+  user_id,
+  guest_id,
+  platform,
+}: {
+  token: string;
+  user_id: number | null;
+  guest_id: string;
+  platform: string;
+}) => {
+  try {
+    await api.post("/app-notifications/register-device-token", {
+      token,
+      user_id,
+      guest_id,
+      platform,
+    });
+  } catch (error: any) {
+    console.error(
+      "Error registering device token:",
+      error.response?.data || error.message
+    );
+    throw error;
+  }
+};
 import axios from "axios";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -5,7 +32,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Configure API URLs for different environments
 // IMPORTANT: Replace YOUR_LAN_IP below with your computer's actual LAN IP address
 const API_URLS = {
-  development: "http://192.168.1.8:4000", // e.g., http://192.168.1.100:4000
+  development: "http://192.168.1.7:4000", // e.g., http://192.168.1.100:4000
   production: "https://deenstream.live",
   // production: "https://api.alihsan.org.au",
 };
