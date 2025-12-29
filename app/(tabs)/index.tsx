@@ -12,12 +12,75 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Feather from "@expo/vector-icons/Feather";
 import SimpleLineIcons from "@expo/vector-icons/SimpleLineIcons";
 import { useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import ImageSlider from "@/components/ui/sliders/ImageSlider";
+import CampaignSlider from "@/components/ui/sliders/CampaignSlider";
+import { ProgressModal } from "@/components/ui/Modals/DonationAppealModal";
 
 const ICON_SIZE = 16;
 const SIDE_BUTTON_WIDTH = 60;
 const PADDING_HORIZONTAL = 20;
 const screenWidth = Dimensions.get("window").width;
 const HEADER_HEIGHT = 64;
+
+const SLIDER_DATA = [
+  {
+    id: 1,
+    title: "Zakat",
+    image: require("../../assets/card1.png"),
+  },
+  {
+    id: 2,
+    title: "Sponsorship",
+    image: require("../../assets/card2.png"),
+  },
+  {
+    id: 3,
+    title: "Emergency",
+    image: require("../../assets/card1.png"),
+  },
+  {
+    id: 4,
+    title: "Infaq",
+    image: require("../../assets/card1.png"),
+  },
+  {
+    id: 5,
+    title: "Infaq",
+    image: require("../../assets/card1.png"),
+  },
+];
+
+const campaigns = [
+  {
+    id: 1,
+    image: require("../../assets/card1.png"),
+    title: "Help Children in Need",
+    donors: 120,
+    status: "Ongoing",
+    amountRaised: "$5,000",
+    goal: "$10,000",
+  },
+  {
+    id: 2,
+    image: require("../../assets/card1.png"),
+    title: "Support Animal Shelter",
+    donors: 85,
+    status: "Ongoing",
+    amountRaised: "$3,200",
+    goal: "$5,000",
+  },
+  {
+    id: 3,
+    image: require("../../assets/card1.png"),
+    title: "Plant 1000 Trees",
+    donors: 200,
+    status: "Ongoing",
+    amountRaised: "$8,000",
+    goal: "$8,000",
+  },
+];
 
 const BUTTONS = [
   { name: "Waterwells", icon: "droplet" },
@@ -31,7 +94,7 @@ const BUTTONS = [
 ];
 
 const GIVING_OPTIONS = ["One-time", "Monthly", "Friday"];
-const AMOUNTS = [500, 250, 150, 50, 25, 10];
+const AMOUNTS = [50, 25, 10];
 
 const CARDS = [
   {
@@ -56,18 +119,34 @@ const CARDS = [
   },
 ];
 
+export type CampaignItem = {
+  id: string | number;
+  image: any;
+  title: string;
+  donors: number;
+  status: string;
+  amountRaised: string;
+  goal: string;
+};
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const screenHeight = Dimensions.get("window").height;
 
   const [selectedIndex, setSelectedIndex] = useState<number | null>(0);
   const [selectedGiving, setSelectedGiving] = useState<number>(0);
-  const [selectedAmount, setSelectedAmount] = useState<number | null>(500);
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(50);
   const [customAmount, setCustomAmount] = useState<string>("");
+  const [isModalVisible, setIsModalVisible] = useState(true);
 
   const handleAmountPress = (amount: number) => {
     setSelectedAmount(amount);
     setCustomAmount(""); // clear custom input
+  };
+
+  const handleCampaignPress = (item: CampaignItem) => {
+    console.log("Selected campaign:", item);
+    // Navigate or show details
   };
 
   return (
@@ -76,34 +155,80 @@ export default function HomeScreen() {
         flex: 1,
         backgroundColor: "#fff",
         paddingTop: insets.top,
-        marginBottom: 70,
       }}
       contentContainerStyle={{ paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
     >
+      <ProgressModal
+        visible={isModalVisible}
+        onClose={() => setIsModalVisible(false)}
+        image={require("../../assets/modal-image.png")}
+        title="Help Children in Need"
+        raised={109690.51}
+        goal={150000}
+        onDonate={() => console.log("Donate pressed")}
+      />
+      {/* Background images */}
       {/* Background images */}
       <View
         style={{
           width: "100%",
-          minHeight: screenHeight * 0.7,
+          minHeight: screenHeight * 0.6,
           position: "absolute",
         }}
       >
+        {/* Solid background color */}
+        <View style={styles.headerBgColor} />
+
+        {/* Header image */}
         <ExpoImage
-          source={require("../../assets/background.png")}
+          source={require("../../assets/header-image.png")}
           style={styles.background}
+          contentFit="cover"
         />
-        <ExpoImage
-          source={require("../../assets/content-background.png")}
-          style={styles.overlay}
+
+        {/* Left fade overlay (50%) */}
+        <LinearGradient
+          colors={[
+            "rgba(36,107,225,0.5)", // left (50% visible)
+            "rgba(36,107,225,0.0)", // right (fully clear)
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.leftFade}
           pointerEvents="none"
         />
       </View>
 
       {/* Main content */}
       <View style={{ paddingHorizontal: PADDING_HORIZONTAL, paddingTop: 10 }}>
+        {/* Header Bar */}
+        <View style={styles.headerBar}>
+          {/* Search */}
+          <View style={styles.searchContainer}>
+            <Feather name="search" size={16} color="#fff" />
+            <TextInput
+              placeholder="Search"
+              placeholderTextColor="rgba(255,255,255,0.6)"
+              style={styles.searchInput}
+            />
+          </View>
+
+          {/* Notification */}
+          <TouchableOpacity style={styles.notificationButton}>
+            <Ionicons name="notifications" size={18} color="#010D264D" />
+            {/* Optional dot */}
+            <View style={styles.notificationDot} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.heroTextContainer}>
+          <Text style={styles.heroTitle}>Gaza</Text>
+          <Text style={styles.heroSubtitle}>is being Starved</Text>
+        </View>
+
         {/* Header */}
-        <View style={styles.header}>
+        {/* <View style={styles.header}>
           <View style={styles.sideContainer}>
             <TouchableOpacity style={styles.menuButton}>
               <SimpleLineIcons name="grid" size={ICON_SIZE} color="white" />
@@ -120,10 +245,10 @@ export default function HomeScreen() {
               <Feather name="bell" size={ICON_SIZE} color="white" />
             </TouchableOpacity>
           </View>
-        </View>
+        </View> */}
 
         {/* Buttons Grid */}
-        <View style={styles.buttonGrid}>
+        {/* <View style={styles.buttonGrid}>
           {BUTTONS.map((btn, idx) => (
             <TouchableOpacity
               key={idx}
@@ -134,7 +259,7 @@ export default function HomeScreen() {
                   : styles.gridButtonUnselected,
               ]}
               onPress={() => setSelectedIndex(idx)}
-              activeOpacity={0.8}
+              OngoingOpacity={0.8}
             >
               <View style={styles.buttonContent}>
                 <Feather
@@ -153,14 +278,14 @@ export default function HomeScreen() {
               </View>
             </TouchableOpacity>
           ))}
-        </View>
+        </View> */}
 
         {/* Bottom image */}
-        <ExpoImage
+        {/* <ExpoImage
           source={require("../../assets/header-image.png")}
           style={styles.headerImage}
           contentFit="contain"
-        />
+        /> */}
 
         {/* Giving options */}
         <View style={styles.givingContainer}>
@@ -204,32 +329,30 @@ export default function HomeScreen() {
             {AMOUNTS.map((amt, idx) => (
               <TouchableOpacity
                 key={idx}
-                style={[
-                  styles.amountButton,
-                  selectedAmount === amt && styles.amountButtonSelected,
-                ]}
+                style={styles.amountButton}
                 onPress={() => handleAmountPress(amt)}
+                activeOpacity={0.85}
               >
-                <Text
-                  style={[
-                    styles.amountText,
-                    selectedAmount === amt && {
-                      color: "#fff",
-                      fontWeight: "700",
-                    },
-                  ]}
-                >
-                  $ {amt}
-                </Text>
+                {selectedAmount === amt ? (
+                  <LinearGradient
+                    colors={["#246BE1", "#064DC3"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.amountGradient}
+                  >
+                    <Text style={styles.amountTextSelected}>$ {amt}</Text>
+                  </LinearGradient>
+                ) : (
+                  <Text style={styles.amountText}>$ {amt}</Text>
+                )}
               </TouchableOpacity>
             ))}
           </View>
 
           {/* Custom input */}
           <View style={styles.inputWrapper}>
-            <Text style={styles.inputLeft}>$ Other</Text>
             <TextInput
-              placeholder="0"
+              placeholder="Custom Amount"
               keyboardType="numeric"
               value={customAmount}
               onChangeText={(text) => {
@@ -247,8 +370,46 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
+        <ImageSlider
+          data={SLIDER_DATA}
+          onPress={(item) => {
+            console.log("Pressed:", item.title);
+          }}
+        />
+        <View
+          style={{
+            height: 1,
+            backgroundColor: "#E0E0E0",
+            marginBottom: 18,
+            width: "100%",
+          }}
+        />
+
+        <View style={{ flex: 1 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 12,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 24,
+                fontWeight: "700",
+                marginBottom: 10,
+              }}
+            >
+              Featured Campaigns
+            </Text>
+            <Text>See All</Text>
+          </View>
+          <CampaignSlider data={campaigns} onPress={handleCampaignPress} />
+        </View>
+
         {/* Cards Grid */}
-        <View style={styles.cardsGrid}>
+        {/* <View style={styles.cardsGrid}>
           {CARDS.map((card) => (
             <View key={card.id} style={styles.card}>
               <ExpoImage source={card.image} style={styles.cardImage} />
@@ -261,8 +422,8 @@ export default function HomeScreen() {
               </View>
             </View>
           ))}
-        </View>
-        <TouchableOpacity
+        </View> */}
+        {/* <TouchableOpacity
           style={styles.cartButtonWrapper}
           activeOpacity={0.85}
           onPress={() => {
@@ -275,12 +436,11 @@ export default function HomeScreen() {
             contentFit="cover"
           />
 
-          {/* Overlay content */}
           <View style={styles.cartContent}>
             <Feather name="shopping-cart" size={24} color="#fff" />
             <Text style={styles.cartText}>Cart</Text>
           </View>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
     </ScrollView>
   );
@@ -301,6 +461,72 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "70%",
   },
+  headerBar: {
+    height: HEADER_HEIGHT,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  heroTextContainer: {
+    marginTop: 12,
+    marginBottom: 20,
+  },
+
+  heroTitle: {
+    fontSize: 56,
+    fontWeight: "800",
+    color: "#fff",
+    lineHeight: 60,
+  },
+
+  heroSubtitle: {
+    fontSize: 30,
+    fontWeight: "600",
+    color: "#fff",
+    opacity: 0.9,
+    marginTop: 4,
+  },
+
+  searchContainer: {
+    flex: 1,
+    height: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.50)",
+  },
+
+  searchInput: {
+    flex: 1,
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+
+  notificationButton: {
+    width: 44,
+    height: 44,
+    marginLeft: 12,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255)",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+
+  notificationDot: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#DD4344",
+  },
+
   header: {
     height: HEADER_HEIGHT,
     flexDirection: "row",
@@ -319,6 +545,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  amountButton: {
+    width: "32%",
+    height: 45,
+    borderRadius: 10,
+    backgroundColor: "rgba(38,75,139,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+    overflow: "hidden", // important for gradient clipping
+  },
+
+  amountGradient: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  amountText: {
+    fontWeight: "600",
+    color: "#264B8B",
+  },
+
+  amountTextSelected: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+
   logo: { width: "100%", height: "100%" },
   menuButton: {
     width: 50,
@@ -392,9 +647,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#264B8B",
-    marginTop: 20,
-    marginBottom: 20,
-    textAlign: "center",
+    marginBottom: 10,
   },
   amountGrid: {
     flexDirection: "row",
@@ -402,17 +655,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 12,
   },
-  amountButton: {
-    width: "30%",
-    height: 50,
-    borderRadius: 10,
-    backgroundColor: "rgba(38,75,139,0.1)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
+
   amountButtonSelected: { backgroundColor: "#264B8B" },
-  amountText: { fontWeight: "600", color: "#264B8B" },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
@@ -421,7 +665,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 10,
     height: 45,
-    marginBottom: 12,
+    marginBottom: 8,
     backgroundColor: "#fff",
   },
   inputLeft: { color: "#264B8B", fontWeight: "600", marginRight: 8 },
@@ -430,10 +674,27 @@ const styles = StyleSheet.create({
   donateButton: {
     backgroundColor: "#FFD602",
     borderRadius: 10,
-    height: 50,
+    height: 45,
     alignItems: "center",
     justifyContent: "center",
   },
+  headerBgColor: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#246BE1", // your requested color
+  },
+
+  leftFade: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%", // only fade left half
+    height: "100%",
+  },
+
   donateText: { color: "#010D26", fontWeight: "700", fontSize: 16 },
   cardsGrid: {
     flexDirection: "row",

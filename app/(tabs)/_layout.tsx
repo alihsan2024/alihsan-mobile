@@ -67,8 +67,14 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: "#fff",
           position: "absolute",
-          bottom: 10,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: Platform.OS === "ios" ? 80 : 60, // taller for iOS to include safe area
+          borderTopWidth: 0,
+          elevation: 0, // remove shadow on Android
         },
+
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "600",

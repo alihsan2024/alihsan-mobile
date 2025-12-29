@@ -2,7 +2,7 @@ import React, { JSX } from "react";
 import { TouchableOpacity, Text, ViewStyle, StyleProp } from "react-native";
 
 type Props = {
-  variant?: string;
+  variant?: "primary" | "secondary" | "warning"; // ⬅️ include the new variant
   label: string;
   onPress?: () => void;
   leftIcon?: JSX.Element;
@@ -20,13 +20,28 @@ const Button: React.FC<Props> = ({
   disabled,
   style,
 }) => {
+  // Define background and text colors based on variant
+  const backgroundColor =
+    variant === "primary"
+      ? "#264B8B"
+      : variant === "secondary"
+      ? "#FFD602"
+      : "#E0E0E0";
+
+  const textColor =
+    variant === "primary"
+      ? "#fff"
+      : variant === "secondary"
+      ? "#010D26"
+      : "#000";
+
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled}
       style={[
         {
-          backgroundColor: variant === "primary" ? "#264B8B" : "#E0E0E0",
+          backgroundColor,
           padding: 12,
           borderRadius: 10,
           flexDirection: "row",
@@ -39,7 +54,7 @@ const Button: React.FC<Props> = ({
       {leftIcon}
       <Text
         style={{
-          color: variant === "primary" ? "#fff" : "#000",
+          color: textColor,
           marginHorizontal: 4,
         }}
       >
