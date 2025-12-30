@@ -32,7 +32,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Configure API URLs for different environments
 // IMPORTANT: Replace YOUR_LAN_IP below with your computer's actual LAN IP address
 const API_URLS = {
-  development: "http://192.168.1.7:4000", // e.g., http://192.168.1.100:4000
+  development: "http://192.168.1.9:4000", // e.g., http://192.168.1.100:4000
   production: "https://deenstream.live",
   // production: "https://api.alihsan.org.au",
 };

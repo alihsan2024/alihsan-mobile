@@ -149,6 +149,10 @@ export default function RootLayout() {
                 name="zakat-calculator"
                 options={{ headerShown: false }}
               />
+              <Stack.Screen
+                name="calculator"
+                options={{ headerShown: false }}
+              />
             </Stack>
             <StatusBar style="auto" />
           </BasketProvider>

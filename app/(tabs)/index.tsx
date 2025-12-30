@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ImageSlider from "@/components/ui/sliders/ImageSlider";
 import CampaignSlider from "@/components/ui/sliders/CampaignSlider";
 import { ProgressModal } from "@/components/ui/Modals/DonationAppealModal";
+import { router } from "expo-router";
 
 const ICON_SIZE = 16;
 const SIDE_BUTTON_WIDTH = 60;
@@ -405,6 +406,19 @@ export default function HomeScreen() {
             </Text>
             <Text>See All</Text>
           </View>
+          <TouchableOpacity
+            onPress={() => router.push("/calculator")}
+            style={{
+              backgroundColor: "#264B8B",
+              padding: 12,
+              borderRadius: 8,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "700" }}>
+              Go to Zakat Calculator
+            </Text>
+          </TouchableOpacity>
           <CampaignSlider data={campaigns} onPress={handleCampaignPress} />
         </View>
 

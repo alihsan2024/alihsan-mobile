@@ -178,7 +178,7 @@ export default function ZakatCalculatorPage() {
           label="Calculate Zakat al-Maal"
           onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
           leftIcon={<Ionicons name="calculator" size={20} color="#fff" />}
-          variant="primaryBlue"
+          variant="primary"
           style={{ width: "80%" }}
         />
       </View>
