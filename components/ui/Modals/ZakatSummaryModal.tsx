@@ -173,6 +173,12 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
                   dispatch(zakatResetInput());
                   onClose();
                 }}
+                style={{
+                  backgroundColor: "#FFFFFF1A",
+                  padding: 10,
+                  borderRadius: 8,
+                  marginTop: 6,
+                }}
               >
                 <Text style={styles.resetText}>Reset</Text>
               </TouchableOpacity>
@@ -300,8 +306,6 @@ const styles = StyleSheet.create({
   resetText: {
     color: "#fff",
     textAlign: "center",
-    textDecorationLine: "underline",
-    marginTop: 8,
   },
   bottomContainer: {
     backgroundColor: "#fff",
