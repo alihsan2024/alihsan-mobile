@@ -407,6 +407,7 @@ export default function HomeScreen() {
             <Text>See All</Text>
           </View>
           <TouchableOpacity
+            // onPress={() => router.push("/thank-you")}
             onPress={() => router.push("/calculator")}
             style={{
               backgroundColor: "#264B8B",

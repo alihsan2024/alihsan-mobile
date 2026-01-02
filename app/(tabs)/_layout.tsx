@@ -5,8 +5,10 @@ import { useGetBasketQuery } from "@/store/reduxSlice/api/basketApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import { useFocusEffect } from "@react-navigation/native";
-import { useCallback } from "react";
+
+/* ----------------------------------------------------
+   Tab Icon
+---------------------------------------------------- */
 
 const TabIcon = ({
   name,
@@ -28,35 +30,66 @@ const TabIcon = ({
   </View>
 );
 
+/* ----------------------------------------------------
+   Tabs Layout
+---------------------------------------------------- */
+
 export default function TabsLayout() {
   const { user } = useSelector((state: any) => state.authentication);
   const isAuthenticated = !!user;
+
+  /* ---------- Logged-in basket ---------- */
   const { data: basketData } = useGetBasketQuery(undefined, {
     skip: !isAuthenticated,
   });
+
+  /* ---------- Guest basket ---------- */
   const [guestBasket, setGuestBasket] = useState<any[]>([]);
+
+  /* ---------- Safe reader ---------- */
+  const readGuestBasket = async () => {
+    try {
+      const data = await AsyncStorage.getItem("guestBasket");
+      const parsed = data ? JSON.parse(data) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  /* ---------- Initial load ---------- */
   useEffect(() => {
     if (!isAuthenticated) {
-      AsyncStorage.getItem("guestBasket").then((data) => {
-        setGuestBasket(data ? JSON.parse(data) : []);
-      });
+      readGuestBasket().then(setGuestBasket);
     }
   }, [isAuthenticated]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!isAuthenticated) {
-        AsyncStorage.getItem("guestBasket").then((data) => {
-          setGuestBasket(data ? JSON.parse(data) : []);
-        });
-      }
-    }, [isAuthenticated])
-  );
+  /* ----------------------------------------------------
+     🔥 CRITICAL FIX
+     Poll AsyncStorage while Tabs are mounted
+     (Tabs never remount, focus won't fire)
+  ---------------------------------------------------- */
+
+  useEffect(() => {
+    if (isAuthenticated) return;
+
+    const interval = setInterval(async () => {
+      const latest = await readGuestBasket();
+      setGuestBasket(latest);
+    }, 1000); // 1 second (lightweight & safe)
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
+  /* ---------- Source of truth ---------- */
   const basketItems = isAuthenticated ? basketData?.payload ?? [] : guestBasket;
-  const itemCount = basketItems.reduce(
-    (sum: number, item: any) => sum + (item.quantity || 1),
-    0
-  );
+
+  /* ---------- Badge count ---------- */
+  const itemCount = Array.isArray(basketItems) ? basketItems.length : 0;
+
+  /* ----------------------------------------------------
+     UI
+  ---------------------------------------------------- */
 
   return (
     <Tabs
@@ -70,11 +103,10 @@ export default function TabsLayout() {
           bottom: 0,
           left: 0,
           right: 0,
-          height: Platform.OS === "ios" ? 80 : 60, // taller for iOS to include safe area
+          height: Platform.OS === "ios" ? 80 : 60,
           borderTopWidth: 0,
-          elevation: 0, // remove shadow on Android
+          elevation: 0,
         },
-
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "600",
@@ -90,6 +122,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="campaigns"
         options={{
@@ -99,6 +132,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="cart"
         options={{
@@ -108,11 +142,12 @@ export default function TabsLayout() {
               name="cart"
               focused={focused}
               color={color}
-              badge={itemCount}
+              badge={itemCount > 0 ? itemCount : undefined}
             />
           ),
         }}
       />
+
       <Tabs.Screen
         name="profile"
         options={{
@@ -125,6 +160,10 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
+
+/* ----------------------------------------------------
+   Styles
+---------------------------------------------------- */
 
 const styles = StyleSheet.create({
   iconContainer: {
