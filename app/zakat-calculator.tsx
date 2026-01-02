@@ -165,9 +165,9 @@ export default function ZakatCalculatorScreen() {
 
             {/* GOLD */}
             <Text style={styles.label}>Zakatable Gold</Text>
-            <View style={styles.row}>
+            <View style={[styles.row, { alignItems: "center" }]}>
               <TextInput
-                style={[styles.input, { flex: 1 }]}
+                style={[styles.input, { flex: 1, marginBottom: 0 }]}
                 keyboardType="numeric"
                 value={amounts.gold?.[0]?.value?.toString() || ""}
                 placeholder="0"
@@ -183,8 +183,12 @@ export default function ZakatCalculatorScreen() {
                   )
                 }
               />
-
-              <View style={styles.pickerWrap}>
+              <View
+                style={[
+                  styles.pickerWrap,
+                  { justifyContent: "center", height: 44, width: 140 },
+                ]}
+              >
                 <Picker
                   selectedValue={amounts.gold?.[0]?.unit || "gram"}
                   onValueChange={(unit) =>
@@ -198,6 +202,8 @@ export default function ZakatCalculatorScreen() {
                       })
                     )
                   }
+                  style={{ height: 52, width: 140 }}
+                  itemStyle={{ minWidth: 100 }}
                 >
                   <Picker.Item label="Grams" value="gram" />
                   <Picker.Item label="Ounces" value="ounce" />
@@ -207,9 +213,9 @@ export default function ZakatCalculatorScreen() {
 
             {/* SILVER */}
             <Text style={styles.label}>Zakatable Silver</Text>
-            <View style={styles.row}>
+            <View style={[styles.row, { alignItems: "center" }]}>
               <TextInput
-                style={[styles.input, { flex: 1 }]}
+                style={[styles.input, { flex: 1, marginBottom: 0 }]}
                 keyboardType="numeric"
                 value={amounts.silver?.[0]?.value?.toString() || ""}
                 placeholder="0"
@@ -225,8 +231,12 @@ export default function ZakatCalculatorScreen() {
                   )
                 }
               />
-
-              <View style={styles.pickerWrap}>
+              <View
+                style={[
+                  styles.pickerWrap,
+                  { justifyContent: "center", height: 44, width: 140 },
+                ]}
+              >
                 <Picker
                   selectedValue={amounts.silver?.[0]?.unit || "gram"}
                   onValueChange={(unit) =>
@@ -240,6 +250,8 @@ export default function ZakatCalculatorScreen() {
                       })
                     )
                   }
+                  style={{ height: 52, width: 140 }}
+                  itemStyle={{ minWidth: 100 }}
                 >
                   <Picker.Item label="Grams" value="gram" />
                   <Picker.Item label="Ounces" value="ounce" />
@@ -282,8 +294,6 @@ export default function ZakatCalculatorScreen() {
         return null;
     }
   };
-
-  /* ---------------- RENDER ---------------- */
 
   return (
     <View style={styles.container}>
@@ -364,29 +374,40 @@ export default function ZakatCalculatorScreen() {
 
       {/* FOOTER */}
       <View style={styles.footer}>
-        <View>
+        {/* Row 1 */}
+        <View style={styles.footerRow}>
           <Text style={styles.footerTitle}>Your estimated Zakat Payment</Text>
+          <Text style={styles.footerAmount}>AUD {zakat.toFixed(2)}</Text>
+        </View>
+
+        {/* Divider */}
+        <View style={styles.footerDivider} />
+
+        {/* Row 2 */}
+        <View style={styles.footerRow}>
           <Text style={styles.footerSub}>
             Based on 2.5% of Zakatable Wealth
           </Text>
-        </View>
 
-        <TouchableOpacity
-          style={styles.reviewWrap}
-          onPress={() => setSummaryOpen(true)}
-        >
-          <Text style={styles.footerAmount}>AUD {zakat.toFixed(2)}</Text>
-
-          <View style={styles.reviewRow}>
+          <TouchableOpacity
+            style={styles.reviewRow}
+            onPress={() => setSummaryOpen(true)}
+          >
             <Text style={styles.reviewText}>Review Summary</Text>
             <Ionicons name="chevron-forward" size={14} color="#fff" />
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <TouchableOpacity
         style={styles.nextBtn}
-        onPress={() => dispatch(zakatStep(1))}
+        onPress={() => {
+          if (step === 4) {
+            setSummaryOpen(true);
+          } else {
+            dispatch(zakatStep(1));
+          }
+        }}
       >
         <Text style={styles.nextText}>Next</Text>
         <Ionicons name="chevron-forward" size={18} color="#fff" />
@@ -394,8 +415,6 @@ export default function ZakatCalculatorScreen() {
     </View>
   );
 }
-
-/* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F6F7FB" },
@@ -428,32 +447,21 @@ const styles = StyleSheet.create({
 
   row: { flexDirection: "row", gap: 10 },
   pickerWrap: {
-    width: 120,
-    backgroundColor: "#F0F2FF",
+    width: 140,
     borderRadius: 8,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#010D2633",
   },
 
-  footer: {
-    backgroundColor: "#5661E9",
-    padding: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  footerTitle: { color: "#E6E8FF", fontSize: 12 },
-  footerSub: { color: "#C7CCFF", fontSize: 11 },
-  footerAmount: { color: "#fff", fontSize: 18, fontWeight: "700" },
   reviewWrap: { alignItems: "flex-end" },
-  reviewRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  reviewText: { color: "#fff", fontSize: 12 },
 
   nextBtn: {
     backgroundColor: "#244180",
-    padding: 10,
+    padding: 8,
     marginHorizontal: 16,
-    marginVertical: 10,
-    borderRadius: 10,
+    marginVertical: 16,
+    borderRadius: 6,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
@@ -463,5 +471,54 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  footer: {
+    backgroundColor: "#246BE1",
+    padding: 16,
+    marginTop: 16,
+  },
+
+  footerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  footerDivider: {
+    height: 1,
+    backgroundColor: "#fff",
+    opacity: 0.1,
+    marginVertical: 10,
+  },
+
+  footerTitle: {
+    fontSize: 14,
+    color: "#fff",
+    opacity: 0.8,
+  },
+
+  footerAmount: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#fff",
+  },
+
+  footerSub: {
+    fontSize: 12,
+    color: "#fff",
+    opacity: 0.7,
+  },
+
+  reviewRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+
+  reviewText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
+    textDecorationLine: "underline",
   },
 });
