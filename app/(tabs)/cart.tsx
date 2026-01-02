@@ -931,8 +931,17 @@ export default function BasketScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="#000" />
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{
+            backgroundColor: "#FAFAFA",
+            borderWidth: 1,
+            borderColor: "#010D264D",
+            padding: 5,
+            borderRadius: 40,
+          }}
+        >
+          <Ionicons name="chevron-back" size={16} color="#010D264D" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Your Basket</Text>
         <View style={{ width: 24 }} />
@@ -1059,11 +1068,19 @@ export default function BasketScreen() {
                         )
                       }
                     >
-                      <Ionicons
-                        name="trash-outline"
-                        size={20}
-                        color="#9CA3AF"
-                      />
+                      <View
+                        style={{
+                          backgroundColor: "#F2F6FF",
+                          padding: 10,
+                          borderRadius: 4,
+                        }}
+                      >
+                        <ExpoImage
+                          source={require("../../assets/trash.png")}
+                          style={{ width: 16, height: 16, borderRadius: 4 }}
+                          contentFit="contain"
+                        />
+                      </View>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -1083,6 +1100,7 @@ export default function BasketScreen() {
               label="Admin Fee"
               value={`$${formatPrice(parseFloat(processingAmount))}`}
             />
+            <Divider />
             <View style={styles.infoRow}>
               <Text style={styles.infoText}>
                 So 100% of my donation goes directly to the field.
@@ -1177,6 +1195,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 14,
+    display: "flex",
   },
 
   headerTitle: {
@@ -1208,8 +1227,8 @@ const styles = StyleSheet.create({
   },
 
   itemImage: {
-    width: 48,
-    height: 48,
+    width: 58,
+    height: 58,
     borderRadius: 8,
     backgroundColor: "#E5E7EB",
   },
@@ -1312,7 +1331,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginVertical: 8,
   },
 
   infoText: {
@@ -1333,7 +1351,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#FACC15",
     borderRadius: 10,
-    paddingVertical: 14,
+    paddingVertical: 10,
     gap: 6,
   },
 
