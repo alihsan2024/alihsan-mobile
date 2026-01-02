@@ -1,48 +1,47 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
-  Dimensions,
-  Platform,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Image,
 } from "react-native";
-import { useDispatch, useSelector } from "react-redux";
-import type { RootState, AppDispatch } from "@/store/store";
-import { useLocalSearchParams } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-
-import Step1 from "@/components/Zakat/Step1";
-import Step2 from "@/components/Zakat/Step2";
-import Step3 from "@/components/Zakat/Step3";
-import Step4 from "@/components/Zakat/Step4";
-import Step5 from "@/components/Zakat/Step5";
-import Summary from "@/components/Zakat/Summary";
-import Header from "@/components/Zakat/ZakatCalculatorHeader";
-import Stepper from "@/components/ui/Stepper";
-import Button from "@/components/ui/Button";
+import { Picker } from "@react-native-picker/picker";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch } from "@/store/store";
 
 import {
+  zakatInput,
+  zakatStep,
   getMetalPrices,
   resetZakatInput,
-  zakatStep,
+  zakatMetalInput,
 } from "@/store/reduxSlice/zakatSlice";
 
-export default function ZakatCalculatorPage() {
-  const dispatch: AppDispatch = useDispatch();
-  const step = useSelector((state: RootState) => state.zakatCalculator.step);
-  const prices = useSelector(
-    (state: RootState) => state.zakatCalculator.prices
-  );
+import ZakatSummaryModal from "@/components/ui/Modals/ZakatSummaryModal";
+import { useRouter } from "expo-router";
 
+const STEPS = [
+  { key: 1, label: "Cash & Bank" },
+  { key: 2, label: "Assets" },
+  { key: 3, label: "Gold, Silver" },
+  { key: 4, label: "Liabilities" },
+];
+
+export default function ZakatCalculatorScreen() {
+  const dispatch: AppDispatch = useDispatch();
+  const router = useRouter();
   const scrollRef = useRef<ScrollView>(null);
 
-  // Query param
-  const params = useLocalSearchParams();
-  const cartAmount = params?.nyp ? parseInt(params.nyp as string) : 0;
+  const { step, amounts, prices } = useSelector(
+    (state: any) => state.zakatCalculator
+  );
 
-  const steps = [Step1, Step2, Step3, Step4];
-  const CurrentStep = step === 5 ? Step5 : steps[step - 1];
+  const [summaryOpen, setSummaryOpen] = useState(false);
 
   useEffect(() => {
     dispatch(getMetalPrices());
@@ -51,247 +50,418 @@ export default function ZakatCalculatorPage() {
     };
   }, []);
 
-  // Jump to step 5 if cartAmount exists
-  useEffect(() => {
-    if (cartAmount && cartAmount > 0) dispatch(zakatStep(4));
-  }, [cartAmount]);
-
-  // Scroll to top when step changes
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: true });
   }, [step]);
 
-  // Responsive: two-column layout for tablets/large screens
-  const windowWidth = Dimensions.get("window").width;
-  const isTablet = windowWidth >= 768;
+  const sumArray = (arr: any[] = []) =>
+    arr.reduce((s, i) => s + (i.value || 0), 0);
+
+  // Total zakatable wealth
+  const totalWealth =
+    (amounts.cash || 0) +
+    (amounts.bank || 0) +
+    sumArray(amounts.gold) +
+    sumArray(amounts.silver) +
+    (amounts.investmentProfit || 0) +
+    (amounts.shareResale || 0) +
+    (amounts.merchandise || 0) +
+    (amounts.loan || 0) +
+    (amounts.other || 0);
+
+  const goldPriceAud = Number(prices.price?.goldPriceInAud || 0);
+  const silverPriceAud = Number(prices.silverFinePriceInAud || 0);
+
+  const goldNisabAud = 87.48 * goldPriceAud;
+  const silverNisabAud = 612.36 * silverPriceAud;
+
+  const zakat = totalWealth >= silverNisabAud ? totalWealth / 40 : 0;
+
+  const renderStep = () => {
+    switch (step) {
+      case 1:
+        return (
+          <>
+            <Text style={styles.sectionTitle}>Cash & Bank</Text>
+
+            <Text style={styles.label}>Cash on Hand</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              value={amounts.cash?.toString() || ""}
+              onChangeText={(v) =>
+                dispatch(zakatInput({ name: "cash", value: Number(v) }))
+              }
+            />
+
+            <Text style={styles.label}>Balance Held in Bank Accounts</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              value={amounts.bank?.toString() || ""}
+              onChangeText={(v) =>
+                dispatch(zakatInput({ name: "bank", value: Number(v) }))
+              }
+            />
+          </>
+        );
+
+      case 2:
+        return (
+          <>
+            <Text style={styles.sectionTitle}>Assets</Text>
+
+            <Text style={styles.label}>Annual Profit Of Investment Held</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              value={amounts.investmentProfit?.toString() || ""}
+              onChangeText={(v) =>
+                dispatch(
+                  zakatInput({
+                    name: "investmentProfit",
+                    value: Number(v),
+                  })
+                )
+              }
+            />
+
+            <Text style={styles.label}>Resale Value Of Share</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              value={amounts.shareResale?.toString() || ""}
+              onChangeText={(v) =>
+                dispatch(
+                  zakatInput({
+                    name: "shareResale",
+                    value: Number(v),
+                  })
+                )
+              }
+            />
+
+            <Text style={styles.label}>Merchandise & Profits</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              value={amounts.merchandise?.toString() || ""}
+              onChangeText={(v) =>
+                dispatch(
+                  zakatInput({
+                    name: "merchandise",
+                    value: Number(v),
+                  })
+                )
+              }
+            />
+          </>
+        );
+
+      case 3:
+        return (
+          <>
+            <Text style={styles.sectionTitle}>Gold & Silver</Text>
+
+            {/* GOLD */}
+            <Text style={styles.label}>Zakatable Gold</Text>
+            <View style={styles.row}>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                keyboardType="numeric"
+                value={amounts.gold?.[0]?.value?.toString() || ""}
+                placeholder="0"
+                onChangeText={(v) =>
+                  dispatch(
+                    zakatMetalInput({
+                      name: "gold",
+                      key: 0,
+                      value: Number(v),
+                      unit: amounts.gold?.[0]?.unit || "gram",
+                      type: "gold",
+                    })
+                  )
+                }
+              />
+
+              <View style={styles.pickerWrap}>
+                <Picker
+                  selectedValue={amounts.gold?.[0]?.unit || "gram"}
+                  onValueChange={(unit) =>
+                    dispatch(
+                      zakatMetalInput({
+                        name: "gold",
+                        key: 0,
+                        value: amounts.gold?.[0]?.value || 0,
+                        unit,
+                        type: "gold",
+                      })
+                    )
+                  }
+                >
+                  <Picker.Item label="Grams" value="gram" />
+                  <Picker.Item label="Ounces" value="ounce" />
+                </Picker>
+              </View>
+            </View>
+
+            {/* SILVER */}
+            <Text style={styles.label}>Zakatable Silver</Text>
+            <View style={styles.row}>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                keyboardType="numeric"
+                value={amounts.silver?.[0]?.value?.toString() || ""}
+                placeholder="0"
+                onChangeText={(v) =>
+                  dispatch(
+                    zakatMetalInput({
+                      name: "silver",
+                      key: 0,
+                      value: Number(v),
+                      unit: amounts.silver?.[0]?.unit || "gram",
+                      type: "silver",
+                    })
+                  )
+                }
+              />
+
+              <View style={styles.pickerWrap}>
+                <Picker
+                  selectedValue={amounts.silver?.[0]?.unit || "gram"}
+                  onValueChange={(unit) =>
+                    dispatch(
+                      zakatMetalInput({
+                        name: "silver",
+                        key: 0,
+                        value: amounts.silver?.[0]?.value || 0,
+                        unit,
+                        type: "silver",
+                      })
+                    )
+                  }
+                >
+                  <Picker.Item label="Grams" value="gram" />
+                  <Picker.Item label="Ounces" value="ounce" />
+                </Picker>
+              </View>
+            </View>
+          </>
+        );
+
+      case 4:
+        return (
+          <>
+            <Text style={styles.sectionTitle}>Liabilities</Text>
+
+            <Text style={styles.label}>
+              Total Amount Of Awaiting Receivable Loans
+            </Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              value={amounts.loan?.toString() || ""}
+              onChangeText={(v) =>
+                dispatch(zakatInput({ name: "loan", value: Number(v) }))
+              }
+            />
+
+            <Text style={styles.label}>Other Zakatable Wealth</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              value={amounts.other?.toString() || ""}
+              onChangeText={(v) =>
+                dispatch(zakatInput({ name: "other", value: Number(v) }))
+              }
+            />
+          </>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  /* ---------------- RENDER ---------------- */
 
   return (
-    <ScrollView
-      style={styles.page}
-      contentContainerStyle={{ paddingBottom: 40 }}
-      ref={scrollRef}
-    >
+    <View style={styles.container}>
+      <ZakatSummaryModal
+        visible={summaryOpen}
+        onClose={() => setSummaryOpen(false)}
+      />
+
       {/* HEADER */}
-      <Header />
-
-      {/* MAIN CARD: Stepper + Current Step */}
-      <View
-        style={[
-          styles.mainRow,
-          {
-            flexDirection: isTablet ? "row" : "column",
-            gap: isTablet ? 20 : 0,
-          },
-        ]}
-      >
-        <View style={styles.leftColumn}>
-          <Stepper />
-          <View style={{ marginTop: 10 }}>
-            <CurrentStep zakatTotal={cartAmount} />
-          </View>
-        </View>
-
-        <View style={styles.rightColumn}>
-          <Summary zakatTotal={cartAmount} />
-        </View>
-      </View>
-
-      {/* ---------- TEXT SECTIONS ---------- */}
-      <Section title="Zakat Calculator: Calculate Your 2.5% Zakat" />
-
-      <Section
-        title="What is Zakat Al-Maal"
-        body={`Zakat Al-Maal is the fifth pillar of Islam, an act of worship that purifies your wealth and uplifts those most in need. If you've held qualifying assets above the nisab threshold for one full Hijri (lunar) year, it's time to calculate and fulfil your obligation.\n\nThis easy-to-use Zakat Calculator helps you determine your 2.5% Zakat amount accurately, based on up-to-date gold and silver prices in Australia.`}
-      />
-
-      <ListSection
-        title="Who Must Pay Zakat?"
-        list={[
-          "A Muslim",
-          "An adult of sound mind",
-          "Holding zakatable wealth above the nisab threshold for a full lunar year, then Zakat becomes obligatory on your qualifying assets.",
-        ]}
-      />
-
-      <ListSection
-        title="What Assets Are Zakatable?"
-        list={[
-          "Cash on hand & in bank",
-          "Gold and silver (including jewellery)",
-          "Shares, crypto, and investments",
-          "Business goods & stock",
-          "Receivable debts (that can be recovered)",
-          "Rental or investment income",
-          "Agricultural produce (as applicable)",
-        ]}
-      />
-
-      <ListSection
-        title="How It Works – Step by Step"
-        numbered
-        list={[
-          "Enter Your Assets: Input your values for cash, savings, gold, silver, investments, receivables, and more.",
-          "Live Nisab Check: The calculator automatically checks against the silver nisab value, updated daily in AUD.",
-          "Instant Zakat Calculation: It calculates 2.5% of your zakatable wealth, instantly showing you the total due.",
-          "Donate Securely: Once calculated, you can fulfil your obligation securely online through Al-Ihsan Foundation, in full accordance with Shariah principles.",
-        ]}
-      />
-
-      <ListSection
-        title="Why Use Al-Ihsan's Zakat Calculator?"
-        list={[
-          "Auto-updated gold & silver nisab rates",
-          "Guided entry for all zakatable asset types",
-          "Shariah-compliant and scholar-reviewed",
-          "Secure Zakat payment portal at the end",
-        ]}
-      />
-
-      <ListSection
-        title="Where Your Zakat Goes"
-        list={[
-          "Food & emergency relief",
-          "Orphan support",
-          "Clean water projects",
-          "Medical care",
-          "Education & self-sufficiency",
-          "Refugees & displaced families",
-        ]}
-      />
-
-      <Section
-        title="Ready to Give?"
-        body={`Once you've calculated your Zakat, complete your obligation in just a few clicks.\n\nDonate confidently. Give with trust. Delivered with Ihsan.`}
-      />
-
-      {/* Hadith Box */}
-      <View style={styles.hadithBox}>
-        <Text style={styles.hadithText}>
-          "Whoever pays the Zakat on his wealth will have its evil removed from
-          him." – Ibn Majah
-        </Text>
-      </View>
-
-      {/* CTA Button */}
-      <View style={{ marginVertical: 30, alignItems: "center" }}>
-        <Button
-          label="Calculate Zakat al-Maal"
-          onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
-          leftIcon={<Ionicons name="calculator" size={20} color="#fff" />}
-          variant="primary"
-          style={{ width: "80%" }}
+      <View style={styles.headerWrapper}>
+        <TouchableOpacity
+          style={{
+            position: "absolute",
+            top: 16,
+            left: 16,
+            zIndex: 10,
+            backgroundColor: "#fff",
+            borderRadius: 20,
+            width: 26,
+            height: 26,
+            alignItems: "center",
+            justifyContent: "center",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 3,
+          }}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="chevron-back" size={22} color="#264B8B" />
+        </TouchableOpacity>
+        <Image
+          source={require("@/assets/card1.png")}
+          style={styles.headerImage}
         />
+
+        <LinearGradient
+          colors={["transparent", "rgba(38,75,139,0.6)", "rgba(38,75,139,0.9)"]}
+          style={StyleSheet.absoluteFill}
+        />
+
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Zakat Calculator</Text>
+          <Text style={styles.headerSubtitle}>
+            Accurately determine your Zakat with our scholar-verified
+            calculator.
+          </Text>
+        </View>
       </View>
-    </ScrollView>
-  );
-}
 
-/* --------------------------- */
-/*        Reusable Components  */
-/* --------------------------- */
+      {/* TOP STEPS */}
+      <View style={styles.tabs}>
+        {STEPS.map((s) => (
+          <TouchableOpacity
+            key={s.key}
+            style={styles.tabWrap}
+            onPress={() => dispatch(zakatStep(s.key - step))}
+          >
+            <View
+              style={[
+                styles.tabLine,
+                s.key <= step ? styles.tabActive : styles.tabInactive,
+              ]}
+            />
+            <Text
+              style={[styles.tabText, step === s.key && styles.tabTextActive]}
+            >
+              {s.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-interface SectionProps {
-  title: string;
-  body?: string;
-}
-function Section({ title, body }: SectionProps) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.heading}>{title}</Text>
-      {body && <Text style={styles.paragraph}>{body}</Text>}
+      <ScrollView ref={scrollRef} style={styles.content}>
+        {renderStep()}
+      </ScrollView>
+
+      {/* FOOTER */}
+      <View style={styles.footer}>
+        <View>
+          <Text style={styles.footerTitle}>Your estimated Zakat Payment</Text>
+          <Text style={styles.footerSub}>
+            Based on 2.5% of Zakatable Wealth
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.reviewWrap}
+          onPress={() => setSummaryOpen(true)}
+        >
+          <Text style={styles.footerAmount}>AUD {zakat.toFixed(2)}</Text>
+
+          <View style={styles.reviewRow}>
+            <Text style={styles.reviewText}>Review Summary</Text>
+            <Ionicons name="chevron-forward" size={14} color="#fff" />
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity
+        style={styles.nextBtn}
+        onPress={() => dispatch(zakatStep(1))}
+      >
+        <Text style={styles.nextText}>Next</Text>
+        <Ionicons name="chevron-forward" size={18} color="#fff" />
+      </TouchableOpacity>
     </View>
   );
 }
 
-interface ListSectionProps {
-  title: string;
-  list?: string[];
-  numbered?: boolean;
-}
-function ListSection({ title, list = [], numbered = false }: ListSectionProps) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.heading}>{title}</Text>
-      {list.map((item, index) => (
-        <Text key={index} style={styles.listItem}>
-          {numbered ? `${index + 1}. ` : "• "}
-          {item}
-        </Text>
-      ))}
-    </View>
-  );
-}
-
-/* --------------------------- */
-/*             Styles          */
-/* --------------------------- */
+/* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
-  page: {
-    flex: 1,
-    backgroundColor: "#F9FAFB",
-  },
+  container: { flex: 1, backgroundColor: "#F6F7FB" },
 
-  mainRow: {
-    marginTop: 16,
-    paddingHorizontal: 16,
-  },
+  headerWrapper: { height: 220 },
+  headerImage: { width: "100%", height: "100%", position: "absolute" },
+  headerContent: { position: "absolute", bottom: 20, left: 16, right: 16 },
+  headerTitle: { color: "#fff", fontSize: 22, fontWeight: "700" },
+  headerSubtitle: { color: "#E6ECFF", fontSize: 14, marginTop: 6 },
 
-  leftColumn: {
-    flex: 1,
-  },
-  rightColumn: {
-    flex: 1,
-    marginTop: Platform.OS === "android" ? 20 : 0,
-  },
+  tabs: { flexDirection: "row", marginTop: 16, marginHorizontal: 16 },
+  tabWrap: { flex: 1, alignItems: "center", marginHorizontal: 6 },
+  tabLine: { height: 4, width: "100%", borderRadius: 4 },
+  tabActive: { backgroundColor: "#264B8B" },
+  tabInactive: { backgroundColor: "#E5E7EB" },
+  tabText: { fontSize: 11, color: "#9AA0B5" },
+  tabTextActive: { color: "#264B8B", fontWeight: "600" },
 
-  section: {
-    paddingHorizontal: 16,
-    marginTop: 28,
-  },
-
-  heading: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#264B8B",
-    marginBottom: 10,
-  },
-
-  paragraph: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: "#444",
-  },
-
-  listItem: {
-    fontSize: 16,
-    color: "#444",
-    marginBottom: 6,
-  },
-
-  hadithBox: {
-    backgroundColor: "#f0f0f0",
-    padding: 16,
-    marginHorizontal: 16,
-    marginTop: 20,
-    borderRadius: 12,
-  },
-  hadithText: {
-    fontStyle: "italic",
-    fontSize: 16,
-    color: "#333",
-  },
-
-  calcInfo: {
-    backgroundColor: "#fff3cd",
+  content: { padding: 20 },
+  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 16 },
+  label: { fontSize: 12, color: "#6B7280", marginBottom: 6 },
+  input: {
+    backgroundColor: "#fff",
     borderRadius: 10,
-    padding: 16,
-    marginHorizontal: 16,
-    marginTop: 20,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    padding: 12,
+    marginBottom: 16,
   },
-  calcText: {
+
+  row: { flexDirection: "row", gap: 10 },
+  pickerWrap: {
+    width: 120,
+    backgroundColor: "#F0F2FF",
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+
+  footer: {
+    backgroundColor: "#5661E9",
+    padding: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  footerTitle: { color: "#E6E8FF", fontSize: 12 },
+  footerSub: { color: "#C7CCFF", fontSize: 11 },
+  footerAmount: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  reviewWrap: { alignItems: "flex-end" },
+  reviewRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  reviewText: { color: "#fff", fontSize: 12 },
+
+  nextBtn: {
+    backgroundColor: "#244180",
+    padding: 10,
+    marginHorizontal: 16,
+    marginVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 6,
+  },
+  nextText: {
+    color: "#fff",
     fontSize: 16,
-    color: "#856404",
-    marginBottom: 4,
+    fontWeight: "600",
   },
 });
