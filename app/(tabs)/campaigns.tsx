@@ -281,11 +281,9 @@ const styles = StyleSheet.create({
   },
   card: {
     width: "48%",
-    backgroundColor: "#fff",
     borderRadius: 10,
     marginBottom: 16,
     overflow: "hidden",
-    elevation: 2,
     minHeight: 210,
     flexDirection: "column",
   },
@@ -298,6 +296,7 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     justifyContent: "space-between",
     padding: 10,
+    backgroundColor: "#F2F6FF",
   },
   cardContentTop: {
     flexShrink: 1,
