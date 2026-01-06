@@ -21,6 +21,7 @@ import { getCampaignDetails } from "@/utils/api";
 import { LinearGradient } from "expo-linear-gradient";
 import { getTopDonation } from "@/store/reduxSlice/quickDonationSlice";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
+import { DimensionValue } from "react-native";
 
 export default function GazaDonationScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -93,7 +94,7 @@ export default function GazaDonationScreen() {
   const raised = Number(campaign?.raisedAmount || 0);
   const goal = Number(campaign?.goalAmount || 0);
 
-  const progressPercent = useMemo(() => {
+  const progressPercent = useMemo<DimensionValue>(() => {
     if (!goal) return "0%";
     return `${Math.min((raised / goal) * 100, 100)}%`;
   }, [raised, goal]);

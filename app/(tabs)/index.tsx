@@ -17,7 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import ImageSlider from "@/components/ui/sliders/ImageSlider";
 import CampaignSlider from "@/components/ui/sliders/CampaignSlider";
-import { ProgressModal } from "@/components/ui/Modals/DonationAppealModal";
+import { DonationAppealModal } from "@/components/ui/Modals/DonationAppealModal";
 import { router } from "expo-router";
 import { fetchFeaturedCampaigns } from "@/utils/api";
 import {
@@ -299,14 +299,13 @@ export default function HomeScreen() {
       contentContainerStyle={{ paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
     >
-      <ProgressModal
+      <DonationAppealModal
         visible={isModalVisible}
         onClose={() => setIsModalVisible(false)}
         image={require("../../assets/modal-image.png")}
         title="Help Children in Need"
         raised={109690.51}
         goal={150000}
-        onDonate={() => console.log("Donate pressed")}
       />
       {/* Background images */}
       {/* Background images */}

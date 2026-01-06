@@ -31,7 +31,7 @@ const GAZA_CAMPAIGN = {
     "https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/1753249055468-alihsan-coverImage.png",
 };
 
-type ProgressModalProps = {
+type DonationAppealModalProps = {
   visible: boolean;
   onClose: () => void;
   image: any;
@@ -40,7 +40,7 @@ type ProgressModalProps = {
   goal: number;
 };
 
-export const ProgressModal: React.FC<ProgressModalProps> = ({
+export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
   visible,
   onClose,
   image,
