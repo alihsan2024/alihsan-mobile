@@ -37,13 +37,25 @@ export default function ActiveAppealsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  let campaignsCache: Campaign[] | null = null;
 
   useEffect(() => {
     const loadCampaigns = async () => {
+      // ✅ Use cache if available
+      if (campaignsCache) {
+        setCampaigns(campaignsCache);
+        setLoading(false);
+        return;
+      }
+
       try {
         setError(null);
         setLoading(true);
         const data = await fetchCampaigns();
+
+        // ✅ Save to session cache
+        campaignsCache = data;
+
         setCampaigns(data);
       } catch (err: any) {
         setError(err?.message || "Failed to load campaigns");
@@ -51,6 +63,7 @@ export default function ActiveAppealsScreen() {
         setLoading(false);
       }
     };
+
     loadCampaigns();
   }, []);
 
@@ -97,7 +110,13 @@ export default function ActiveAppealsScreen() {
         {categories.map((item, index) => (
           <TouchableOpacity
             key={index}
-            style={styles.categoryItem}
+            style={[
+              styles.categoryItem,
+              selectedCategory === item.label && {
+                backgroundColor: "#E3F0FF",
+                borderRadius: 8,
+              },
+            ]}
             onPress={() => setSelectedCategory(item.label)}
             activeOpacity={0.7}
           >
@@ -171,7 +190,12 @@ export default function ActiveAppealsScreen() {
         )}
 
         {filteredCampaigns.map((c) => (
-          <Link key={c.id} href={`/campaign/${c.slug}`} asChild>
+          <Link
+            key={c.id}
+            href={`/campaign/${c.slug}`}
+            asChild
+            style={{ padding: 8, backgroundColor: "#F2F6FF" }}
+          >
             <TouchableOpacity activeOpacity={0.85} style={styles.card}>
               <Image source={{ uri: c.coverImage }} style={styles.cardImage} />
               <View style={styles.cardContentWrapper}>
@@ -252,6 +276,7 @@ const styles = StyleSheet.create({
     width: "25%",
     alignItems: "center",
     marginBottom: 16,
+    paddingVertical: 8,
   },
   categoryText: {
     fontSize: 11,
@@ -290,25 +315,26 @@ const styles = StyleSheet.create({
   cardImage: {
     width: "100%",
     height: 110,
+    borderRadius: 10,
   },
   cardContentWrapper: {
     flex: 1,
     flexDirection: "column",
     justifyContent: "space-between",
-    padding: 10,
-    backgroundColor: "#F2F6FF",
+    paddingTop: 10,
   },
   cardContentTop: {
     flexShrink: 1,
   },
   cardTitle: {
-    fontSize: 13,
+    fontSize: 18,
     fontWeight: "600",
     marginBottom: 4,
+    color: "#010D26",
   },
   cardSubtitle: {
-    fontSize: 11,
-    color: "#777",
+    fontSize: 14,
+    color: "#010D26",
     marginBottom: 10,
   },
   button: {

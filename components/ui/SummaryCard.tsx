@@ -1,40 +1,47 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { Image as ExpoImage } from "expo-image";
 
 type Props = {
   title: string;
   subtitle?: string;
   amount: string;
+  image?: string;
 };
 
-export default function SummaryCard({ title, subtitle, amount }: Props) {
+export default function SummaryCard({ title, subtitle, amount, image }: Props) {
   return (
     <View style={styles.card}>
+      {/* Image */}
+      {image && (
+        <ExpoImage
+          source={{ uri: image }}
+          style={styles.image}
+          contentFit="cover"
+        />
+      )}
+
+      {/* Text */}
       <View style={styles.left}>
-        <Text style={styles.title}>{title}</Text>
-        {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+        <Text style={styles.title} numberOfLines={2}>
+          {title}
+        </Text>
+        {subtitle && (
+          <Text style={styles.subtitle} numberOfLines={2}>
+            {subtitle}
+          </Text>
+        )}
       </View>
 
+      {/* Amount */}
       <Text style={styles.amount}>{amount}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  summaryCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  summaryTitle: { fontWeight: "600" },
-  summarySub: { color: "#777", fontSize: 12 },
   card: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     padding: 16,
@@ -45,6 +52,14 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
+  },
+
+  image: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: "#E5E7EB",
+    marginRight: 12,
   },
 
   left: {

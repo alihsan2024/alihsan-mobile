@@ -6,18 +6,26 @@ import {
   Dimensions,
   TextInput,
   ScrollView,
+  Alert,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Feather from "@expo/vector-icons/Feather";
 import SimpleLineIcons from "@expo/vector-icons/SimpleLineIcons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import ImageSlider from "@/components/ui/sliders/ImageSlider";
 import CampaignSlider from "@/components/ui/sliders/CampaignSlider";
 import { ProgressModal } from "@/components/ui/Modals/DonationAppealModal";
 import { router } from "expo-router";
+import { fetchFeaturedCampaigns } from "@/utils/api";
+import {
+  useAddToBasketMutation,
+  useGetBasketQuery,
+} from "@/store/reduxSlice/api/basketApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useSelector } from "react-redux";
 
 const ICON_SIZE = 16;
 const SIDE_BUTTON_WIDTH = 60;
@@ -120,8 +128,18 @@ const CARDS = [
   },
 ];
 
+const GAZA_CAMPAIGN = {
+  id: 188,
+  name: "Gaza",
+  slug: "gaza",
+  checkoutType: "COMMON",
+  coverImage:
+    "https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/1753249055468-alihsan-coverImage.png",
+};
+
 export type CampaignItem = {
   id: string | number;
+  slug: string;
   image: any;
   title: string;
   donors: number;
@@ -139,6 +157,128 @@ export default function HomeScreen() {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(50);
   const [customAmount, setCustomAmount] = useState<string>("");
   const [isModalVisible, setIsModalVisible] = useState(true);
+  const [featuredCampaigns, setFeaturedCampaigns] = useState<CampaignItem[]>(
+    []
+  );
+  const [isLoadingFeaturedCampaigns, setIsLoadingFeaturedCampaigns] =
+    useState(false);
+  const { user } = useSelector((state: any) => state.authentication);
+  const isAuthenticated = !!user;
+
+  const [addToBasket] = useAddToBasketMutation();
+  const { data: basketData } = useGetBasketQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+
+  const [guestBasket, setGuestBasket] = useState<any[]>([]);
+  const [addingToCart, setAddingToCart] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      AsyncStorage.getItem("guestBasket").then((data) => {
+        setGuestBasket(data ? JSON.parse(data) : []);
+      });
+    }
+  }, [isAuthenticated]);
+
+  const handleGazaDonate = async () => {
+    const donationAmount = Number(selectedAmount || customAmount);
+
+    if (!donationAmount || donationAmount <= 0) {
+      Alert.alert("Please enter a valid amount");
+      return;
+    }
+
+    const basketItems = isAuthenticated
+      ? basketData?.payload ?? []
+      : guestBasket;
+
+    const isInCart = basketItems.some(
+      (item: any) => item.campaignId === GAZA_CAMPAIGN.id
+    );
+
+    if (isInCart) {
+      Alert.alert("Already in cart", "This campaign is already in your cart.", [
+        {
+          text: "View Cart",
+          onPress: () => router.push("/(tabs)/cart"),
+        },
+        { text: "OK", style: "cancel" },
+      ]);
+      return;
+    }
+
+    const basketItem = {
+      campaignId: GAZA_CAMPAIGN.id,
+      amount: donationAmount,
+      quantity: 1,
+      name: GAZA_CAMPAIGN.name,
+      coverImage: GAZA_CAMPAIGN.coverImage,
+      checkoutType: GAZA_CAMPAIGN.checkoutType,
+    };
+
+    try {
+      setAddingToCart(true);
+
+      if (isAuthenticated) {
+        await addToBasket({ body: basketItem });
+      } else {
+        const updated = [...guestBasket, basketItem];
+        setGuestBasket(updated);
+        await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
+      }
+
+      Alert.alert(
+        "Added to cart",
+        "Your donation has been added to the cart.",
+        [
+          {
+            text: "View Cart",
+            onPress: () => router.push("/(tabs)/cart"),
+          },
+          { text: "OK", style: "cancel" },
+        ]
+      );
+    } catch {
+      Alert.alert("Error", "Failed to add to cart");
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
+  useEffect(() => {
+    const loadFeaturedCampaigns = async () => {
+      try {
+        setIsLoadingFeaturedCampaigns(true);
+        const S3_BASE_URL = "https://alihsan.s3.ap-southeast-2.amazonaws.com/";
+
+        const response = await fetchFeaturedCampaigns();
+
+        const mappedCampaigns: CampaignItem[] = response.map(
+          (campaign: any) => ({
+            id: campaign.id,
+            slug: campaign.slug, // ✅ IMPORTANT
+            image: campaign.coverImage
+              ? { uri: `${S3_BASE_URL}${campaign.coverImage}` }
+              : require("../../assets/card1.png"),
+            title: campaign.name,
+            donors: campaign.donorsCount ?? 0,
+            status: "Ongoing",
+            amountRaised: `$${campaign.amountDonated ?? 0}`,
+            goal: `$${campaign.fundraiserGoal ?? 0}`,
+          })
+        );
+
+        setFeaturedCampaigns(mappedCampaigns);
+      } catch (error) {
+        console.error("Failed to load featured campaigns:", error);
+      } finally {
+        setIsLoadingFeaturedCampaigns(false);
+      }
+    };
+
+    loadFeaturedCampaigns();
+  }, []);
 
   const handleAmountPress = (amount: number) => {
     setSelectedAmount(amount);
@@ -146,8 +286,7 @@ export default function HomeScreen() {
   };
 
   const handleCampaignPress = (item: CampaignItem) => {
-    console.log("Selected campaign:", item);
-    // Navigate or show details
+    router.push(`/campaign/${item.slug}`);
   };
 
   return (
@@ -228,66 +367,6 @@ export default function HomeScreen() {
           <Text style={styles.heroSubtitle}>is being Starved</Text>
         </View>
 
-        {/* Header */}
-        {/* <View style={styles.header}>
-          <View style={styles.sideContainer}>
-            <TouchableOpacity style={styles.menuButton}>
-              <SimpleLineIcons name="grid" size={ICON_SIZE} color="white" />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.logoWrapper}>
-            <ExpoImage
-              source={require("../../assets/logo-white.png")}
-              style={styles.logo}
-            />
-          </View>
-          <View style={styles.sideContainer}>
-            <TouchableOpacity style={styles.menuButton}>
-              <Feather name="bell" size={ICON_SIZE} color="white" />
-            </TouchableOpacity>
-          </View>
-        </View> */}
-
-        {/* Buttons Grid */}
-        {/* <View style={styles.buttonGrid}>
-          {BUTTONS.map((btn, idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={[
-                styles.gridButton,
-                selectedIndex === idx
-                  ? styles.gridButtonSelected
-                  : styles.gridButtonUnselected,
-              ]}
-              onPress={() => setSelectedIndex(idx)}
-              OngoingOpacity={0.8}
-            >
-              <View style={styles.buttonContent}>
-                <Feather
-                  name={btn.icon}
-                  size={ICON_SIZE}
-                  color={selectedIndex === idx ? "#010D26" : "#fff"}
-                />
-                <Text
-                  style={[
-                    styles.buttonText,
-                    selectedIndex === idx && { color: "#010D26" },
-                  ]}
-                >
-                  {btn.name}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View> */}
-
-        {/* Bottom image */}
-        {/* <ExpoImage
-          source={require("../../assets/header-image.png")}
-          style={styles.headerImage}
-          contentFit="contain"
-        /> */}
-
         {/* Giving options */}
         <View style={styles.givingContainer}>
           {GIVING_OPTIONS.map((option, idx) => (
@@ -366,8 +445,15 @@ export default function HomeScreen() {
           </View>
 
           {/* Donate button */}
-          <TouchableOpacity style={styles.donateButton} activeOpacity={0.8}>
-            <Text style={styles.donateText}>Donate Now</Text>
+          <TouchableOpacity
+            style={styles.donateButton}
+            activeOpacity={0.8}
+            onPress={handleGazaDonate}
+            disabled={addingToCart}
+          >
+            <Text style={styles.donateText}>
+              {addingToCart ? "Adding..." : "Donate Now"}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -404,57 +490,18 @@ export default function HomeScreen() {
             >
               Featured Campaigns
             </Text>
-            <Text>See All</Text>
+            <TouchableOpacity onPress={() => router.push("/campaigns")}>
+              <Text style={{ color: "#010D26" }}>See All</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            onPress={() => router.push("/zakat-calculator")}
-            style={{
-              backgroundColor: "#264B8B",
-              padding: 12,
-              borderRadius: 8,
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ color: "#fff", fontWeight: "700" }}>
-              Go to Zakat Calculator
-            </Text>
-          </TouchableOpacity>
-          <CampaignSlider data={campaigns} onPress={handleCampaignPress} />
+
+          {featuredCampaigns.length > 0 && (
+            <CampaignSlider
+              data={featuredCampaigns}
+              onPress={handleCampaignPress}
+            />
+          )}
         </View>
-
-        {/* Cards Grid */}
-        {/* <View style={styles.cardsGrid}>
-          {CARDS.map((card) => (
-            <View key={card.id} style={styles.card}>
-              <ExpoImage source={card.image} style={styles.cardImage} />
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{card.title}</Text>
-                <TouchableOpacity style={styles.cardButton} activeOpacity={0.8}>
-                  <Text style={styles.cardButtonText}>Donate</Text>
-                  <Feather name="arrow-right" size={20} color="black" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-        </View> */}
-        {/* <TouchableOpacity
-          style={styles.cartButtonWrapper}
-          activeOpacity={0.85}
-          onPress={() => {
-            // handle cart press
-          }}
-        >
-          <ExpoImage
-            source={require("../../assets/cart-bg-btn.png")}
-            style={styles.cartBackground}
-            contentFit="cover"
-          />
-
-          <View style={styles.cartContent}>
-            <Feather name="shopping-cart" size={24} color="#fff" />
-            <Text style={styles.cartText}>Cart</Text>
-          </View>
-        </TouchableOpacity> */}
       </View>
     </ScrollView>
   );

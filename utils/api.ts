@@ -32,7 +32,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Configure API URLs for different environments
 // IMPORTANT: Replace YOUR_LAN_IP below with your computer's actual LAN IP address
 const API_URLS = {
-  development: "http://192.168.1.6:4000", // e.g., http://192.168.1.100:4000
+  development: "http://192.168.1.2:4000", // e.g., http://192.168.1.100:4000
   production: "https://deenstream.live",
   // production: "https://api.alihsan.org.au",
 };
@@ -133,6 +133,19 @@ export const fetchCampaigns = async (): Promise<Campaign[]> => {
 
     // Return projects.rows which contains the list of campaigns
     return data?.payload?.projects?.rows || [];
+  } catch (error) {
+    console.error("Error fetching campaigns:", error);
+    throw error;
+  }
+};
+// Fetch all featured campaigns
+export const fetchFeaturedCampaigns = async (): Promise<any> => {
+  try {
+    const response = await api.get("/project/featured-campaigns");
+    const data = response.data;
+
+    // Return the full data object as requested
+    return data;
   } catch (error) {
     console.error("Error fetching campaigns:", error);
     throw error;

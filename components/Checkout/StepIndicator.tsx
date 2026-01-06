@@ -4,32 +4,46 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 const STEPS = ["Details", "Payment", "Confirm"];
 
 type Props = {
-  step: number;
+  step: number; // 1-based
   onStepPress: (step: number) => void;
 };
 
 export default function StepIndicator({ step, onStepPress }: Props) {
   return (
-    <View style={styles.wrapper}>
-      <View style={styles.line} />
-
+    <View style={styles.container}>
       <View style={styles.row}>
         {STEPS.map((label, index) => {
           const stepNumber = index + 1;
-          const active = step >= stepNumber;
+          const isCompleted = step > stepNumber;
+          const isActive = step === stepNumber;
 
           return (
-            <TouchableOpacity
-              key={label}
-              style={styles.step}
-              activeOpacity={0.7}
-              onPress={() => onStepPress(stepNumber)}
-            >
-              <View style={[styles.dot, active && styles.activeDot]} />
-              <Text style={[styles.label, active && styles.activeLabel]}>
-                {label}
-              </Text>
-            </TouchableOpacity>
+            <React.Fragment key={label}>
+              {/* STEP */}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => onStepPress(stepNumber)}
+                style={styles.step}
+              >
+                <View
+                  style={[
+                    styles.dot,
+                    isCompleted && styles.dotCompleted,
+                    isActive && styles.dotActive,
+                  ]}
+                />
+              </TouchableOpacity>
+
+              {/* LINE (except after last step) */}
+              {index < STEPS.length - 1 && (
+                <View
+                  style={[
+                    styles.line,
+                    step > stepNumber && styles.lineCompleted,
+                  ]}
+                />
+              )}
+            </React.Fragment>
           );
         })}
       </View>
@@ -38,41 +52,46 @@ export default function StepIndicator({ step, onStepPress }: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
+  container: {
     paddingVertical: 16,
     paddingHorizontal: 20,
   },
-  line: {
-    position: "absolute",
-    top: 26,
-    left: 30,
-    right: 30,
-    height: 2,
-    backgroundColor: "#E0E0E0",
-  },
+
   row: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "center",
   },
+
+  /* STEP */
   step: {
     alignItems: "center",
   },
+
   dot: {
     width: 10,
     height: 10,
     borderRadius: 5,
     backgroundColor: "#CFCFCF",
-    marginBottom: 6,
   },
-  activeDot: {
-    backgroundColor: "#264B8B",
+
+  dotCompleted: {
+    backgroundColor: "#246BE1",
   },
-  label: {
-    fontSize: 12,
-    color: "#999",
+
+  dotActive: {
+    backgroundColor: "#246BE1",
+    transform: [{ scale: 1.2 }],
   },
-  activeLabel: {
-    color: "#264B8B",
-    fontWeight: "500",
+
+  /* LINE BETWEEN STEPS */
+  line: {
+    flex: 1,
+    height: 2,
+    backgroundColor: "#E5E7EB",
+    marginHorizontal: 6,
+  },
+
+  lineCompleted: {
+    backgroundColor: "#246BE1",
   },
 });

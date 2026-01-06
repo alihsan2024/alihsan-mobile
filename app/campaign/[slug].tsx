@@ -19,6 +19,8 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getCampaignDetails } from "@/utils/api";
 import { LinearGradient } from "expo-linear-gradient";
+import { getTopDonation } from "@/store/reduxSlice/quickDonationSlice";
+import { useAppDispatch } from "@/hooks/useAppDispatch";
 
 export default function GazaDonationScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -38,6 +40,27 @@ export default function GazaDonationScreen() {
   const { data: basketData } = useGetBasketQuery(undefined, {
     skip: !isAuthenticated,
   });
+  const dispatch = useAppDispatch();
+  const liveDonations =
+    useSelector((state: any) => state.quickDonations?.liveDonations) ?? [];
+
+  console.log({ campaign });
+
+  console.log({ liveDonations });
+
+  useEffect(() => {
+    if (campaign?.id) {
+      dispatch(
+        getTopDonation({
+          id: campaign.id,
+          live: true,
+          sort: "createdAt",
+          order: "desc",
+          period: "alltime",
+        })
+      );
+    }
+  }, [campaign?.id]);
 
   useEffect(() => {
     const load = async () => {
@@ -258,18 +281,35 @@ export default function GazaDonationScreen() {
 
         <Text style={styles.donationTitle}>Donation</Text>
 
-        {[1, 2, 3, 4, 5].map((_, i) => (
-          <View key={i} style={styles.donationRow}>
-            <Ionicons name="person-circle-outline" size={28} color="#cfcfcf" />
+        {Array.isArray(liveDonations) && liveDonations.length > 0 ? (
+          liveDonations.map((donation: any, index: number) => (
+            <View key={`liveDonation_${index}`} style={styles.donationRow}>
+              <Ionicons
+                name="person-circle-outline"
+                size={28}
+                color="#cfcfcf"
+              />
 
-            <View style={styles.donationInfo}>
-              <Text style={styles.donorName}>Anonymous</Text>
-              <Text style={styles.timeText}>5 Minutes ago</Text>
+              <View style={styles.donationInfo}>
+                <Text style={styles.donorName}>
+                  {donation?.isAnonymous
+                    ? "Anonymous"
+                    : `${donation?.firstName} ${donation?.lastName}`}
+                </Text>
+
+                <Text style={styles.timeText}>{donation?.displayTime}</Text>
+              </View>
+
+              <Text style={styles.donationValue}>
+                AUD {Number(donation?.total || 0).toLocaleString()}
+              </Text>
             </View>
-
-            <Text style={styles.donationValue}>$25</Text>
-          </View>
-        ))}
+          ))
+        ) : (
+          <Text style={{ marginTop: 12, color: "#888" }}>
+            No donations yet. Be the first to donate.
+          </Text>
+        )}
       </View>
     </ScrollView>
   );

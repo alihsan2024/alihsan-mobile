@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Modal,
   View,
@@ -6,9 +6,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  Animated,
+  Easing,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Button from "../Button";
 import { zakatResetInput } from "@/store/reduxSlice/zakatSlice";
@@ -22,6 +24,7 @@ type Props = {
 
 export default function ZakatSummaryModal({ visible, onClose }: Props) {
   const dispatch = useAppDispatch();
+
   const { amounts, prices } = useSelector(
     (state: any) => state.zakatCalculator
   );
@@ -31,9 +34,50 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
 
   const [loading, setLoading] = useState(false);
 
-  /* =====================================================
-     ✅ CALCULATIONS — MATCHES WEB EXACTLY
-     ===================================================== */
+  const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.88)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 320,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.timing(scale, {
+            toValue: 1.03,
+            duration: 260,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.spring(scale, {
+            toValue: 1,
+            friction: 6,
+            tension: 80,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 220,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 0.88,
+          duration: 220,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible]);
 
   const sumArray = (arr: any[] = []) =>
     arr.reduce((s, i) => s + (i.value || 0), 0);
@@ -52,20 +96,13 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
   const totalLiabilities = 0;
   const zakatableWealth = totalAssets - totalLiabilities;
 
-  // ✅ AUD prices directly (NO USD CONVERSION)
   const goldPriceAud = Number(prices.price?.goldPriceInAud || 0);
   const silverPriceAud = Number(prices.silverFinePriceInAud || 0);
 
-  // ✅ Nisab (AUD)
   const goldNisab = 87.48 * goldPriceAud;
   const silverNisab = 612.36 * silverPriceAud;
 
-  // ✅ Zakat (based on SILVER nisab)
   const zakatOwed = zakatableWealth >= silverNisab ? zakatableWealth / 40 : 0;
-
-  /* =====================================================
-     ✅ ADD TO BASKET — SAME AS OLD STEP 5
-     ===================================================== */
 
   const handlePayZakat = async () => {
     if (zakatOwed <= 0) {
@@ -91,11 +128,9 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
       };
 
       if (isLoggedIn) {
-        // ✅ LOGGED-IN USER → API
         await dispatch(addBasketItem(zakatItem)).unwrap();
         dispatch(getBasketItems());
       } else {
-        // ✅ GUEST USER → ASYNC STORAGE
         const guestData = await AsyncStorage.getItem("guestBasket");
         const guestBasket = guestData ? JSON.parse(guestData) : [];
 
@@ -119,10 +154,9 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
       }
 
       Alert.alert("Success", "Zakat added to basket successfully");
-
       dispatch(zakatResetInput());
       onClose();
-    } catch (error) {
+    } catch {
       Alert.alert(
         "Error",
         "Something went wrong while adding Zakat to basket."
@@ -132,16 +166,28 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
     }
   };
 
-  /* =====================================================
-     UI — UNCHANGED
-     ===================================================== */
-
   return (
-    <Modal transparent animationType="slide" visible={visible}>
-      <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
+    <Modal
+      transparent
+      visible={visible}
+      animationType="none"
+      statusBarTranslucent
+    >
+      <Animated.View style={[styles.overlay, { opacity }]}>
+        <Animated.View
+          style={[styles.modalContainer, { transform: [{ scale }] }]}
+        >
           {/* ===== TOP ===== */}
           <View style={styles.topContainer}>
+            {/* CLOSE BUTTON */}
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+
             <Text style={styles.title}>Your estimated Zakat Payment</Text>
 
             <View style={styles.amountBox}>
@@ -173,12 +219,7 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
                   dispatch(zakatResetInput());
                   onClose();
                 }}
-                style={{
-                  backgroundColor: "#FFFFFF1A",
-                  padding: 10,
-                  borderRadius: 8,
-                  marginTop: 6,
-                }}
+                style={styles.resetButton}
               >
                 <Text style={styles.resetText}>Reset</Text>
               </TouchableOpacity>
@@ -235,13 +276,11 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
               </View>
             )}
           </View>
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 }
-
-/* ================= STYLES (UNCHANGED) ================= */
 
 const styles = StyleSheet.create({
   overlay: {
@@ -255,9 +294,19 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     minWidth: 320,
     width: "90%",
-    alignSelf: "center",
     borderRadius: 20,
-    elevation: 10,
+  },
+  closeButton: {
+    position: "absolute",
+    top: 14,
+    right: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
   },
   gap: {
     height: 12,
@@ -302,6 +351,12 @@ const styles = StyleSheet.create({
   rowTextRight: {
     color: "#FFFFFF",
     fontSize: 14,
+  },
+  resetButton: {
+    backgroundColor: "#FFFFFF1A",
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 6,
   },
   resetText: {
     color: "#fff",

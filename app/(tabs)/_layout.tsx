@@ -1,115 +1,79 @@
 import { Tabs } from "expo-router";
 import { Platform, View, Text, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import { useGetBasketQuery } from "@/store/reduxSlice/api/basketApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-
-/* ----------------------------------------------------
-   Tab Icon
----------------------------------------------------- */
+import { LinearGradient } from "expo-linear-gradient";
 
 const TabIcon = ({
   name,
-  color,
-  badge,
+  focused,
 }: {
   name: keyof typeof Ionicons.glyphMap;
   focused: boolean;
-  color: string;
-  badge?: number;
 }) => (
-  <View style={styles.iconContainer}>
-    <Ionicons name={name} size={24} color={color} />
-    {badge !== undefined && badge > 0 && (
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>{badge > 99 ? "99+" : badge}</Text>
-      </View>
-    )}
+  <View style={styles.tabItem}>
+    <Ionicons name={name} size={22} color={focused ? "#4F6EF7" : "#9CA3AF"} />
   </View>
 );
-
-/* ----------------------------------------------------
-   Tabs Layout
----------------------------------------------------- */
 
 export default function TabsLayout() {
   const { user } = useSelector((state: any) => state.authentication);
   const isAuthenticated = !!user;
 
-  /* ---------- Logged-in basket ---------- */
   const { data: basketData } = useGetBasketQuery(undefined, {
     skip: !isAuthenticated,
   });
 
-  /* ---------- Guest basket ---------- */
   const [guestBasket, setGuestBasket] = useState<any[]>([]);
 
-  /* ---------- Safe reader ---------- */
   const readGuestBasket = async () => {
     try {
       const data = await AsyncStorage.getItem("guestBasket");
-      const parsed = data ? JSON.parse(data) : [];
-      return Array.isArray(parsed) ? parsed : [];
+      return data ? JSON.parse(data) : [];
     } catch {
       return [];
     }
   };
 
-  /* ---------- Initial load ---------- */
   useEffect(() => {
     if (!isAuthenticated) {
       readGuestBasket().then(setGuestBasket);
     }
   }, [isAuthenticated]);
 
-  /* ----------------------------------------------------
-     🔥 CRITICAL FIX
-     Poll AsyncStorage while Tabs are mounted
-     (Tabs never remount, focus won't fire)
-  ---------------------------------------------------- */
-
   useEffect(() => {
     if (isAuthenticated) return;
-
-    const interval = setInterval(async () => {
+    const i = setInterval(async () => {
       const latest = await readGuestBasket();
       setGuestBasket(latest);
-    }, 1000); // 1 second (lightweight & safe)
-
-    return () => clearInterval(interval);
+    }, 1000);
+    return () => clearInterval(i);
   }, [isAuthenticated]);
 
-  /* ---------- Source of truth ---------- */
   const basketItems = isAuthenticated ? basketData?.payload ?? [] : guestBasket;
 
-  /* ---------- Badge count ---------- */
-  const itemCount = Array.isArray(basketItems) ? basketItems.length : 0;
-
-  /* ----------------------------------------------------
-     UI
-  ---------------------------------------------------- */
+  const itemCount = basketItems.length;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#264B8B",
-        tabBarInactiveTintColor: "#999",
+        tabBarShowLabel: true,
+        tabBarLabelStyle: {
+          fontSize: 12,
+          marginTop: 4,
+        },
         tabBarStyle: {
+          height: Platform.OS === "ios" ? 88 : 68,
           backgroundColor: "#fff",
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: Platform.OS === "ios" ? 80 : 60,
           borderTopWidth: 0,
           elevation: 0,
         },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "600",
+        tabBarItemStyle: {
+          flex: 1,
         },
       }}
     >
@@ -117,8 +81,8 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="home" focused={focused} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="home" focused={focused} />
           ),
         }}
       />
@@ -126,9 +90,9 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="campaigns"
         options={{
-          title: "Campaigns",
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="heart" focused={focused} color={color} />
+          title: "Explore",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="compass" focused={focused} />
           ),
         }}
       />
@@ -136,14 +100,44 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="cart"
         options={{
-          title: "Cart",
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon
-              name="cart"
-              focused={focused}
-              color={color}
-              badge={itemCount > 0 ? itemCount : undefined}
-            />
+          title: "",
+          tabBarLabel: () => null, // ✅ NO LABEL
+          tabBarIcon: () => (
+            <View
+              style={{
+                alignItems: "center",
+                justifyContent: "center",
+                marginTop: 22,
+              }}
+            >
+              <LinearGradient
+                colors={["#246BE1", "#064DC3"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  transform: [{ rotate: "45deg" }],
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <View style={{ transform: [{ rotate: "-45deg" }] }}>
+                  <Ionicons name="cart" size={22} color="#fff" />
+                </View>
+              </LinearGradient>
+            </View>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="zakat-calculator"
+        options={{
+          title: "Zakat",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="hand-left" focused={focused} />
           ),
         }}
       />
@@ -152,8 +146,8 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="person" focused={focused} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="person" focused={focused} />
           ),
         }}
       />
@@ -161,35 +155,9 @@ export default function TabsLayout() {
   );
 }
 
-/* ----------------------------------------------------
-   Styles
----------------------------------------------------- */
-
 const styles = StyleSheet.create({
-  iconContainer: {
+  tabItem: {
     alignItems: "center",
     justifyContent: "center",
-    width: 24,
-    height: 24,
-    position: "relative",
-  },
-  badge: {
-    position: "absolute",
-    top: -6,
-    right: -12,
-    backgroundColor: "#d32f2f",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    paddingHorizontal: 6,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#fff",
-  },
-  badgeText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "bold",
   },
 });

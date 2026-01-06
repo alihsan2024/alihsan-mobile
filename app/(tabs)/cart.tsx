@@ -1,752 +1,3 @@
-// import React, { useCallback, useEffect, useState } from "react";
-// import {
-//   View,
-//   Text,
-//   StyleSheet,
-//   ScrollView,
-//   TouchableOpacity,
-//   Alert,
-//   RefreshControl,
-//   Switch,
-// } from "react-native";
-// import { useRouter } from "expo-router";
-// import { useSafeAreaInsets } from "react-native-safe-area-context";
-// import { Image as ExpoImage } from "expo-image";
-// import LoadingScreen from "../../components/LoadingScreen";
-// import { LinearGradient } from "expo-linear-gradient";
-// import AsyncStorage from "@react-native-async-storage/async-storage";
-// import { useSelector } from "react-redux";
-// import {
-//   useGetBasketQuery,
-//   useAddToBasketMutation,
-//   useRemoveFromBasketMutation,
-// } from "@/store/reduxSlice/api/basketApi";
-
-// // Format price helper
-// const formatPrice = (price: number): string => {
-//   return !isNaN(price)
-//     ? price.toLocaleString(undefined, {
-//         minimumFractionDigits: 2,
-//         maximumFractionDigits: 2,
-//       })
-//     : "0.00";
-// };
-
-// // Get recurring label helper
-// const getRecurringLabel = (periodDays?: number): string => {
-//   if (!periodDays) return "";
-//   switch (parseInt(periodDays.toString())) {
-//     case 7:
-//       return "Weekly";
-//     case 30:
-//       return "Monthly";
-//     case 365:
-//       return "Yearly";
-//     case 1:
-//       return "Daily";
-//     case 10:
-//       return "Last 10 Ramadan";
-//     default:
-//       return "";
-//   }
-// };
-
-// export default function CartScreen() {
-//   const { user } = useSelector((state: any) => state.authentication);
-//   const isAuthenticated = !!user;
-//   const router = useRouter();
-//   const insets = useSafeAreaInsets();
-//   const [refreshing, setRefreshing] = useState(false);
-//   const [isAnonymous, setIsAnonymous] = useState(false);
-//   const [guestBasket, setGuestBasket] = useState<any[]>([]);
-//   const [guestLoading, setGuestLoading] = useState(false);
-
-//   // RTK Query hooks for logged-in users
-//   const {
-//     data: basketData,
-//     isLoading,
-//     refetch,
-//   } = useGetBasketQuery(undefined, {
-//     skip: !isAuthenticated,
-//   });
-//   const [addToBasket] = useAddToBasketMutation();
-//   const [removeFromBasket] = useRemoveFromBasketMutation();
-
-//   // Load guest basket from AsyncStorage
-//   const loadGuestBasket = useCallback(async () => {
-//     setGuestLoading(true);
-//     const data = await AsyncStorage.getItem("guestBasket");
-//     setGuestBasket(data ? JSON.parse(data) : []);
-//     setGuestLoading(false);
-//   }, []);
-
-//   useEffect(() => {
-//     if (!isAuthenticated) {
-//       loadGuestBasket();
-//     }
-//   }, [isAuthenticated, loadGuestBasket]);
-
-//   // Unified basketItems for rendering
-//   const basketItems = isAuthenticated ? basketData?.payload ?? [] : guestBasket;
-
-//   console.log({ basketItems });
-
-//   // Refresh logic
-//   const onRefresh = useCallback(async () => {
-//     setRefreshing(true);
-//     if (isAuthenticated) {
-//       await refetch();
-//     } else {
-//       await loadGuestBasket();
-//     }
-//     setRefreshing(false);
-//   }, [isAuthenticated, refetch, loadGuestBasket]);
-
-//   // Remove item logic
-//   const handleRemoveItem = async (
-//     campaignId: number,
-//     orphanId: number,
-//     donationItem?: string
-//   ) => {
-//     Alert.alert(
-//       "Remove Item",
-//       "Are you sure you want to remove this item from your cart?",
-//       [
-//         { text: "Cancel", style: "cancel" },
-//         {
-//           text: "Remove",
-//           style: "destructive",
-//           onPress: async () => {
-//             try {
-//               if (isAuthenticated) {
-//                 await removeFromBasket({ campaignId, orphanId, donationItem });
-//                 await refetch();
-//               } else {
-//                 const updated = guestBasket.filter(
-//                   (item) => item.campaignId !== campaignId
-//                 );
-//                 setGuestBasket(updated);
-//                 await AsyncStorage.setItem(
-//                   "guestBasket",
-//                   JSON.stringify(updated)
-//                 );
-//               }
-//             } catch (error: any) {
-//               Alert.alert("Error", error.message || "Failed to remove item");
-//             }
-//           },
-//         },
-//       ]
-//     );
-//   };
-
-//   // Checkout logic
-//   const handleCheckout = () => {
-//     if (basketItems.length === 0) {
-//       Alert.alert("Empty Cart", "Your cart is empty");
-//       return;
-//     }
-//     router.push("/checkout");
-//   };
-
-//   // Calculate totals
-//   const processingFee = 0.03; // 3%
-//   const subtotal = basketItems.reduce((sum: number, item: any) => {
-//     const checkoutType = item.checkoutType || item.Campaign?.checkoutType;
-//     if (isAuthenticated) {
-//       // Logged-in user: use total
-//       if (checkoutType === "ADEEQAH_GENERAL_SACRIFICE") {
-//         return sum + parseFloat(item.total?.toString() || "0");
-//       } else {
-//         return (
-//           sum +
-//           parseFloat(item.total?.toString() || item.amount?.toString() || "0")
-//         );
-//       }
-//     } else {
-//       // Guest user: use amount * quantity
-//       const quantity = parseFloat(item.quantity?.toString() || "1");
-//       const amount = parseFloat(item.amount?.toString() || "0");
-//       return sum + amount * quantity;
-//     }
-//   }, 0);
-//   const processingAmount = (subtotal * processingFee).toFixed(2);
-//   const total = subtotal + parseFloat(processingAmount);
-
-//   if (isLoading || guestLoading) {
-//     return <LoadingScreen message="Loading cart..." />;
-//   }
-
-//   return (
-//     <View style={[styles.container, { paddingTop: insets.top }]}>
-//       <ScrollView
-//         style={styles.scrollView}
-//         refreshControl={
-//           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-//         }
-//         showsVerticalScrollIndicator={false}
-//       >
-//         {basketItems.length === 0 ? (
-//           <View style={styles.emptyContainer}>
-//             <Text style={styles.emptyIcon}>🛒</Text>
-//             <Text style={styles.emptyTitle}>Your basket is empty</Text>
-//             <Text style={styles.emptyDescription}>
-//               Browse our projects and add items to your basket
-//             </Text>
-//             <TouchableOpacity
-//               style={styles.browseButton}
-//               onPress={() => router.push("/(tabs)/campaigns")}
-//             >
-//               <Text style={styles.browseButtonText}>Browse Projects</Text>
-//             </TouchableOpacity>
-//           </View>
-//         ) : (
-//           <>
-//             {/* Cart Header */}
-//             <View style={styles.cartHeaderContainer}>
-//               <LinearGradient
-//                 colors={["#264B8B", "#5B8FD8"]}
-//                 start={{ x: 0, y: 0 }}
-//                 end={{ x: 1, y: 0 }}
-//                 style={styles.cartHeaderGradient}
-//               >
-//                 <View style={styles.cartHeaderContent}>
-//                   <View style={styles.cartIconContainer}>
-//                     <Text style={styles.cartIcon}>🛒</Text>
-//                   </View>
-//                   <View style={{ marginLeft: 8 }}>
-//                     <Text style={styles.cartHeaderTitle}>
-//                       Your Cart ({basketItems.length})
-//                     </Text>
-//                   </View>
-//                 </View>
-//               </LinearGradient>
-//             </View>
-
-//             {/* Cart Items */}
-//             <View style={styles.cartItemsContainer}>
-//               {basketItems.map((item: any, index: number) => {
-//                 const checkoutType =
-//                   item.checkoutType || item.Campaign?.checkoutType;
-//                 const isAdeeqah = checkoutType === "ADEEQAH_GENERAL_SACRIFICE";
-//                 const quantity = isAdeeqah
-//                   ? parseInt(item.riceQuantity?.toString() || "1")
-//                   : item.quantity || 1;
-//                 const price = parseFloat(
-//                   item.amount?.toString() || item.ricePrice?.toString() || "0"
-//                 );
-//                 // For logged-in user, use item.total; for guest, use amount * quantity
-//                 const itemTotal =
-//                   item.total !== undefined && item.total !== null
-//                     ? parseFloat(item.total?.toString() || "0")
-//                     : price * quantity;
-//                 const isCommonORZaqat = [
-//                   "ZAQAT",
-//                   "COMMON",
-//                   "WATER_CAMPAIGN",
-//                   "KURBAN",
-//                 ].includes(checkoutType || "");
-
-//                 return (
-//                   <View key={item.id || index} style={styles.cartItem}>
-//                     <View style={styles.cartItemContent}>
-//                       <ExpoImage
-//                         source={{
-//                           uri:
-//                             item.coverImage ||
-//                             item.Campaign?.coverImage ||
-//                             item.Orphan?.coverImage ||
-//                             "https://via.placeholder.com/64",
-//                         }}
-//                         style={styles.itemImage}
-//                         contentFit="cover"
-//                       />
-//                       <View style={[styles.itemDetails, { marginLeft: 12 }]}>
-//                         <Text style={styles.itemName} numberOfLines={2}>
-//                           {item.name ||
-//                             item.Campaign?.name ||
-//                             item.Orphan?.name ||
-//                             "Campaign"}
-//                         </Text>
-
-//                         {item.isRecurring && (
-//                           <View
-//                             style={[styles.recurringBadge, { marginTop: 4 }]}
-//                           >
-//                             <Text style={styles.recurringIcon}>🔄</Text>
-//                             <Text style={styles.recurringText}>
-//                               {getRecurringLabel(item.periodDays)} donation
-//                             </Text>
-//                           </View>
-//                         )}
-
-//                         {item.donationItem && (
-//                           <Text style={[styles.donationItem, { marginTop: 4 }]}>
-//                             {item.donationItem}
-//                           </Text>
-//                         )}
-
-//                         <View style={styles.itemPriceRow}>
-//                           <Text style={styles.itemTotalPrice}>
-//                             ${formatPrice(itemTotal)}
-//                           </Text>
-//                           {isCommonORZaqat && quantity > 1 && (
-//                             <Text style={styles.itemUnitPrice}>
-//                               (${formatPrice(price)} each)
-//                             </Text>
-//                           )}
-//                         </View>
-//                       </View>
-//                     </View>
-
-//                     <TouchableOpacity
-//                       style={styles.removeButton}
-//                       onPress={() =>
-//                         handleRemoveItem(
-//                           item.campaignId,
-//                           item.orphanId,
-//                           item.donationItem
-//                         )
-//                       }
-//                     >
-//                       <Text style={styles.removeButtonText}>🗑️</Text>
-//                     </TouchableOpacity>
-//                   </View>
-//                 );
-//               })}
-//             </View>
-
-//             {/* Order Summary */}
-//             <View style={styles.orderSummaryContainer}>
-//               <LinearGradient
-//                 colors={["#264B8B", "#5B8FD8"]}
-//                 start={{ x: 0, y: 0 }}
-//                 end={{ x: 1, y: 0 }}
-//                 style={styles.summaryHeaderGradient}
-//               >
-//                 <View style={styles.summaryHeaderContent}>
-//                   <View style={styles.summaryIconContainer}>
-//                     <Text style={styles.summaryIcon}>🛡️</Text>
-//                   </View>
-//                   <View style={{ marginLeft: 8 }}>
-//                     <Text style={styles.summaryHeaderTitle}>Order Summary</Text>
-//                   </View>
-//                 </View>
-//               </LinearGradient>
-
-//               <View style={styles.summaryContent}>
-//                 <View style={styles.summaryHeaderRow}>
-//                   <Text style={styles.summaryHeaderText}>Order Summary</Text>
-//                   <View style={styles.itemCountBadge}>
-//                     <Text style={styles.itemCountText}>
-//                       {basketItems.length}{" "}
-//                       {basketItems.length === 1 ? "item" : "items"}
-//                     </Text>
-//                   </View>
-//                 </View>
-
-//                 <View style={styles.summaryRow}>
-//                   <Text style={styles.summaryLabel}>Subtotal</Text>
-//                   <Text style={styles.summaryValue}>
-//                     ${formatPrice(subtotal)}
-//                   </Text>
-//                 </View>
-
-//                 <View style={styles.summaryRow}>
-//                   <View style={styles.feeRow}>
-//                     <Text style={styles.summaryLabel}>Processing Fee (3%)</Text>
-//                     <Text style={styles.helpIcon}>ℹ️</Text>
-//                   </View>
-//                   <Text style={styles.summaryValue}>
-//                     ${formatPrice(parseFloat(processingAmount))}
-//                   </Text>
-//                 </View>
-
-//                 <View style={styles.summaryDivider} />
-
-//                 <View style={styles.totalRow}>
-//                   <Text style={styles.totalLabel}>Total</Text>
-//                   <Text style={styles.totalValue}>${formatPrice(total)}</Text>
-//                 </View>
-
-//                 <Text style={styles.charityNote}>
-//                   100% of your donation goes to charity
-//                 </Text>
-
-//                 {isAuthenticated && user && (
-//                   <View style={styles.anonymousContainer}>
-//                     <Switch
-//                       value={isAnonymous}
-//                       onValueChange={setIsAnonymous}
-//                       trackColor={{
-//                         false: "#e0e0e0",
-//                         true: "#264B8B",
-//                       }}
-//                       thumbColor={isAnonymous ? "#fff" : "#f4f3f4"}
-//                     />
-//                     <Text style={styles.anonymousLabel}>
-//                       Anonymous Checkout
-//                     </Text>
-//                     <View style={{ marginLeft: 8 }}>
-//                       <Text style={styles.helpIconSmall}>ℹ️</Text>
-//                     </View>
-//                   </View>
-//                 )}
-
-//                 <TouchableOpacity
-//                   style={[
-//                     styles.checkoutButton,
-//                     (subtotal <= 0 ||
-//                       basketItems.some(
-//                         (item: any) =>
-//                           parseFloat(
-//                             isAuthenticated
-//                               ? item.total?.toString() || "0"
-//                               : item.amount?.toString() || "0"
-//                           ) === 0
-//                       )) &&
-//                       styles.checkoutButtonDisabled,
-//                   ]}
-//                   onPress={handleCheckout}
-//                   disabled={
-//                     subtotal <= 0 ||
-//                     basketItems.some(
-//                       (item: any) =>
-//                         parseFloat(
-//                           isAuthenticated
-//                             ? item.total?.toString() || "0"
-//                             : item.amount?.toString() || "0"
-//                         ) === 0
-//                     )
-//                   }
-//                 >
-//                   <Text style={styles.checkoutButtonText}>
-//                     Proceed to Checkout
-//                   </Text>
-//                 </TouchableOpacity>
-//               </View>
-//             </View>
-//           </>
-//         )}
-//       </ScrollView>
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: "#f5f5f5",
-//   },
-//   scrollView: {
-//     flex: 1,
-//   },
-//   emptyContainer: {
-//     alignItems: "center",
-//     justifyContent: "center",
-//     paddingVertical: 80,
-//     paddingHorizontal: 20,
-//   },
-//   emptyIcon: {
-//     fontSize: 80,
-//     marginBottom: 16,
-//     opacity: 0.3,
-//   },
-//   emptyTitle: {
-//     fontSize: 20,
-//     fontWeight: "600",
-//     color: "#333",
-//     marginBottom: 8,
-//   },
-//   emptyDescription: {
-//     fontSize: 14,
-//     color: "#666",
-//     textAlign: "center",
-//     marginBottom: 24,
-//   },
-//   browseButton: {
-//     backgroundColor: "#264B8B",
-//     paddingHorizontal: 24,
-//     paddingVertical: 12,
-//     borderRadius: 8,
-//   },
-//   browseButtonText: {
-//     color: "#fff",
-//     fontSize: 16,
-//     fontWeight: "600",
-//   },
-//   // Cart Header
-//   cartHeaderContainer: {
-//     marginHorizontal: 20,
-//     marginTop: 20,
-//     marginBottom: 6,
-//     borderRadius: 8,
-//     overflow: "hidden",
-//     shadowColor: "#000",
-//     shadowOffset: { width: 0, height: 2 },
-//     shadowOpacity: 0.1,
-//     shadowRadius: 4,
-//     elevation: 3,
-//   },
-//   cartHeaderGradient: {
-//     paddingVertical: 12,
-//     paddingHorizontal: 16,
-//   },
-//   cartHeaderContent: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//   },
-//   cartIconContainer: {
-//     width: 28,
-//     height: 28,
-//     borderRadius: 14,
-//     backgroundColor: "rgba(255, 255, 255, 0.6)",
-//     alignItems: "center",
-//     justifyContent: "center",
-//   },
-//   cartIcon: {
-//     fontSize: 16,
-//   },
-//   cartHeaderTitle: {
-//     fontSize: 18,
-//     fontWeight: "600",
-//     color: "#fff",
-//   },
-//   // Cart Items Container
-//   cartItemsContainer: {
-//     marginHorizontal: 20,
-//     marginBottom: 20,
-//     backgroundColor: "#fff",
-//     borderRadius: 8,
-//     overflow: "hidden",
-//     shadowColor: "#000",
-//     shadowOffset: { width: 0, height: 1 },
-//     shadowOpacity: 0.05,
-//     shadowRadius: 2,
-//     elevation: 2,
-//   },
-//   cartItem: {
-//     flexDirection: "row",
-//     padding: 12,
-//     borderBottomWidth: 1,
-//     borderBottomColor: "#f0f0f0",
-//     alignItems: "center",
-//   },
-//   cartItemContent: {
-//     flex: 1,
-//     flexDirection: "row",
-//   },
-//   itemImage: {
-//     width: 64,
-//     height: 64,
-//     borderRadius: 8,
-//     backgroundColor: "#e0e0e0",
-//   },
-//   itemDetails: {
-//     flex: 1,
-//   },
-//   itemName: {
-//     fontSize: 14,
-//     fontWeight: "600",
-//     color: "#333",
-//     lineHeight: 20,
-//   },
-//   recurringBadge: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     alignSelf: "flex-start",
-//     backgroundColor: "#E3F2FD",
-//     paddingHorizontal: 8,
-//     paddingVertical: 4,
-//     borderRadius: 4,
-//   },
-//   recurringIcon: {
-//     fontSize: 10,
-//     marginRight: 4,
-//   },
-//   recurringText: {
-//     fontSize: 11,
-//     fontWeight: "500",
-//     color: "#264B8B",
-//   },
-//   donationItem: {
-//     fontSize: 12,
-//     color: "#666",
-//   },
-//   itemPriceRow: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     marginTop: 4,
-//   },
-//   itemTotalPrice: {
-//     fontSize: 16,
-//     fontWeight: "bold",
-//     color: "#264B8B",
-//   },
-//   itemUnitPrice: {
-//     fontSize: 12,
-//     color: "#999",
-//     marginLeft: 8,
-//   },
-//   removeButton: {
-//     padding: 8,
-//     marginLeft: 8,
-//   },
-//   removeButtonText: {
-//     fontSize: 18,
-//   },
-//   // Order Summary
-//   orderSummaryContainer: {
-//     marginHorizontal: 20,
-//     marginBottom: 20,
-//     borderRadius: 8,
-//     overflow: "hidden",
-//     backgroundColor: "#fff",
-//     shadowColor: "#000",
-//     shadowOffset: { width: 0, height: 2 },
-//     shadowOpacity: 0.1,
-//     shadowRadius: 4,
-//     elevation: 3,
-//   },
-//   summaryHeaderGradient: {
-//     paddingVertical: 12,
-//     paddingHorizontal: 16,
-//   },
-//   summaryHeaderContent: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//   },
-//   summaryIconContainer: {
-//     width: 28,
-//     height: 28,
-//     borderRadius: 14,
-//     backgroundColor: "rgba(255, 255, 255, 0.2)",
-//     alignItems: "center",
-//     justifyContent: "center",
-//   },
-//   summaryIcon: {
-//     fontSize: 16,
-//   },
-//   summaryHeaderTitle: {
-//     fontSize: 18,
-//     fontWeight: "600",
-//     color: "#fff",
-//   },
-//   summaryContent: {
-//     padding: 16,
-//   },
-//   summaryHeaderRow: {
-//     flexDirection: "row",
-//     justifyContent: "space-between",
-//     alignItems: "center",
-//     marginBottom: 16,
-//     paddingBottom: 12,
-//     borderBottomWidth: 1,
-//     borderBottomColor: "#e0e0e0",
-//   },
-//   summaryHeaderText: {
-//     fontSize: 16,
-//     fontWeight: "600",
-//     color: "#333",
-//   },
-//   itemCountBadge: {
-//     backgroundColor: "#f0f0f0",
-//     paddingHorizontal: 8,
-//     paddingVertical: 4,
-//     borderRadius: 12,
-//   },
-//   itemCountText: {
-//     fontSize: 11,
-//     color: "#666",
-//     fontWeight: "500",
-//   },
-//   summaryRow: {
-//     flexDirection: "row",
-//     justifyContent: "space-between",
-//     alignItems: "center",
-//     marginBottom: 12,
-//   },
-//   summaryLabel: {
-//     fontSize: 14,
-//     color: "#666",
-//   },
-//   summaryValue: {
-//     fontSize: 14,
-//     fontWeight: "600",
-//     color: "#666",
-//   },
-//   feeRow: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//   },
-//   helpIcon: {
-//     fontSize: 14,
-//     color: "#999",
-//     marginLeft: 6,
-//   },
-//   helpIconSmall: {
-//     fontSize: 12,
-//     color: "#999",
-//   },
-//   summaryDivider: {
-//     height: 1,
-//     backgroundColor: "#e0e0e0",
-//     marginVertical: 12,
-//   },
-//   totalRow: {
-//     flexDirection: "row",
-//     justifyContent: "space-between",
-//     alignItems: "center",
-//     marginBottom: 8,
-//   },
-//   totalLabel: {
-//     fontSize: 16,
-//     fontWeight: "bold",
-//     color: "#333",
-//   },
-//   totalValue: {
-//     fontSize: 20,
-//     fontWeight: "bold",
-//     color: "#264B8B",
-//   },
-//   charityNote: {
-//     fontSize: 11,
-//     color: "#999",
-//     textAlign: "right",
-//     marginBottom: 16,
-//   },
-//   anonymousContainer: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     backgroundColor: "#f5f5f5",
-//     padding: 12,
-//     borderRadius: 8,
-//     marginBottom: 16,
-//   },
-//   anonymousLabel: {
-//     flex: 1,
-//     fontSize: 14,
-//     fontWeight: "500",
-//     color: "#333",
-//     marginLeft: 8,
-//   },
-//   checkoutButton: {
-//     backgroundColor: "#264B8B",
-//     padding: 16,
-//     borderRadius: 8,
-//     alignItems: "center",
-//   },
-//   checkoutButtonDisabled: {
-//     backgroundColor: "#ccc",
-//     opacity: 0.6,
-//   },
-//   checkoutButtonText: {
-//     color: "#fff",
-//     fontSize: 16,
-//     fontWeight: "600",
-//   },
-// });
-
 import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
@@ -767,9 +18,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSelector } from "react-redux";
 import {
   useGetBasketQuery,
-  useAddToBasketMutation,
   useRemoveFromBasketMutation,
 } from "@/store/reduxSlice/api/basketApi";
+import RemoveDonationModal from "@/components/ui/Modals/RemoveDonationModal";
 
 // Format price helper
 const formatPrice = (price: number): string => {
@@ -809,6 +60,13 @@ export default function BasketScreen() {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [guestBasket, setGuestBasket] = useState<any[]>([]);
   const [guestLoading, setGuestLoading] = useState(false);
+  const [removeModalVisible, setRemoveModalVisible] = useState(false);
+  const [pendingRemoveItem, setPendingRemoveItem] = useState<{
+    campaignId: number;
+    orphanId: number;
+    donationItem?: string;
+    name?: string;
+  } | null>(null);
 
   // RTK Query hooks for logged-in users
   const {
@@ -849,41 +107,43 @@ export default function BasketScreen() {
   }, [isAuthenticated, refetch, loadGuestBasket]);
 
   // Remove item logic
-  const handleRemoveItem = async (
+  const handleRemoveItem = (
     campaignId: number,
     orphanId: number,
-    donationItem?: string
+    donationItem?: string,
+    name?: string
   ) => {
-    Alert.alert(
-      "Remove Item",
-      "Are you sure you want to remove this item from your cart?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              if (isAuthenticated) {
-                await removeFromBasket({ campaignId, orphanId, donationItem });
-                await refetch();
-              } else {
-                const updated = guestBasket.filter(
-                  (item) => item.campaignId !== campaignId
-                );
-                setGuestBasket(updated);
-                await AsyncStorage.setItem(
-                  "guestBasket",
-                  JSON.stringify(updated)
-                );
-              }
-            } catch (error: any) {
-              Alert.alert("Error", error.message || "Failed to remove item");
-            }
-          },
-        },
-      ]
-    );
+    setPendingRemoveItem({
+      campaignId,
+      orphanId,
+      donationItem,
+      name,
+    });
+    setRemoveModalVisible(true);
+  };
+
+  const confirmRemoveItem = async () => {
+    if (!pendingRemoveItem) return;
+
+    try {
+      const { campaignId, orphanId, donationItem } = pendingRemoveItem;
+
+      if (isAuthenticated) {
+        await removeFromBasket({ campaignId, orphanId, donationItem });
+        await refetch();
+      } else {
+        const updated = guestBasket.filter(
+          (item) => item.campaignId !== campaignId
+        );
+        setGuestBasket(updated);
+        await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
+      }
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Failed to remove item");
+    } finally {
+      setRemoveModalVisible(false);
+      setPendingRemoveItem(null);
+    }
   };
 
   // Checkout logic
@@ -928,7 +188,18 @@ export default function BasketScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <RemoveDonationModal
+        visible={removeModalVisible}
+        description={`Are you sure you want to remove ${
+          pendingRemoveItem?.name || "this donation"
+        } from your donation list?`}
+        onCancel={() => {
+          setRemoveModalVisible(false);
+          setPendingRemoveItem(null);
+        }}
+        onConfirm={confirmRemoveItem}
+      />
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -1064,7 +335,8 @@ export default function BasketScreen() {
                         handleRemoveItem(
                           item.campaignId,
                           item.orphanId,
-                          item.donationItem
+                          item.donationItem,
+                          item.name || item.Campaign?.name
                         )
                       }
                     >
@@ -1105,10 +377,29 @@ export default function BasketScreen() {
               <Text style={styles.infoText}>
                 So 100% of my donation goes directly to the field.
               </Text>
-              <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+              <View
+                style={{
+                  width: 36,
+                  height: 20,
+                  borderRadius: 12,
+                  backgroundColor: "#22C55E",
+                  justifyContent: "center",
+                  alignItems: "flex-end",
+                  padding: 2,
+                }}
+              >
+                <View
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 8,
+                    backgroundColor: "#fff",
+                  }}
+                />
+              </View>
             </View>
             <Divider />
-            <Row label="Total" value={`$${formatPrice(total)}`} bold />
+            <Row label="Total" value={`$${formatPrice(total)}`} />
           </View>
         </View>
       </ScrollView>
@@ -1135,55 +426,25 @@ export default function BasketScreen() {
         </TouchableOpacity>
 
         <Text style={styles.termsText}>
-          By selecting the button, I agree to the donation terms.
+          By selecting the button, I agree to the{" "}
+          <Text style={{ textDecorationLine: "underline" }}>
+            donation terms
+          </Text>
+          .
         </Text>
       </View>
     </View>
   );
 }
 
-/* ---------- Components ---------- */
-
-const BasketItem = ({
-  title,
-  subtitle,
-  price,
-}: {
-  title: string;
-  subtitle: string;
-  price: string;
-}) => (
-  <View style={styles.itemRow}>
-    <View style={styles.itemImage} />
-    <View style={styles.itemContent}>
-      <Text style={styles.itemTitle}>{title}</Text>
-      <Text style={styles.itemSubtitle}>{subtitle}</Text>
-      <Text style={styles.itemPrice}>{price}</Text>
-    </View>
-    <TouchableOpacity>
-      <Ionicons name="trash-outline" size={20} color="#9CA3AF" />
-    </TouchableOpacity>
-  </View>
-);
-
-const Row = ({
-  label,
-  value,
-  bold,
-}: {
-  label: string;
-  value: string;
-  bold?: boolean;
-}) => (
+const Row = ({ label, value }: { label: string; value: string }) => (
   <View style={styles.row}>
-    <Text style={[styles.rowLabel, bold && styles.boldText]}>{label}</Text>
-    <Text style={[styles.rowValue, bold && styles.boldText]}>{value}</Text>
+    <Text style={[styles.rowLabel]}>{label}</Text>
+    <Text style={[styles.rowValue, styles.boldText]}>{value}</Text>
   </View>
 );
 
 const Divider = () => <View style={styles.divider} />;
-
-/* ---------- Styles ---------- */
 
 const styles = StyleSheet.create({
   container: {
@@ -1194,8 +455,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    display: "flex",
+    paddingVertical: 12,
   },
 
   headerTitle: {
@@ -1227,8 +487,8 @@ const styles = StyleSheet.create({
   },
 
   itemImage: {
-    width: 58,
-    height: 58,
+    width: 64,
+    height: 68,
     borderRadius: 8,
     backgroundColor: "#E5E7EB",
   },
@@ -1297,14 +557,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginTop: 20,
     marginBottom: 8,
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: "600",
-    marginHorizontal: 16,
+    color: "#010D26",
   },
 
   priceBox: {
     borderRadius: 12,
-    padding: 12,
+    paddingVertical: 12,
   },
 
   row: {
@@ -1315,7 +575,7 @@ const styles = StyleSheet.create({
 
   rowLabel: {
     fontSize: 14,
-    color: "#374151",
+    color: "#010D26",
   },
 
   rowValue: {
@@ -1336,7 +596,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 12,
-    color: "#374151",
+    color: "#010D26",
     marginRight: 8,
   },
 
@@ -1363,8 +623,8 @@ const styles = StyleSheet.create({
 
   termsText: {
     marginTop: 8,
-    fontSize: 11,
+    fontSize: 12,
     textAlign: "center",
-    color: "#6B7280",
+    color: "#010D26",
   },
 });

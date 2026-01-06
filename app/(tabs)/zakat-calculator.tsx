@@ -307,7 +307,7 @@ export default function ZakatCalculatorScreen() {
         <TouchableOpacity
           style={{
             position: "absolute",
-            top: 16,
+            top: 26,
             left: 16,
             zIndex: 10,
             backgroundColor: "#fff",
@@ -327,7 +327,7 @@ export default function ZakatCalculatorScreen() {
           <Ionicons name="chevron-back" size={22} color="#264B8B" />
         </TouchableOpacity>
         <Image
-          source={require("@/assets/card1.png")}
+          source={require("@/assets/zakat-bg.png")}
           style={styles.headerImage}
         />
 

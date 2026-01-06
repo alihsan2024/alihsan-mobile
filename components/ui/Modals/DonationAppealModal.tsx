@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Modal,
   View,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Animated,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
@@ -35,18 +36,64 @@ export const ProgressModal: React.FC<ProgressModalProps> = ({
 }) => {
   const progress = Math.min(raised / goal, 1);
 
+  // ===== Animation values =====
+  const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.95)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scale, {
+          toValue: 1,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 0.95,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible]);
+
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+    >
+      <Animated.View style={[styles.overlay, { opacity }]}>
+        <Animated.View
+          style={[
+            styles.modalContainer,
+            {
+              transform: [{ scale }],
+            },
+          ]}
+        >
           {/* Image Background */}
           <ExpoImage source={image} style={styles.image} contentFit="cover" />
 
           {/* Gradient Overlay */}
           <LinearGradient
             colors={["transparent", "#246BE1"]}
-            end={{ x: 0, y: 0.5 }} // left middle
-            start={{ x: 1, y: 0.5 }} // right middle
+            end={{ x: 0, y: 0.5 }}
+            start={{ x: 1, y: 0.5 }}
             style={styles.gradientOverlay}
           />
 
@@ -61,6 +108,7 @@ export const ProgressModal: React.FC<ProgressModalProps> = ({
               <Text style={styles.heroTitle}>Gaza</Text>
               <Text style={styles.heroSubtitle}>is being Starved</Text>
             </View>
+
             <View
               style={{ flexDirection: "row", justifyContent: "space-between" }}
             >
@@ -83,8 +131,8 @@ export const ProgressModal: React.FC<ProgressModalProps> = ({
             {/* Donate Button */}
             <Button label="Donate Now" variant="secondary" onPress={onDonate} />
           </View>
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 };
@@ -96,20 +144,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  heroTextContainer: {
-    marginBottom: 8,
-  },
-  heroTitle: {
-    fontSize: 48,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  heroSubtitle: {
-    fontSize: 30,
-    fontWeight: "500",
-    color: "#fff",
-  },
-
   modalContainer: {
     width: width * 0.9,
     borderRadius: 16,
@@ -144,11 +178,18 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
   },
-  title: {
-    fontSize: 18,
+  heroTextContainer: {
+    marginBottom: 8,
+  },
+  heroTitle: {
+    fontSize: 48,
     fontWeight: "700",
     color: "#fff",
-    marginBottom: 4,
+  },
+  heroSubtitle: {
+    fontSize: 30,
+    fontWeight: "500",
+    color: "#fff",
   },
   amount: {
     fontSize: 14,

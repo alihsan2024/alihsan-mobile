@@ -9,6 +9,7 @@ import {
   TextStyle,
 } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Variant = "filled" | "outlined";
 
@@ -38,9 +39,16 @@ export default function HeaderSearchBar({
   inputStyle,
 }: Props) {
   const isOutlined = variant === "outlined";
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.headerBar, containerStyle]}>
+    <View
+      style={[
+        styles.headerBar,
+        { paddingTop: insets.top + 8 }, // 👈 SAFE AREA
+        containerStyle,
+      ]}
+    >
       {/* Search */}
       <View
         style={[
@@ -52,7 +60,7 @@ export default function HeaderSearchBar({
         <Feather
           name="search"
           size={16}
-          color={isOutlined ? "#010D26" : "#fff"}
+          color={isOutlined ? "#010D26E5" : "#fff"}
         />
 
         <TextInput
@@ -80,7 +88,6 @@ export default function HeaderSearchBar({
         activeOpacity={0.8}
       >
         <Ionicons name="notifications" size={18} color={"#010D264D"} />
-
         {showNotificationDot && <View style={styles.notificationDot} />}
       </TouchableOpacity>
     </View>
@@ -92,7 +99,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
     paddingVertical: 12,
   },
 

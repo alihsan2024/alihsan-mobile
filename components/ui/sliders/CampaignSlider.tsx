@@ -16,6 +16,7 @@ const VISIBLE_ITEMS = 1.5; // show 1.5 cards on screen
 
 export type CampaignItem = {
   id: string | number;
+  slug: string;
   image: any;
   title: string;
   donors: number;
