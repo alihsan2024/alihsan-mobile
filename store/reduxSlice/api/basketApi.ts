@@ -62,7 +62,37 @@ export const basketApi = createApi({
     // 2. Add item to basket
     // -----------------------------
     addToBasket: builder.mutation<any, { body: any }>({
-      query: ({ body }) => ({ url: "basket", method: "POST", data: body }),
+      query: ({ body }) => ({
+        url: "basket",
+        method: "POST",
+        data: body,
+      }),
+
+      async onQueryStarted({ body }, { dispatch, queryFulfilled }) {
+        // 🔥 Optimistically update basket cache
+        const patchResult = dispatch(
+          basketApi.util.updateQueryData(
+            "getBasket",
+            undefined,
+            (draft: any) => {
+              if (!draft?.payload) return;
+
+              draft.payload.push({
+                ...body,
+                total: body.amount,
+                quantity: body.quantity ?? 1,
+              });
+            }
+          )
+        );
+
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
+
       invalidatesTags: ["Basket"],
     }),
 

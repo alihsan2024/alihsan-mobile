@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Modal,
   View,
@@ -7,13 +7,29 @@ import {
   StyleSheet,
   Dimensions,
   Animated,
+  Alert,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import Button from "../Button";
 import { LinearGradient } from "expo-linear-gradient";
+import { useSelector } from "react-redux";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
+import {
+  useAddToBasketMutation,
+  useGetBasketQuery,
+} from "@/store/reduxSlice/api/basketApi";
 
 const { width, height } = Dimensions.get("window");
+
+const GAZA_CAMPAIGN = {
+  id: 188,
+  name: "Gaza",
+  checkoutType: "COMMON",
+  coverImage:
+    "https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/1753249055468-alihsan-coverImage.png",
+};
 
 type ProgressModalProps = {
   visible: boolean;
@@ -22,7 +38,6 @@ type ProgressModalProps = {
   title: string;
   raised: number;
   goal: number;
-  onDonate?: () => void;
 };
 
 export const ProgressModal: React.FC<ProgressModalProps> = ({
@@ -32,7 +47,6 @@ export const ProgressModal: React.FC<ProgressModalProps> = ({
   title,
   raised,
   goal,
-  onDonate,
 }) => {
   const progress = Math.min(raised / goal, 1);
 
@@ -40,6 +54,27 @@ export const ProgressModal: React.FC<ProgressModalProps> = ({
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.95)).current;
 
+  // ===== Auth & basket =====
+  const { user } = useSelector((state: any) => state.authentication);
+  const isAuthenticated = !!user;
+
+  const [addToBasket] = useAddToBasketMutation();
+  const { data: basketData } = useGetBasketQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+
+  const [guestBasket, setGuestBasket] = useState<any[]>([]);
+  const [addingToCart, setAddingToCart] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      AsyncStorage.getItem("guestBasket").then((data) => {
+        setGuestBasket(data ? JSON.parse(data) : []);
+      });
+    }
+  }, [isAuthenticated]);
+
+  // ===== Animate modal =====
   useEffect(() => {
     if (visible) {
       Animated.parallel([
@@ -69,6 +104,73 @@ export const ProgressModal: React.FC<ProgressModalProps> = ({
       ]).start();
     }
   }, [visible]);
+
+  // ===== Donate handler (SAME AS HOME) =====
+  const handleDonate = async () => {
+    const donationAmount = 50; // default Gaza amount (same assumption as Home)
+
+    const basketItems = isAuthenticated
+      ? basketData?.payload ?? []
+      : guestBasket;
+
+    const isInCart = basketItems.some(
+      (item: any) => item.campaignId === GAZA_CAMPAIGN.id
+    );
+
+    if (isInCart) {
+      Alert.alert("Already in cart", "This campaign is already in your cart.", [
+        {
+          text: "View Cart",
+          onPress: () => {
+            onClose();
+            router.push("/(tabs)/cart");
+          },
+        },
+        { text: "OK", style: "cancel" },
+      ]);
+      return;
+    }
+
+    const basketItem = {
+      campaignId: GAZA_CAMPAIGN.id,
+      amount: donationAmount,
+      quantity: 1,
+      name: GAZA_CAMPAIGN.name,
+      coverImage: GAZA_CAMPAIGN.coverImage,
+      checkoutType: GAZA_CAMPAIGN.checkoutType,
+    };
+
+    try {
+      setAddingToCart(true);
+
+      if (isAuthenticated) {
+        await addToBasket({ body: basketItem });
+      } else {
+        const updated = [...guestBasket, basketItem];
+        setGuestBasket(updated);
+        await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
+      }
+
+      Alert.alert(
+        "Added to cart",
+        "Your donation has been added to the cart.",
+        [
+          {
+            text: "View Cart",
+            onPress: () => {
+              onClose();
+              router.push("/(tabs)/cart");
+            },
+          },
+          { text: "OK", style: "cancel" },
+        ]
+      );
+    } catch {
+      Alert.alert("Error", "Failed to add to cart");
+    } finally {
+      setAddingToCart(false);
+    }
+  };
 
   return (
     <Modal
@@ -129,7 +231,12 @@ export const ProgressModal: React.FC<ProgressModalProps> = ({
             </View>
 
             {/* Donate Button */}
-            <Button label="Donate Now" variant="secondary" onPress={onDonate} />
+            <Button
+              label={addingToCart ? "Adding..." : "Donate Now"}
+              variant="secondary"
+              onPress={handleDonate}
+              disabled={addingToCart}
+            />
           </View>
         </Animated.View>
       </Animated.View>

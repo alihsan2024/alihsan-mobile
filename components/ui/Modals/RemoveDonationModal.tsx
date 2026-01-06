@@ -1,3 +1,4 @@
+import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Modal, View, Text, StyleSheet, TouchableOpacity } from "react-native";
 
@@ -41,7 +42,10 @@ export default function RemoveDonationModal({
               style={[styles.button, styles.removeButton]}
               onPress={onConfirm}
             >
-              <Text style={styles.removeText}>Yes, Remove →</Text>
+              <Text style={styles.removeText}>
+                Yes, Remove{" "}
+                <Feather name="chevron-right" size={16} color="#FFFFFF" />
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

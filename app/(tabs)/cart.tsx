@@ -21,6 +21,7 @@ import {
   useRemoveFromBasketMutation,
 } from "@/store/reduxSlice/api/basketApi";
 import RemoveDonationModal from "@/components/ui/Modals/RemoveDonationModal";
+import { useFocusEffect } from "@react-navigation/native";
 
 // Format price helper
 const formatPrice = (price: number): string => {
@@ -94,6 +95,16 @@ export default function BasketScreen() {
 
   // Unified basketItems for rendering
   const basketItems = isAuthenticated ? basketData?.payload ?? [] : guestBasket;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated) {
+        refetch();
+      } else {
+        loadGuestBasket();
+      }
+    }, [isAuthenticated, refetch, loadGuestBasket])
+  );
 
   // Refresh logic
   const onRefresh = useCallback(async () => {
