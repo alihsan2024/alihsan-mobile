@@ -12,7 +12,7 @@ const styles = StyleSheet.create({
   priceRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginVertical: 4,
   },
   priceText: { fontSize: 14 },
   bold: { fontWeight: "700" },

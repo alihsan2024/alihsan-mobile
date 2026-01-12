@@ -22,6 +22,7 @@ import {
 } from "@/store/reduxSlice/api/basketApi";
 import RemoveDonationModal from "@/components/ui/Modals/RemoveDonationModal";
 import { useFocusEffect } from "@react-navigation/native";
+import BasketItemRow from "@/components/ui/Basket/BasketItemRow";
 
 // Format price helper
 const formatPrice = (price: number): string => {
@@ -297,76 +298,18 @@ export default function BasketScreen() {
               ].includes(checkoutType || "");
 
               return (
-                <View key={item.id || index}>
-                  <View style={styles.itemRow}>
-                    <ExpoImage
-                      source={{
-                        uri:
-                          item.coverImage ||
-                          item.Campaign?.coverImage ||
-                          item.Orphan?.coverImage ||
-                          "https://via.placeholder.com/64",
-                      }}
-                      style={styles.itemImage}
-                      contentFit="cover"
-                    />
-                    <View style={styles.itemContent}>
-                      <Text style={styles.itemTitle} numberOfLines={2}>
-                        {item.name ||
-                          item.Campaign?.name ||
-                          item.Orphan?.name ||
-                          "Campaign"}
-                      </Text>
-                      {item.isRecurring && (
-                        <View style={[styles.recurringBadge, { marginTop: 4 }]}>
-                          <Text style={styles.recurringIcon}>🔄</Text>
-                          <Text style={styles.recurringText}>
-                            {getRecurringLabel(item.periodDays)} donation
-                          </Text>
-                        </View>
-                      )}
-                      {item.donationItem && (
-                        <Text style={[styles.donationItem, { marginTop: 4 }]}>
-                          {item.donationItem}
-                        </Text>
-                      )}
-                      <View style={styles.itemPriceRow}>
-                        <Text style={styles.itemPrice}>
-                          ${formatPrice(itemTotal)}
-                        </Text>
-                        {isCommonORZaqat && quantity > 1 && (
-                          <Text style={styles.itemUnitPrice}>
-                            (${formatPrice(price)} each)
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                    <TouchableOpacity
-                      onPress={() =>
-                        handleRemoveItem(
-                          item.campaignId,
-                          item.orphanId,
-                          item.donationItem,
-                          item.name || item.Campaign?.name
-                        )
-                      }
-                    >
-                      <View
-                        style={{
-                          backgroundColor: "#F2F6FF",
-                          padding: 10,
-                          borderRadius: 4,
-                        }}
-                      >
-                        <ExpoImage
-                          source={require("../../assets/trash.png")}
-                          style={{ width: 16, height: 16, borderRadius: 4 }}
-                          contentFit="contain"
-                        />
-                      </View>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                <BasketItemRow
+                  item={item}
+                  index={index}
+                  key={`basket-item-${item.id || index}`}
+                  quantity={quantity}
+                  price={price}
+                  itemTotal={itemTotal}
+                  isCommonORZaqat={isCommonORZaqat}
+                  formatPrice={formatPrice}
+                  getRecurringLabel={getRecurringLabel}
+                  onRemove={handleRemoveItem}
+                />
               );
             })
           )}

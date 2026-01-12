@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { View, StyleSheet, Text } from "react-native";
+import { View } from "react-native";
 import { useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-import SummaryCard from "../ui/SummaryCard";
-import PriceRow from "./PriceRow";
 import { useGetBasketQuery } from "@/store/reduxSlice/api/basketApi";
+import BasketTotal from "../ui/Basket/BasketTotal";
+import BasketItemRow from "../ui/Basket/BasketItemRow";
 
 /* ---------- Helpers (SAME as BasketScreen) ---------- */
 
@@ -17,8 +16,6 @@ const formatPrice = (price: number): string => {
       })
     : "0.00";
 };
-
-/* ---------- Component ---------- */
 
 const ConfirmStep = () => {
   const { user } = useSelector((state: any) => state.authentication);
@@ -77,50 +74,25 @@ const ConfirmStep = () => {
     <View>
       {/* Basket Items */}
       {basketItems.map((item: any, index: number) => {
-        const title =
-          item.name || item.Campaign?.name || item.Orphan?.name || "Campaign";
-
-        const subtitle =
-          item.donationItem || item.Campaign?.subtitle || item.Orphan?.subtitle;
-
-        const image =
-          item.coverImage ||
-          item.Campaign?.coverImage ||
-          item.Orphan?.coverImage ||
-          "https://via.placeholder.com/64";
-
-        const amount =
-          item.total !== undefined && item.total !== null
-            ? parseFloat(item.total?.toString() || "0")
-            : parseFloat(item.amount?.toString() || "0");
-
         return (
-          <SummaryCard
+          <BasketItemRow
             key={item.id || index}
-            title={title}
-            subtitle={subtitle}
-            image={image}
-            amount={`$${formatPrice(amount)}`}
+            item={item}
+            index={index}
+            formatPrice={formatPrice}
+            variant="summary"
           />
         );
       })}
 
       {/* Price Summary */}
-      <View style={styles.priceBox}>
-        <PriceRow label="Subtotal" value={`$${formatPrice(subtotal)}`} />
-        <PriceRow label="Admin Fee" value={`$${formatPrice(adminFee)}`} />
-        <PriceRow label="Total" value={`$${formatPrice(total)}`} bold />
-      </View>
+      <BasketTotal
+        subTotal={subtotal}
+        processingAmount={adminFee}
+        total={total}
+      />
     </View>
   );
 };
 
 export default ConfirmStep;
-
-/* ---------- Styles ---------- */
-
-const styles = StyleSheet.create({
-  priceBox: {
-    marginTop: 16,
-  },
-});

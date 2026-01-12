@@ -142,32 +142,46 @@ export default function GazaDonationScreen() {
 
   if (loading || !campaign) return null;
 
+  console.log(campaign.name);
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* ===== HERO ===== */}
-      <ImageBackground
-        source={{ uri: campaign.coverImage }}
-        style={styles.hero}
-      >
-        <TouchableOpacity style={styles.backBtn} onPress={router.back}>
-          <Ionicons name="chevron-back" size={22} color="#fff" />
-        </TouchableOpacity>
+      <View style={{ position: "relative" }}>
+        <ImageBackground
+          source={{ uri: campaign.coverImage }}
+          style={styles.hero}
+        >
+          {/* Gradient overlay */}
+          <LinearGradient
+            colors={["rgba(36,107,225,0.5)", "rgba(36,107,225,0.0)"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          <TouchableOpacity style={styles.backBtn} onPress={router.back}>
+            <Ionicons name="chevron-back" size={22} color="#fff" />
+          </TouchableOpacity>
 
-        <View style={styles.heroText}>
-          <Text style={styles.heroTitle}>Gaza</Text>
-          <Text style={styles.heroSubtitle}>is being Starved</Text>
+          <View style={styles.heroText}>
+            <Text style={styles.heroTitle}>{campaign.name}</Text>
 
-          <Text style={styles.heroMeta}>
-            <Text style={styles.heroMetaBold}>
-              {campaign.totalDonors || 254_786}
-            </Text>{" "}
-            Lives Changed
-          </Text>
-        </View>
-      </ImageBackground>
+            <Text style={styles.heroMeta}>
+              <Text style={styles.heroMetaBold}>
+                {campaign.totalDonors || "254,786+"}
+              </Text>{" "}
+              Lives Changed
+            </Text>
+          </View>
+        </ImageBackground>
+      </View>
 
       {/* ===== CONTENT ===== */}
       <View style={styles.content}>
+        <Text style={{ fontSize: 24, fontWeight: "700", marginBottom: 8 }}>
+          {campaign.name}
+        </Text>
         <Text style={styles.raisedAmount}>${raised.toLocaleString()}</Text>
         <Text style={styles.goalText}>of ${goal.toLocaleString()} goal</Text>
 
@@ -383,7 +397,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#fff",
   },
-  heroMetaBold: { fontWeight: "700" },
+  heroMetaBold: { fontWeight: "700", color: "#f4c430" },
 
   /* CONTENT */
   content: { padding: 16 },

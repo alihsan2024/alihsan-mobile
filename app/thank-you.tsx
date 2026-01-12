@@ -18,16 +18,8 @@ export default function ThankYouScreen() {
 
   if (!summary) return null;
 
-  const processingFee = 0.03;
+  const { subtotal, adminFee, total } = summary;
 
-  const subtotal = summary.items.reduce((sum: number, item: any) => {
-    const qty = item.quantity || 1;
-    const amount = parseFloat(item.amount || item.total || 0);
-    return sum + amount * qty;
-  }, 0);
-
-  const adminFee = subtotal * processingFee;
-  const total = subtotal + adminFee;
   return (
     <View style={styles.container}>
       {/* ===== TOP IMAGE SECTION ===== */}
@@ -71,9 +63,12 @@ export default function ThankYouScreen() {
 
         {/* ===== PRICE DETAILS ===== */}
         <View style={styles.priceBox}>
+          <View style={styles.horizontalLine} />
           <PriceRow label="Subtotal" value={`$${formatPrice(subtotal)}`} />
           <PriceRow label="Admin Fee" value={`$${formatPrice(adminFee)}`} />
+          <View style={styles.horizontalLine} />
           <PriceRow label="Total" value={`$${formatPrice(total)}`} bold />
+          <View style={styles.horizontalLine} />
         </View>
 
         {/* ===== SHARE ===== */}
@@ -162,7 +157,13 @@ const styles = StyleSheet.create({
     right: 0,
     padding: 20,
   },
-
+  horizontalLine: {
+    height: 1,
+    backgroundColor: "#E0E0E0",
+    marginBottom: 8,
+    marginTop: 8,
+    width: "100%",
+  },
   /* CONTENT */
   content: {
     padding: 20,
@@ -203,9 +204,6 @@ const styles = StyleSheet.create({
 
   /* PRICE */
   priceBox: {
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: "#EEE",
     paddingVertical: 12,
     marginBottom: 20,
   },

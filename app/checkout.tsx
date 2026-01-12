@@ -176,13 +176,13 @@ export default function CheckoutScreen() {
           finalBasketItems = guest ? JSON.parse(guest) : [];
         }
 
+        console.log({ finalBasketItems });
+
         const summary = {
           items: finalBasketItems,
           isAuthenticated,
           createdAt: Date.now(),
         };
-
-        await AsyncStorage.setItem("checkoutSummary", JSON.stringify(summary));
 
         await AsyncStorage.setItem("checkoutSummary", JSON.stringify(summary));
 
