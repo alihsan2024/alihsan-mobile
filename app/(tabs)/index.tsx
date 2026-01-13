@@ -430,7 +430,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           {/* Link to Orphan Details */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={{ marginTop: 16, alignSelf: "center" }}
             onPress={() => router.push("/orphan-details")}
             activeOpacity={0.8}
@@ -438,7 +438,7 @@ export default function HomeScreen() {
             <Text style={{ color: "#246BE1", fontWeight: "600", fontSize: 16 }}>
               View Orphan Details
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </HeroBackground>
 
