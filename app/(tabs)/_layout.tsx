@@ -139,6 +139,7 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => (
             <TabIcon name="hand-left" focused={focused} />
           ),
+          tabBarStyle: { display: "none" },
         }}
       />
 

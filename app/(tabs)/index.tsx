@@ -294,7 +294,7 @@ export default function HomeScreen() {
       style={{
         flex: 1,
         backgroundColor: "#fff",
-        paddingTop: insets.top,
+        paddingTop: 0,
       }}
       contentContainerStyle={{ paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
@@ -314,6 +314,8 @@ export default function HomeScreen() {
           width: "100%",
           minHeight: screenHeight * 0.6,
           position: "absolute",
+          top: 0,
+          left: 0,
         }}
       >
         {/* Solid background color */}
@@ -340,7 +342,12 @@ export default function HomeScreen() {
       </View>
 
       {/* Main content */}
-      <View style={{ paddingHorizontal: PADDING_HORIZONTAL, paddingTop: 10 }}>
+      <View
+        style={{
+          paddingHorizontal: PADDING_HORIZONTAL,
+          paddingTop: insets.top,
+        }}
+      >
         {/* Header Bar */}
         <View style={styles.headerBar}>
           {/* Search */}
@@ -456,21 +463,34 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <ImageSlider
-          data={SLIDER_DATA}
-          onPress={(item) => {
-            console.log("Pressed:", item.title);
-          }}
-        />
+        {/* Categories Section - Below Banner */}
         <View
           style={{
-            height: 1,
-            backgroundColor: "#E0E0E0",
-            marginBottom: 18,
-            width: "100%",
+            backgroundColor: "#fff",
+            paddingTop: 16,
+            marginHorizontal: -PADDING_HORIZONTAL,
+            paddingHorizontal: PADDING_HORIZONTAL,
+            marginTop: 0,
           }}
-        />
+        >
+          <ImageSlider
+            data={SLIDER_DATA}
+            onPress={(item) => {
+              console.log("Pressed:", item.title);
+            }}
+          />
+          <View
+            style={{
+              height: 1,
+              backgroundColor: "#E0E0E0",
+              marginBottom: 18,
+              marginTop: 20,
+              width: "100%",
+            }}
+          />
+        </View>
 
+        {/* Featured Campaigns Section */}
         <View style={{ flex: 1 }}>
           <View
             style={{
@@ -526,11 +546,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: 8,
   },
   heroTextContainer: {
-    marginTop: 12,
-    marginBottom: 20,
+    marginTop: 4,
+    marginBottom: 16,
   },
 
   heroTitle: {
@@ -696,7 +716,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     padding: 16,
     borderRadius: 12,
-    marginBottom: 32,
+    marginBottom: 10,
     elevation: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },

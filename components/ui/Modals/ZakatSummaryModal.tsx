@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Button from "../Button";
-import { zakatResetInput } from "@/store/reduxSlice/zakatSlice";
+import { zakatResetInput, zakatStep } from "@/store/reduxSlice/zakatSlice";
 import { addBasketItem, getBasketItems } from "@/store/reduxSlice/basketSlice";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 
@@ -25,7 +25,7 @@ type Props = {
 export default function ZakatSummaryModal({ visible, onClose }: Props) {
   const dispatch = useAppDispatch();
 
-  const { amounts, prices } = useSelector(
+  const { amounts, prices, step } = useSelector(
     (state: any) => state.zakatCalculator
   );
   const isLoggedIn = useSelector(
@@ -185,7 +185,7 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
               style={styles.closeButton}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="close" size={20} color="#FFFFFF" />
+              <Ionicons name="close" size={14} color="#FFFFFF" />
             </TouchableOpacity>
 
             <Text style={styles.title}>Your estimated Zakat Payment</Text>
@@ -206,7 +206,7 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
               </View>
             ))}
 
-            <View style={{ marginTop: 16 }}>
+            <View style={{ marginTop: 12 }}>
               <Button
                 label="Pay Zakat Now"
                 variant="secondary"
@@ -217,6 +217,7 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
               <TouchableOpacity
                 onPress={() => {
                   dispatch(zakatResetInput());
+                  dispatch(zakatStep(1 - step)); // Reset to step 1
                   onClose();
                 }}
                 style={styles.resetButton}
@@ -225,8 +226,6 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
               </TouchableOpacity>
             </View>
           </View>
-
-          <View style={styles.gap} />
 
           {/* ===== BOTTOM ===== */}
           <View style={styles.bottomContainer}>
@@ -268,7 +267,7 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
 
             {prices.price?.updatedAt && (
               <View style={styles.footer}>
-                <Ionicons name="reload" size={16} color="#555" />
+                <Ionicons name="reload" size={12} color="#555" />
                 <Text style={styles.footerText}>
                   Prices were last updated at{" "}
                   {new Date(prices.price.updatedAt).toLocaleString()}
@@ -294,46 +293,47 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     minWidth: 320,
     width: "90%",
-    borderRadius: 20,
   },
   closeButton: {
     position: "absolute",
-    top: 14,
-    right: 14,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    top: 10,
+    right: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 10,
   },
-  gap: {
-    height: 12,
-    backgroundColor: "rgba(0,0,0,0.9)",
-  },
   topContainer: {
     backgroundColor: "#1E6EF2",
-    padding: 20,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    padding: 16,
+    borderRadius: 14,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   title: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "600",
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 10,
+    marginTop: 4,
   },
   amountBox: {
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 10,
+    padding: 12,
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 14,
   },
   amountText: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "700",
     color: "#1E6EF2",
   },
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.4)",
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   rowTextLeft: {
     color: "#FFFFFFCC",
@@ -354,24 +354,29 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     backgroundColor: "#FFFFFF1A",
-    padding: 10,
+    padding: 8,
     borderRadius: 8,
     marginTop: 6,
   },
   resetText: {
     color: "#fff",
     textAlign: "center",
+    fontSize: 13,
   },
   bottomContainer: {
     backgroundColor: "#fff",
-    padding: 12,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    padding: 14,
+    borderRadius: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   subTitle: {
     fontSize: 14,
     fontWeight: "600",
-    marginBottom: 12,
+    marginBottom: 10,
     color: "#010D26",
   },
   rowDark: {
@@ -379,7 +384,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderBottomWidth: 1,
     borderBottomColor: "#E0E0E0",
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   darkTextLeft: {
     fontSize: 14,
@@ -393,22 +398,22 @@ const styles = StyleSheet.create({
   },
   nisabRow: {
     flexDirection: "row",
-    marginTop: 16,
+    marginTop: 12,
     gap: 6,
   },
   goldBox: {
     flex: 1,
     backgroundColor: "#FFD60233",
-    padding: 6,
-    borderRadius: 10,
+    padding: 8,
+    borderRadius: 8,
     flexDirection: "row",
     justifyContent: "space-between",
   },
   silverBox: {
     flex: 1,
     backgroundColor: "#F5F5F5",
-    padding: 6,
-    borderRadius: 10,
+    padding: 8,
+    borderRadius: 8,
     flexDirection: "row",
     justifyContent: "space-between",
   },
@@ -427,11 +432,13 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 14,
-    gap: 6,
+    justifyContent: "center",
+    marginTop: 12,
+    gap: 4,
   },
   footerText: {
-    fontSize: 12,
+    fontSize: 10,
     color: "#666",
+    textAlign: "center",
   },
 });
