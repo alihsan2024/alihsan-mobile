@@ -32,8 +32,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Configure API URLs for different environments
 // IMPORTANT: Replace YOUR_LAN_IP below with your computer's actual LAN IP address
 const API_URLS = {
-  development: "http://192.168.1.3:4000", // e.g., http://192.168.1.100:4000
-  production: "https://deenstream.live",
+  development: "http://192.168.20.16:4000", // e.g., http://192.168.1.100:4000
+  production: "http://localhost:4000",
   // production: "https://api.alihsan.org.au",
 };
 
@@ -126,9 +126,17 @@ interface CampaignsResponse {
 }
 
 // Fetch all campaigns
-export const fetchCampaigns = async (): Promise<Campaign[]> => {
+export const fetchCampaigns = async (
+  isMobileCampaign?: boolean
+): Promise<Campaign[]> => {
   try {
-    const response = await api.get<CampaignsResponse>("/project/all-projects");
+    const params: any = {};
+    if (isMobileCampaign === true) {
+      params.isMobileCampaign = "true";
+    }
+    const response = await api.get<CampaignsResponse>("/project/all-projects", {
+      params,
+    });
     const data = response.data;
 
     // Return projects.rows which contains the list of campaigns

@@ -8,6 +8,7 @@ import {
   Image,
   TouchableOpacity,
   ActivityIndicator,
+  FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -38,6 +39,7 @@ export default function ActiveAppealsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [isCategoriesCollapsed, setIsCategoriesCollapsed] = useState(false);
   let campaignsCache: Campaign[] | null = null;
   const insets = useSafeAreaInsets();
 
@@ -53,7 +55,7 @@ export default function ActiveAppealsScreen() {
       try {
         setError(null);
         setLoading(true);
-        const data = await fetchCampaigns();
+        const data = await fetchCampaigns(true); // Only fetch mobile campaigns for explore page
 
         // ✅ Save to session cache
         campaignsCache = data;
@@ -113,47 +115,93 @@ export default function ActiveAppealsScreen() {
       <Text style={styles.heading}>Active Appeals</Text>
 
       {/* Categories */}
-      <View style={styles.categories}>
-        {categories.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[
-              styles.categoryItem,
-              selectedCategory === item.label && {
-                backgroundColor: "#E3F0FF",
-                borderRadius: 8,
-              },
-            ]}
-            onPress={() => setSelectedCategory(item.label)}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={item.icon as any}
-              size={20}
-              color={selectedCategory === item.label ? "#246BE1" : "#777"}
-              style={{ marginBottom: 6 }}
-            />
-            <Text
+      {!isCategoriesCollapsed ? (
+        <View style={styles.categories}>
+          {categories.map((item, index) => (
+            <TouchableOpacity
+              key={index}
               style={[
-                styles.categoryText,
+                styles.categoryItem,
                 selectedCategory === item.label && {
-                  color: "#246BE1",
-                  fontWeight: "bold",
+                  backgroundColor: "#E3F0FF",
+                  borderRadius: 8,
                 },
               ]}
+              onPress={() => setSelectedCategory(item.label)}
+              activeOpacity={0.7}
             >
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+              <Ionicons
+                name={item.icon as any}
+                size={20}
+                color={selectedCategory === item.label ? "#246BE1" : "#777"}
+                style={{ marginBottom: 6 }}
+              />
+              <Text
+                style={[
+                  styles.categoryText,
+                  selectedCategory === item.label && {
+                    color: "#246BE1",
+                    fontWeight: "bold",
+                  },
+                ]}
+              >
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : (
+        <FlatList
+          data={categories}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item, index) => index.toString()}
+          contentContainerStyle={styles.categoriesHorizontal}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[
+                styles.categoryItemHorizontal,
+                selectedCategory === item.label && {
+                  backgroundColor: "#E3F0FF",
+                  borderRadius: 8,
+                },
+              ]}
+              onPress={() => setSelectedCategory(item.label)}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={item.icon as any}
+                size={20}
+                color={selectedCategory === item.label ? "#246BE1" : "#777"}
+                style={{ marginBottom: 6 }}
+              />
+              <Text
+                style={[
+                  styles.categoryText,
+                  selectedCategory === item.label && {
+                    color: "#246BE1",
+                    fontWeight: "bold",
+                  },
+                ]}
+              >
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+      )}
 
-      <Ionicons
-        name="chevron-down"
-        size={20}
-        color="#777"
-        style={{ alignSelf: "center", marginBottom: 12 }}
-      />
+      <TouchableOpacity
+        onPress={() => setIsCategoriesCollapsed(!isCategoriesCollapsed)}
+        style={{ alignSelf: "center", marginBottom: 12, padding: 4 }}
+        activeOpacity={0.7}
+      >
+        <Ionicons
+          name={isCategoriesCollapsed ? "chevron-down" : "chevron-up"}
+          size={20}
+          color="#777"
+        />
+      </TouchableOpacity>
       <View
         style={{
           height: 1,
@@ -279,11 +327,21 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "space-between",
   },
+  categoriesHorizontal: {
+    paddingVertical: 8,
+  },
   categoryItem: {
     width: "25%",
     alignItems: "center",
     marginBottom: 16,
     paddingVertical: 8,
+  },
+  categoryItemHorizontal: {
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginRight: 8,
+    minWidth: 70,
   },
   categoryText: {
     fontSize: 11,

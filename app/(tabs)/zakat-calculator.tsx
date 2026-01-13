@@ -33,6 +33,15 @@ const STEPS = [
   { key: 4, label: "Liabilities" },
 ];
 
+const formatPrice = (price: number): string => {
+  return !isNaN(price)
+    ? price.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+    : "0.00";
+};
+
 export default function ZakatCalculatorScreen() {
   const dispatch: AppDispatch = useDispatch();
   const router = useRouter();
@@ -43,6 +52,8 @@ export default function ZakatCalculatorScreen() {
   );
 
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [goldDropdownOpen, setGoldDropdownOpen] = useState(false);
+  const [silverDropdownOpen, setSilverDropdownOpen] = useState(false);
 
   useEffect(() => {
     dispatch(getMetalPrices());
@@ -53,6 +64,8 @@ export default function ZakatCalculatorScreen() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: true });
+    setGoldDropdownOpen(false);
+    setSilverDropdownOpen(false);
   }, [step]);
 
   const sumArray = (arr: any[] = []) =>
@@ -78,6 +91,17 @@ export default function ZakatCalculatorScreen() {
 
   const zakat = totalWealth >= silverNisabAud ? totalWealth / 40 : 0;
 
+  // Helper function to calculate metal value in AUD
+  const calculateMetalValue = (
+    weight: number,
+    unit: string,
+    pricePerGram: number
+  ): number => {
+    if (!weight || !pricePerGram) return 0;
+    const weightInGrams = unit === "ounce" ? weight * 31.1035 : weight;
+    return weightInGrams * pricePerGram;
+  };
+
   const renderStep = () => {
     switch (step) {
       case 1:
@@ -86,24 +110,36 @@ export default function ZakatCalculatorScreen() {
             <Text style={styles.sectionTitle}>Cash & Bank</Text>
 
             <Text style={styles.label}>Cash on Hand</Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              value={amounts.cash?.toString() || ""}
-              onChangeText={(v) =>
-                dispatch(zakatInput({ name: "cash", value: Number(v) }))
-              }
-            />
+            <View style={styles.inputWithPrefix}>
+              <Text style={styles.prefix}>$</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={amounts.cash?.toString() || ""}
+                onChangeText={(v) =>
+                  dispatch(zakatInput({ name: "cash", value: Number(v) }))
+                }
+              />
+            </View>
+            <Text style={styles.tip}>
+              Physical cash you currently have in your possession
+            </Text>
 
             <Text style={styles.label}>Balance Held in Bank Accounts</Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              value={amounts.bank?.toString() || ""}
-              onChangeText={(v) =>
-                dispatch(zakatInput({ name: "bank", value: Number(v) }))
-              }
-            />
+            <View style={styles.inputWithPrefix}>
+              <Text style={styles.prefix}>$</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={amounts.bank?.toString() || ""}
+                onChangeText={(v) =>
+                  dispatch(zakatInput({ name: "bank", value: Number(v) }))
+                }
+              />
+            </View>
+            <Text style={styles.tip}>
+              Total balance across all your savings and checking accounts
+            </Text>
           </>
         );
 
@@ -113,49 +149,67 @@ export default function ZakatCalculatorScreen() {
             <Text style={styles.sectionTitle}>Assets</Text>
 
             <Text style={styles.label}>Annual Profit Of Investment Held</Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              value={amounts.investmentProfit?.toString() || ""}
-              onChangeText={(v) =>
-                dispatch(
-                  zakatInput({
-                    name: "investmentProfit",
-                    value: Number(v),
-                  })
-                )
-              }
-            />
+            <View style={styles.inputWithPrefix}>
+              <Text style={styles.prefix}>$</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={amounts.investmentProfit?.toString() || ""}
+                onChangeText={(v) =>
+                  dispatch(
+                    zakatInput({
+                      name: "investmentProfit",
+                      value: Number(v),
+                    })
+                  )
+                }
+              />
+            </View>
+            <Text style={styles.tip}>
+              Yearly profit earned from your investments
+            </Text>
 
             <Text style={styles.label}>Resale Value Of Share</Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              value={amounts.shareResale?.toString() || ""}
-              onChangeText={(v) =>
-                dispatch(
-                  zakatInput({
-                    name: "shareResale",
-                    value: Number(v),
-                  })
-                )
-              }
-            />
+            <View style={styles.inputWithPrefix}>
+              <Text style={styles.prefix}>$</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={amounts.shareResale?.toString() || ""}
+                onChangeText={(v) =>
+                  dispatch(
+                    zakatInput({
+                      name: "shareResale",
+                      value: Number(v),
+                    })
+                  )
+                }
+              />
+            </View>
+            <Text style={styles.tip}>
+              Current market value of your shares if sold today
+            </Text>
 
             <Text style={styles.label}>Merchandise & Profits</Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              value={amounts.merchandise?.toString() || ""}
-              onChangeText={(v) =>
-                dispatch(
-                  zakatInput({
-                    name: "merchandise",
-                    value: Number(v),
-                  })
-                )
-              }
-            />
+            <View style={styles.inputWithPrefix}>
+              <Text style={styles.prefix}>$</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={amounts.merchandise?.toString() || ""}
+                onChangeText={(v) =>
+                  dispatch(
+                    zakatInput({
+                      name: "merchandise",
+                      value: Number(v),
+                    })
+                  )
+                }
+              />
+            </View>
+            <Text style={styles.tip}>
+              Value of goods you own for business or resale purposes
+            </Text>
           </>
         );
 
@@ -167,98 +221,254 @@ export default function ZakatCalculatorScreen() {
             {/* GOLD */}
             <Text style={styles.label}>Zakatable Gold</Text>
             <View style={[styles.row, { alignItems: "center" }]}>
-              <TextInput
-                style={[styles.input, { flex: 1, marginBottom: 0 }]}
-                keyboardType="numeric"
-                value={amounts.gold?.[0]?.value?.toString() || ""}
-                placeholder="0"
-                onChangeText={(v) =>
-                  dispatch(
-                    zakatMetalInput({
-                      name: "gold",
-                      key: 0,
-                      value: Number(v),
-                      unit: amounts.gold?.[0]?.unit || "gram",
-                      type: "gold",
-                    })
-                  )
-                }
-              />
               <View
-                style={[
-                  styles.pickerWrap,
-                  { justifyContent: "center", height: 44, width: 140 },
-                ]}
+                style={[styles.inputWithPrefix, { flex: 1, marginBottom: 0 }]}
               >
-                <Picker
-                  selectedValue={amounts.gold?.[0]?.unit || "gram"}
-                  onValueChange={(unit) =>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  value={amounts.gold?.[0]?.weight?.toString() || ""}
+                  placeholder="0"
+                  onChangeText={(v) => {
+                    const weight = Number(v) || 0;
+                    const unit = amounts.gold?.[0]?.unit || "gram";
+                    const calculatedValue = calculateMetalValue(
+                      weight,
+                      unit,
+                      goldPriceAud
+                    );
                     dispatch(
                       zakatMetalInput({
                         name: "gold",
                         key: 0,
-                        value: amounts.gold?.[0]?.value || 0,
+                        weight,
+                        value: calculatedValue,
                         unit,
                         type: "gold",
                       })
-                    )
-                  }
-                  style={{ height: 52, width: 140 }}
-                  itemStyle={{ minWidth: 100 }}
+                    );
+                  }}
+                />
+              </View>
+              <View style={styles.dropdownContainer}>
+                <TouchableOpacity
+                  style={styles.dropdownButton}
+                  onPress={() => setGoldDropdownOpen(!goldDropdownOpen)}
+                  activeOpacity={0.7}
                 >
-                  <Picker.Item label="Grams" value="gram" />
-                  <Picker.Item label="Ounces" value="ounce" />
-                </Picker>
+                  <Text style={styles.dropdownText}>
+                    {amounts.gold?.[0]?.unit === "ounce" ? "Ounces" : "Grams"}
+                  </Text>
+                  <Ionicons
+                    name={goldDropdownOpen ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color="#264B8B"
+                  />
+                </TouchableOpacity>
+                {goldDropdownOpen && (
+                  <View style={styles.dropdownMenu}>
+                    <TouchableOpacity
+                      style={[styles.dropdownItem, { borderBottomWidth: 1 }]}
+                      onPress={() => {
+                        const weight = amounts.gold?.[0]?.weight || 0;
+                        const calculatedValue = calculateMetalValue(
+                          weight,
+                          "gram",
+                          goldPriceAud
+                        );
+                        dispatch(
+                          zakatMetalInput({
+                            name: "gold",
+                            key: 0,
+                            weight,
+                            value: calculatedValue,
+                            unit: "gram",
+                            type: "gold",
+                          })
+                        );
+                        setGoldDropdownOpen(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          amounts.gold?.[0]?.unit === "gram" &&
+                            styles.dropdownItemTextActive,
+                        ]}
+                      >
+                        Grams
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        const weight = amounts.gold?.[0]?.weight || 0;
+                        const calculatedValue = calculateMetalValue(
+                          weight,
+                          "ounce",
+                          goldPriceAud
+                        );
+                        dispatch(
+                          zakatMetalInput({
+                            name: "gold",
+                            key: 0,
+                            weight,
+                            value: calculatedValue,
+                            unit: "ounce",
+                            type: "gold",
+                          })
+                        );
+                        setGoldDropdownOpen(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          amounts.gold?.[0]?.unit === "ounce" &&
+                            styles.dropdownItemTextActive,
+                        ]}
+                      >
+                        Ounces
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             </View>
+            <Text style={[styles.tip, { marginTop: 4 }]}>
+              Total weight of gold you own (jewelry, coins, bars)
+            </Text>
+            {amounts.gold?.[0]?.value > 0 && (
+              <Text style={styles.valueDisplay}>
+                Value: ${formatPrice(amounts.gold?.[0]?.value || 0)}
+              </Text>
+            )}
 
             {/* SILVER */}
             <Text style={styles.label}>Zakatable Silver</Text>
             <View style={[styles.row, { alignItems: "center" }]}>
-              <TextInput
-                style={[styles.input, { flex: 1, marginBottom: 0 }]}
-                keyboardType="numeric"
-                value={amounts.silver?.[0]?.value?.toString() || ""}
-                placeholder="0"
-                onChangeText={(v) =>
-                  dispatch(
-                    zakatMetalInput({
-                      name: "silver",
-                      key: 0,
-                      value: Number(v),
-                      unit: amounts.silver?.[0]?.unit || "gram",
-                      type: "silver",
-                    })
-                  )
-                }
-              />
               <View
-                style={[
-                  styles.pickerWrap,
-                  { justifyContent: "center", height: 44, width: 140 },
-                ]}
+                style={[styles.inputWithPrefix, { flex: 1, marginBottom: 0 }]}
               >
-                <Picker
-                  selectedValue={amounts.silver?.[0]?.unit || "gram"}
-                  onValueChange={(unit) =>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  value={amounts.silver?.[0]?.weight?.toString() || ""}
+                  placeholder="0"
+                  onChangeText={(v) => {
+                    const weight = Number(v) || 0;
+                    const unit = amounts.silver?.[0]?.unit || "gram";
+                    const calculatedValue = calculateMetalValue(
+                      weight,
+                      unit,
+                      silverPriceAud
+                    );
                     dispatch(
                       zakatMetalInput({
                         name: "silver",
                         key: 0,
-                        value: amounts.silver?.[0]?.value || 0,
+                        weight,
+                        value: calculatedValue,
                         unit,
                         type: "silver",
                       })
-                    )
-                  }
-                  style={{ height: 52, width: 140 }}
-                  itemStyle={{ minWidth: 100 }}
+                    );
+                  }}
+                />
+              </View>
+              <View style={styles.dropdownContainer}>
+                <TouchableOpacity
+                  style={styles.dropdownButton}
+                  onPress={() => setSilverDropdownOpen(!silverDropdownOpen)}
+                  activeOpacity={0.7}
                 >
-                  <Picker.Item label="Grams" value="gram" />
-                  <Picker.Item label="Ounces" value="ounce" />
-                </Picker>
+                  <Text style={styles.dropdownText}>
+                    {amounts.silver?.[0]?.unit === "ounce" ? "Ounces" : "Grams"}
+                  </Text>
+                  <Ionicons
+                    name={silverDropdownOpen ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color="#264B8B"
+                  />
+                </TouchableOpacity>
+                {silverDropdownOpen && (
+                  <View style={styles.dropdownMenu}>
+                    <TouchableOpacity
+                      style={[styles.dropdownItem, { borderBottomWidth: 1 }]}
+                      onPress={() => {
+                        const weight = amounts.silver?.[0]?.weight || 0;
+                        const calculatedValue = calculateMetalValue(
+                          weight,
+                          "gram",
+                          silverPriceAud
+                        );
+                        dispatch(
+                          zakatMetalInput({
+                            name: "silver",
+                            key: 0,
+                            weight,
+                            value: calculatedValue,
+                            unit: "gram",
+                            type: "silver",
+                          })
+                        );
+                        setSilverDropdownOpen(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          amounts.silver?.[0]?.unit === "gram" &&
+                            styles.dropdownItemTextActive,
+                        ]}
+                      >
+                        Grams
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        const weight = amounts.silver?.[0]?.weight || 0;
+                        const calculatedValue = calculateMetalValue(
+                          weight,
+                          "ounce",
+                          silverPriceAud
+                        );
+                        dispatch(
+                          zakatMetalInput({
+                            name: "silver",
+                            key: 0,
+                            weight,
+                            value: calculatedValue,
+                            unit: "ounce",
+                            type: "silver",
+                          })
+                        );
+                        setSilverDropdownOpen(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          amounts.silver?.[0]?.unit === "ounce" &&
+                            styles.dropdownItemTextActive,
+                        ]}
+                      >
+                        Ounces
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             </View>
+            <Text style={[styles.tip, { marginTop: 4 }]}>
+              Total weight of silver you own (jewelry, coins, bars)
+            </Text>
+            {amounts.silver?.[0]?.value > 0 && (
+              <Text style={styles.valueDisplay}>
+                Value: ${formatPrice(amounts.silver?.[0]?.value || 0)}
+              </Text>
+            )}
           </>
         );
 
@@ -270,24 +480,36 @@ export default function ZakatCalculatorScreen() {
             <Text style={styles.label}>
               Total Amount Of Awaiting Receivable Loans
             </Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              value={amounts.loan?.toString() || ""}
-              onChangeText={(v) =>
-                dispatch(zakatInput({ name: "loan", value: Number(v) }))
-              }
-            />
+            <View style={styles.inputWithPrefix}>
+              <Text style={styles.prefix}>$</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={amounts.loan?.toString() || ""}
+                onChangeText={(v) =>
+                  dispatch(zakatInput({ name: "loan", value: Number(v) }))
+                }
+              />
+            </View>
+            <Text style={styles.tip}>
+              Money you owe to others that you need to pay back
+            </Text>
 
             <Text style={styles.label}>Other Zakatable Wealth</Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              value={amounts.other?.toString() || ""}
-              onChangeText={(v) =>
-                dispatch(zakatInput({ name: "other", value: Number(v) }))
-              }
-            />
+            <View style={styles.inputWithPrefix}>
+              <Text style={styles.prefix}>$</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={amounts.other?.toString() || ""}
+                onChangeText={(v) =>
+                  dispatch(zakatInput({ name: "other", value: Number(v) }))
+                }
+              />
+            </View>
+            <Text style={styles.tip}>
+              Any other wealth that qualifies for Zakat calculation
+            </Text>
           </>
         );
 
@@ -304,16 +526,26 @@ export default function ZakatCalculatorScreen() {
       />
 
       {/* HEADER */}
-      <HeroBackground
-        source={require("@/assets/zakat-bg.png")}
-        containerStyle={{ height: 220 }}
-        showBack
-      >
-        <Text style={styles.headerTitle}>Zakat Calculator</Text>
-        <Text style={styles.headerSubtitle}>
-          Accurately determine your Zakat with our scholar-verified calculator.
-        </Text>
-      </HeroBackground>
+      <View style={styles.headerWrapper}>
+        <Image
+          source={require("@/assets/zakat-bg.png")}
+          style={styles.headerImage}
+        />
+
+        <LinearGradient
+          colors={["transparent", "rgba(38,75,139,0.6)", "rgba(38,75,139,0.9)"]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Zakat Calculator</Text>
+          <Text style={styles.headerSubtitle}>
+            Accurately determine your Zakat with our scholar-verified
+            calculator, ensuring your contribution is precise and impactful.
+          </Text>
+        </View>
+      </View>
 
       {/* TOP STEPS */}
       <View style={styles.tabs}>
@@ -322,6 +554,7 @@ export default function ZakatCalculatorScreen() {
             key={s.key}
             style={styles.tabWrap}
             onPress={() => dispatch(zakatStep(s.key - step))}
+            activeOpacity={0.7}
           >
             <View
               style={[
@@ -369,19 +602,47 @@ export default function ZakatCalculatorScreen() {
         </View>
       </View>
 
-      <TouchableOpacity
-        style={styles.nextBtn}
-        onPress={() => {
-          if (step === 4) {
-            setSummaryOpen(true);
-          } else {
-            dispatch(zakatStep(1));
-          }
-        }}
-      >
-        <Text style={styles.nextText}>Next</Text>
-        <Ionicons name="chevron-forward" size={18} color="#fff" />
-      </TouchableOpacity>
+      <View style={styles.buttonSection}>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => {
+              if (step === 1) {
+                router.push("/(tabs)/");
+              } else {
+                dispatch(zakatStep(-1));
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={step === 1 ? "home" : "chevron-back"}
+              size={16}
+              color="#264B8B"
+            />
+            <Text style={styles.backText}>{step === 1 ? "Home" : "Back"}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.nextBtn}
+            onPress={() => {
+              if (step === 4) {
+                setSummaryOpen(true);
+              } else {
+                dispatch(zakatStep(1));
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.nextText}>
+              {step === 4 ? "Finish" : "Next"}
+            </Text>
+            {step !== 4 && (
+              <Ionicons name="chevron-forward" size={16} color="#fff" />
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 }
@@ -399,24 +660,91 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  tabs: { flexDirection: "row", marginTop: 16, marginHorizontal: 16 },
-  tabWrap: { flex: 1, alignItems: "center", marginHorizontal: 6 },
-  tabLine: { height: 4, width: "100%", borderRadius: 4 },
-  tabActive: { backgroundColor: "#264B8B" },
-  tabInactive: { backgroundColor: "#E5E7EB" },
-  tabText: { fontSize: 11, color: "#9AA0B5" },
-  tabTextActive: { color: "#264B8B", fontWeight: "600" },
+  tabs: {
+    flexDirection: "row",
+    marginTop: 20,
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
+  tabWrap: {
+    flex: 1,
+    alignItems: "center",
+    marginHorizontal: 4,
+  },
+  tabLine: {
+    height: 4,
+    width: "100%",
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  tabActive: {
+    backgroundColor: "#264B8B",
+  },
+  tabInactive: {
+    backgroundColor: "#E5E7EB",
+  },
+  tabText: {
+    fontSize: 11,
+    color: "#9AA0B5",
+    textAlign: "center",
+    fontWeight: "500",
+  },
+  tabTextActive: {
+    color: "#264B8B",
+    fontWeight: "600",
+  },
 
-  content: { padding: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 16 },
-  label: { fontSize: 12, color: "#6B7280", marginBottom: 6 },
-  input: {
+  content: { padding: 20, paddingTop: 28 },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 20,
+    color: "#010D26",
+  },
+  label: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginBottom: 8,
+    fontWeight: "500",
+  },
+  tip: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    marginTop: -12,
+    marginBottom: 16,
+    fontStyle: "italic",
+    lineHeight: 14,
+  },
+  valueDisplay: {
+    fontSize: 12,
+    color: "#264B8B",
+    fontWeight: "600",
+    marginTop: -10,
+    marginBottom: 16,
+  },
+  inputWithPrefix: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    padding: 12,
     marginBottom: 16,
+    paddingLeft: 12,
+  },
+  prefix: {
+    fontSize: 14,
+    color: "#6B7280",
+    fontWeight: "500",
+    marginRight: 4,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    padding: 12,
+    paddingLeft: 0,
+    marginBottom: 0,
   },
 
   row: { flexDirection: "row", gap: 10 },
@@ -426,6 +754,55 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "#010D2633",
+  },
+  dropdownContainer: {
+    position: "relative",
+    width: 140,
+  },
+  dropdownButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    padding: 12,
+    height: 44,
+  },
+  dropdownText: {
+    fontSize: 14,
+    color: "#264B8B",
+    fontWeight: "500",
+  },
+  dropdownMenu: {
+    position: "absolute",
+    top: 48,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 1000,
+    overflow: "hidden",
+  },
+  dropdownItem: {
+    padding: 12,
+    borderBottomColor: "#F3F4F6",
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  dropdownItemTextActive: {
+    color: "#264B8B",
+    fontWeight: "600",
   },
 
   reviewWrap: { alignItems: "flex-end" },
@@ -445,20 +822,52 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
 
-  nextBtn: {
-    backgroundColor: "#244180",
-    padding: 8,
-    marginHorizontal: 16,
-    marginVertical: 16,
-    borderRadius: 6,
+  buttonSection: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  backBtn: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderWidth: 1.5,
+    borderColor: "#264B8B",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
-    gap: 6,
+    gap: 5,
+    minHeight: 44,
+  },
+  backText: {
+    color: "#264B8B",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  nextBtn: {
+    flex: 1,
+    backgroundColor: "#244180",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 5,
+    minHeight: 44,
   },
   nextText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
   },
   footer: {

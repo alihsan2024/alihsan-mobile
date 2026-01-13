@@ -150,11 +150,34 @@ export default function GazaDonationScreen() {
         containerStyle={{ height: 320 }}
       >
         <View style={styles.heroText}>
-          <Text style={styles.heroTitle}>{campaign.name}</Text>
+          {campaign.campaignBriefTitle ? (
+            <>
+              {(() => {
+                const words = campaign.campaignBriefTitle.split(" ");
+                const firstWord = words[0];
+                const restOfTitle = words.slice(1).join(" ");
+                return (
+                  <>
+                    <Text style={styles.heroTitle}>{firstWord}</Text>
+                    {restOfTitle && (
+                      <Text style={styles.heroSubtitle}>{restOfTitle}</Text>
+                    )}
+                  </>
+                );
+              })()}
+            </>
+          ) : (
+            <>
+              <Text style={styles.heroTitle}>Gaza</Text>
+              <Text style={styles.heroSubtitle}>is being Starved</Text>
+            </>
+          )}
 
           <Text style={styles.heroMeta}>
             <Text style={styles.heroMetaBold}>
-              {campaign.totalDonors || "254,786+"}
+              {campaign.impactFigure
+                ? campaign.impactFigure.toLocaleString()
+                : campaign.totalDonors || 254_786}
             </Text>{" "}
             Lives Changed
           </Text>
@@ -189,7 +212,29 @@ export default function GazaDonationScreen() {
 
         {problemOpen && (
           <Text style={styles.bodyText}>
-            {campaign.description
+            {campaign.problemDesc
+              ? campaign.problemDesc
+                  .replace(/<[^>]*>/g, "")
+                  .replace(
+                    /&nbsp;|&amp;|&quot;|&lt;|&gt;/gi,
+                    function (entity: string) {
+                      switch (entity) {
+                        case "&nbsp;":
+                          return " ";
+                        case "&amp;":
+                          return "&";
+                        case "&quot;":
+                          return '"';
+                        case "&lt;":
+                          return "<";
+                        case "&gt;":
+                          return ">";
+                        default:
+                          return "";
+                      }
+                    }
+                  )
+              : campaign.description
               ?.replace(/<[^>]*>/g, "")
               .replace(
                 /&nbsp;|&amp;|&quot;|&lt;|&gt;/gi,

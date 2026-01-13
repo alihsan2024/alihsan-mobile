@@ -291,7 +291,7 @@ export default function HomeScreen() {
       style={{
         flex: 1,
         backgroundColor: "#fff",
-        paddingTop: insets.top,
+        paddingTop: 0,
       }}
       contentContainerStyle={{ paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
@@ -304,13 +304,14 @@ export default function HomeScreen() {
         raised={109690.51}
         goal={150000}
       />
-      {/* Background images */}
-      <HeroBackground
-        source={require("../../assets/header-image.png")}
-        isHome
-        contentStyle={{
-          paddingHorizontal: PADDING_HORIZONTAL,
-          paddingBottom: 4,
+  
+      <View
+        style={{
+          width: "100%",
+          minHeight: screenHeight * 0.6,
+          position: "absolute",
+          top: 0,
+          left: 0,
         }}
       >
         <HeaderSearchBar
@@ -319,6 +320,34 @@ export default function HomeScreen() {
           // onChangeText={(text) => console.log(text)}
           // onNotificationPress={() => router.push("/notifications")}
         />
+      </View>
+
+      {/* Main content */}
+      <View
+        style={{
+          paddingHorizontal: PADDING_HORIZONTAL,
+          paddingTop: insets.top,
+        }}
+      >
+        {/* Header Bar */}
+        <View style={styles.headerBar}>
+          {/* Search */}
+          <View style={styles.searchContainer}>
+            <Feather name="search" size={16} color="#fff" />
+            <TextInput
+              placeholder="Search"
+              placeholderTextColor="rgba(255,255,255,0.6)"
+              style={styles.searchInput}
+            />
+          </View>
+
+          {/* Notification */}
+          <TouchableOpacity style={styles.notificationButton}>
+            <Ionicons name="notifications" size={18} color="#010D264D" />
+            {/* Optional dot */}
+            <View style={styles.notificationDot} />
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.heroTextContainer}>
           <Text style={styles.heroTitle}>Gaza</Text>
@@ -469,15 +498,34 @@ export default function HomeScreen() {
           ))}
         </View>
 
+        {/* Categories Section - Below Banner */}
         <View
           style={{
-            height: 1,
-            backgroundColor: "#E0E0E0",
-            marginBottom: 18,
-            width: "100%",
+            backgroundColor: "#fff",
+            paddingTop: 16,
+            marginHorizontal: -PADDING_HORIZONTAL,
+            paddingHorizontal: PADDING_HORIZONTAL,
+            marginTop: 0,
           }}
-        />
+        >
+          <ImageSlider
+            data={SLIDER_DATA}
+            onPress={(item) => {
+              console.log("Pressed:", item.title);
+            }}
+          />
+          <View
+            style={{
+              height: 1,
+              backgroundColor: "#E0E0E0",
+              marginBottom: 18,
+              marginTop: 20,
+              width: "100%",
+            }}
+          />
+        </View>
 
+        {/* Featured Campaigns Section */}
         <View style={{ flex: 1 }}>
           <View
             style={{
@@ -534,11 +582,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: 8,
   },
   heroTextContainer: {
-    marginTop: 12,
-    marginBottom: 20,
+    marginTop: 4,
+    marginBottom: 16,
   },
 
   heroTitle: {
@@ -706,7 +754,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     padding: 16,
     borderRadius: 12,
-    marginBottom: 32,
+    marginBottom: 10,
     elevation: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
