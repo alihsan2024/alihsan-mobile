@@ -65,9 +65,20 @@ export default function CampaignSlider({ data, onPress }: Props) {
             <Text style={styles.title} numberOfLines={2}>
               {item.title}
             </Text>
-            <Text style={styles.amount}>
-              {item.amountRaised} of {item.goal} goal
-            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Text style={styles.amount}>of {item.goal} goal</Text>
+              <Text
+                style={[styles.amount, { fontSize: 18, fontWeight: "600" }]}
+              >
+                {item.amountRaised}
+              </Text>
+            </View>
           </View>
         </TouchableOpacity>
       )}
@@ -101,18 +112,18 @@ const styles = StyleSheet.create({
   donors: {
     fontSize: 12,
     fontWeight: "500",
-    color: "#4B5563",
-    marginBottom: 4,
+    color: "#010D26",
+    opacity: 0.8,
   },
   title: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "700",
-    color: "#111827",
-    marginBottom: 4,
+    color: "#010D26",
+    marginVertical: 8,
   },
   amount: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#111827",
+    color: "#010D26",
   },
 });

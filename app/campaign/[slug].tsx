@@ -22,6 +22,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { getTopDonation } from "@/store/reduxSlice/quickDonationSlice";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { DimensionValue } from "react-native";
+import HeroBackground from "@/components/ui/GradientImage";
 
 export default function GazaDonationScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -44,10 +45,6 @@ export default function GazaDonationScreen() {
   const dispatch = useAppDispatch();
   const liveDonations =
     useSelector((state: any) => state.quickDonations?.liveDonations) ?? [];
-
-  console.log({ campaign });
-
-  console.log({ liveDonations });
 
   useEffect(() => {
     if (campaign?.id) {
@@ -147,35 +144,22 @@ export default function GazaDonationScreen() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* ===== HERO ===== */}
-      <View style={{ position: "relative" }}>
-        <ImageBackground
-          source={{ uri: campaign.coverImage }}
-          style={styles.hero}
-        >
-          {/* Gradient overlay */}
-          <LinearGradient
-            colors={["rgba(36,107,225,0.5)", "rgba(36,107,225,0.0)"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-          <TouchableOpacity style={styles.backBtn} onPress={router.back}>
-            <Ionicons name="chevron-back" size={22} color="#fff" />
-          </TouchableOpacity>
+      <HeroBackground
+        source={{ uri: campaign.coverImage }}
+        showBack
+        containerStyle={{ height: 320 }}
+      >
+        <View style={styles.heroText}>
+          <Text style={styles.heroTitle}>{campaign.name}</Text>
 
-          <View style={styles.heroText}>
-            <Text style={styles.heroTitle}>{campaign.name}</Text>
-
-            <Text style={styles.heroMeta}>
-              <Text style={styles.heroMetaBold}>
-                {campaign.totalDonors || "254,786+"}
-              </Text>{" "}
-              Lives Changed
-            </Text>
-          </View>
-        </ImageBackground>
-      </View>
+          <Text style={styles.heroMeta}>
+            <Text style={styles.heroMetaBold}>
+              {campaign.totalDonors || "254,786+"}
+            </Text>{" "}
+            Lives Changed
+          </Text>
+        </View>
+      </HeroBackground>
 
       {/* ===== CONTENT ===== */}
       <View style={styles.content}>
@@ -392,6 +376,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     marginTop: -4,
   },
+
   heroMeta: {
     marginTop: 10,
     fontSize: 13,
@@ -431,8 +416,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: "700",
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#010D26",
   },
 
   bodyText: {
@@ -444,8 +430,9 @@ const styles = StyleSheet.create({
 
   chooseText: {
     marginTop: 10,
-    fontSize: 14,
-    color: "#444",
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#010D26",
   },
 
   amountRow: {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Entypo, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image as ExpoImage } from "expo-image";
@@ -22,8 +22,6 @@ export default function ThankYouScreen() {
 
   return (
     <View style={styles.container}>
-      {/* ===== TOP IMAGE SECTION ===== */}
-
       <View style={styles.header}>
         {/* Solid background */}
         <View style={styles.headerBgColor} />
@@ -44,7 +42,6 @@ export default function ThankYouScreen() {
           pointerEvents="none"
         />
 
-        {/* TEXT — MUST BE LAST */}
         <View style={styles.textOverlay}>
           <Text style={styles.headerTitle}>Alhamdulillah</Text>
           <Text style={styles.headerSubtitle}>Transaction Successful!</Text>
@@ -72,14 +69,15 @@ export default function ThankYouScreen() {
         </View>
 
         {/* ===== SHARE ===== */}
-        <View style={styles.shareSection}>
+        <View>
           <Text style={styles.shareTitle}>Share</Text>
 
           <View style={styles.shareRow}>
             <ShareItem icon="logo-instagram" label="Instagram" />
             <ShareItem icon="logo-whatsapp" label="WhatsApp" />
             <ShareItem icon="logo-facebook" label="Facebook" />
-            <ShareItem icon="link-outline" label="Link" />
+            <ShareItem icon="entypo-link" label="Link" />
+
             <ShareItem icon="ellipsis-horizontal" label="More" />
           </View>
         </View>
@@ -88,10 +86,11 @@ export default function ThankYouScreen() {
       {/* ===== BOTTOM BUTTON ===== */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={styles.button}
+          style={styles.footerButton}
           onPress={() => router.push("/")}
+          activeOpacity={0.85}
         >
-          <Text style={styles.buttonText}>Back to Home</Text>
+          <Text style={styles.footerButtonText}>Back to Home</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -117,7 +116,11 @@ const PriceRow = ({
 const ShareItem = ({ icon, label }: { icon: any; label: string }) => (
   <TouchableOpacity style={styles.shareItem}>
     <View style={styles.shareIconCircle}>
-      <Ionicons name={icon} size={24} color="#4C63F0" />
+      {icon === "entypo-link" ? (
+        <Entypo name="link" size={24} color="#4C63F0" />
+      ) : (
+        <Ionicons name={icon} size={24} color="#4C63F0" />
+      )}
     </View>
     <Text style={styles.shareLabel}>{label}</Text>
   </TouchableOpacity>
@@ -167,6 +170,7 @@ const styles = StyleSheet.create({
   /* CONTENT */
   content: {
     padding: 20,
+    flex: 1,
   },
   background: {
     position: "absolute",
@@ -205,7 +209,7 @@ const styles = StyleSheet.create({
   /* PRICE */
   priceBox: {
     paddingVertical: 12,
-    marginBottom: 20,
+    marginBottom: 4,
   },
   priceRow: {
     flexDirection: "row",
@@ -221,10 +225,6 @@ const styles = StyleSheet.create({
   },
 
   /* SHARE */
-  shareSection: {
-    marginTop: 4,
-  },
-
   shareTitle: {
     fontSize: 18,
     fontWeight: "700",
@@ -261,19 +261,22 @@ const styles = StyleSheet.create({
 
   /* FOOTER */
   footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderColor: "#EEE",
+    backgroundColor: "#246BE1",
+    paddingHorizontal: 16,
+    paddingVertical: 20,
   },
-  button: {
-    backgroundColor: "#5B66F0",
-    paddingVertical: 14,
-    borderRadius: 10,
+
+  footerButton: {
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 10,
+    borderRadius: 8,
     alignItems: "center",
+    justifyContent: "center",
   },
-  buttonText: {
-    color: "#FFF",
-    fontSize: 15,
+
+  footerButtonText: {
+    color: "#244180",
+    fontSize: 16,
     fontWeight: "600",
   },
 });

@@ -16,6 +16,7 @@ export default function StepIndicator({ step, onStepPress }: Props) {
           const stepNumber = index + 1;
           const isCompleted = step > stepNumber;
           const isActive = step === stepNumber;
+          const isDoneOrActive = step >= stepNumber;
 
           return (
             <React.Fragment key={label}>
@@ -36,7 +37,10 @@ export default function StepIndicator({ step, onStepPress }: Props) {
                 </TouchableOpacity>
                 {index === 0 && (
                   <Text
-                    style={[styles.labelLeft, isActive && styles.labelActive]}
+                    style={[
+                      styles.labelLeft,
+                      isDoneOrActive && styles.labelActive,
+                    ]}
                   >
                     {label}
                   </Text>
@@ -45,7 +49,7 @@ export default function StepIndicator({ step, onStepPress }: Props) {
                   <Text
                     style={[
                       styles.labelAbsolute,
-                      isActive && styles.labelActive,
+                      isDoneOrActive && styles.labelActive,
                     ]}
                   >
                     {label}
@@ -53,7 +57,10 @@ export default function StepIndicator({ step, onStepPress }: Props) {
                 )}
                 {index === 2 && (
                   <Text
-                    style={[styles.labelRight, isActive && styles.labelActive]}
+                    style={[
+                      styles.labelRight,
+                      isDoneOrActive && styles.labelActive,
+                    ]}
                   >
                     {label}
                   </Text>

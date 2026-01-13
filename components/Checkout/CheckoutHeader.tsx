@@ -11,7 +11,6 @@ export default function CheckoutHeader({
   setStep?: (step: 1 | 2 | 3) => void;
 }) {
   const router = useRouter();
-  console.log({ step });
 
   return (
     <View style={styles.container}>

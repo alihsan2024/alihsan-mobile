@@ -26,6 +26,8 @@ import {
 } from "@/store/reduxSlice/api/basketApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSelector } from "react-redux";
+import HeroBackground from "@/components/ui/GradientImage";
+import HeaderSearchBar from "@/components/ui/HeaderSearchBar";
 
 const ICON_SIZE = 16;
 const SIDE_BUTTON_WIDTH = 60;
@@ -37,7 +39,7 @@ const SLIDER_DATA = [
   {
     id: 1,
     title: "Zakat",
-    image: require("../../assets/card1.png"),
+    image: require("../../assets/category-1.png"),
   },
   {
     id: 2,
@@ -51,11 +53,6 @@ const SLIDER_DATA = [
   },
   {
     id: 4,
-    title: "Infaq",
-    image: require("../../assets/card1.png"),
-  },
-  {
-    id: 5,
     title: "Infaq",
     image: require("../../assets/card1.png"),
   },
@@ -308,58 +305,20 @@ export default function HomeScreen() {
         goal={150000}
       />
       {/* Background images */}
-      {/* Background images */}
-      <View
-        style={{
-          width: "100%",
-          minHeight: screenHeight * 0.6,
-          position: "absolute",
+      <HeroBackground
+        source={require("../../assets/header-image.png")}
+        isHome
+        contentStyle={{
+          paddingHorizontal: PADDING_HORIZONTAL,
+          paddingBottom: 4,
         }}
       >
-        {/* Solid background color */}
-        <View style={styles.headerBgColor} />
-
-        {/* Header image */}
-        <ExpoImage
-          source={require("../../assets/header-image.png")}
-          style={styles.background}
-          contentFit="cover"
+        <HeaderSearchBar
+          placeholder="Search"
+          showNotificationDot
+          // onChangeText={(text) => console.log(text)}
+          // onNotificationPress={() => router.push("/notifications")}
         />
-
-        {/* Left fade overlay (50%) */}
-        <LinearGradient
-          colors={[
-            "rgba(36,107,225,0.5)", // left (50% visible)
-            "rgba(36,107,225,0.0)", // right (fully clear)
-          ]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.leftFade}
-          pointerEvents="none"
-        />
-      </View>
-
-      {/* Main content */}
-      <View style={{ paddingHorizontal: PADDING_HORIZONTAL, paddingTop: 10 }}>
-        {/* Header Bar */}
-        <View style={styles.headerBar}>
-          {/* Search */}
-          <View style={styles.searchContainer}>
-            <Feather name="search" size={16} color="#fff" />
-            <TextInput
-              placeholder="Search"
-              placeholderTextColor="rgba(255,255,255,0.6)"
-              style={styles.searchInput}
-            />
-          </View>
-
-          {/* Notification */}
-          <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons name="notifications" size={18} color="#010D264D" />
-            {/* Optional dot */}
-            <View style={styles.notificationDot} />
-          </TouchableOpacity>
-        </View>
 
         <View style={styles.heroTextContainer}>
           <Text style={styles.heroTitle}>Gaza</Text>
@@ -432,6 +391,7 @@ export default function HomeScreen() {
           <View style={styles.inputWrapper}>
             <TextInput
               placeholder="Custom Amount"
+              placeholderTextColor={"#010D2640"}
               keyboardType="numeric"
               value={customAmount}
               onChangeText={(text) => {
@@ -450,18 +410,65 @@ export default function HomeScreen() {
             onPress={handleGazaDonate}
             disabled={addingToCart}
           >
-            <Text style={styles.donateText}>
-              {addingToCart ? "Adding..." : "Donate Now"}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text style={styles.donateText}>
+                {addingToCart ? "Adding..." : "Donate Now"}
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color="#010D26"
+                style={{ marginLeft: 8 }}
+              />
+            </View>
+          </TouchableOpacity>
+
+          {/* Link to Orphan Details */}
+          <TouchableOpacity
+            style={{ marginTop: 16, alignSelf: "center" }}
+            onPress={() => router.push("/orphan-details")}
+            activeOpacity={0.8}
+          >
+            <Text style={{ color: "#246BE1", fontWeight: "600", fontSize: 16 }}>
+              View Orphan Details
             </Text>
           </TouchableOpacity>
         </View>
+      </HeroBackground>
 
-        <ImageSlider
-          data={SLIDER_DATA}
-          onPress={(item) => {
-            console.log("Pressed:", item.title);
-          }}
-        />
+      {/* Main content */}
+      <View style={{ paddingHorizontal: PADDING_HORIZONTAL, paddingTop: 10 }}>
+        {/* Header Bar */}
+
+        <View style={styles.categoryRow}>
+          {SLIDER_DATA.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.categoryCard}
+              activeOpacity={0.85}
+              onPress={() => {
+                console.log("Pressed:", item.title);
+              }}
+            >
+              <View style={styles.categoryImageWrapper}>
+                <ExpoImage
+                  source={item.image}
+                  style={styles.categoryImage}
+                  contentFit="contain"
+                />
+              </View>
+
+              <Text style={styles.categoryTitle}>{item.title}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         <View
           style={{
             height: 1,
@@ -483,7 +490,8 @@ export default function HomeScreen() {
             <Text
               style={{
                 fontSize: 24,
-                fontWeight: "700",
+                color: "#010D26",
+                fontWeight: "600",
                 marginBottom: 10,
               }}
             >
@@ -575,12 +583,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
+    borderWidth: 2,
+    borderColor: "#010D261A",
   },
 
   notificationDot: {
     position: "absolute",
-    top: 10,
-    right: 10,
+    top: 1,
+    right: 2,
     width: 8,
     height: 8,
     borderRadius: 4,
@@ -729,7 +739,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   inputLeft: { color: "#264B8B", fontWeight: "600", marginRight: 8 },
-  inputMiddle: { flex: 1, height: "100%", color: "#264B8B", fontWeight: "600" },
+  inputMiddle: { flex: 1, height: "100%", color: "#264B8B" },
   inputRight: { color: "#264B8B", fontWeight: "600", marginLeft: 8 },
   donateButton: {
     backgroundColor: "#FFD602",
@@ -753,6 +763,37 @@ const styles = StyleSheet.create({
     left: 0,
     width: "100%", // only fade left half
     height: "100%",
+  },
+  categoryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+
+  categoryCard: {
+    width: "22%",
+    alignItems: "center",
+  },
+
+  categoryImageWrapper: {
+    width: "100%",
+    height: 90,
+    borderRadius: 18,
+    overflow: "hidden",
+    backgroundColor: "#E9EDFF",
+  },
+
+  categoryImage: {
+    width: "100%",
+    height: "100%",
+  },
+
+  categoryTitle: {
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#010D26",
+    textAlign: "center",
   },
 
   donateText: { color: "#010D26", fontWeight: "700", fontSize: 16 },

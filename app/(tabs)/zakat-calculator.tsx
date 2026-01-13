@@ -24,6 +24,7 @@ import {
 
 import ZakatSummaryModal from "@/components/ui/Modals/ZakatSummaryModal";
 import { useRouter } from "expo-router";
+import HeroBackground from "@/components/ui/GradientImage";
 
 const STEPS = [
   { key: 1, label: "Cash & Bank" },
@@ -303,47 +304,16 @@ export default function ZakatCalculatorScreen() {
       />
 
       {/* HEADER */}
-      <View style={styles.headerWrapper}>
-        <TouchableOpacity
-          style={{
-            position: "absolute",
-            top: 26,
-            left: 16,
-            zIndex: 10,
-            backgroundColor: "#fff",
-            borderRadius: 20,
-            width: 26,
-            height: 26,
-            alignItems: "center",
-            justifyContent: "center",
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 3,
-          }}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="chevron-back" size={22} color="#264B8B" />
-        </TouchableOpacity>
-        <Image
-          source={require("@/assets/zakat-bg.png")}
-          style={styles.headerImage}
-        />
-
-        <LinearGradient
-          colors={["transparent", "rgba(38,75,139,0.6)", "rgba(38,75,139,0.9)"]}
-          style={StyleSheet.absoluteFill}
-        />
-
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Zakat Calculator</Text>
-          <Text style={styles.headerSubtitle}>
-            Accurately determine your Zakat with our scholar-verified
-            calculator.
-          </Text>
-        </View>
-      </View>
+      <HeroBackground
+        source={require("@/assets/zakat-bg.png")}
+        containerStyle={{ height: 220 }}
+        showBack
+      >
+        <Text style={styles.headerTitle}>Zakat Calculator</Text>
+        <Text style={styles.headerSubtitle}>
+          Accurately determine your Zakat with our scholar-verified calculator.
+        </Text>
+      </HeroBackground>
 
       {/* TOP STEPS */}
       <View style={styles.tabs}>
@@ -421,9 +391,13 @@ const styles = StyleSheet.create({
 
   headerWrapper: { height: 220 },
   headerImage: { width: "100%", height: "100%", position: "absolute" },
-  headerContent: { position: "absolute", bottom: 20, left: 16, right: 16 },
   headerTitle: { color: "#fff", fontSize: 22, fontWeight: "700" },
-  headerSubtitle: { color: "#E6ECFF", fontSize: 14, marginTop: 6 },
+  headerSubtitle: {
+    color: "#E6ECFF",
+    fontSize: 14,
+    marginTop: 6,
+    marginBottom: 10,
+  },
 
   tabs: { flexDirection: "row", marginTop: 16, marginHorizontal: 16 },
   tabWrap: { flex: 1, alignItems: "center", marginHorizontal: 6 },
@@ -455,6 +429,21 @@ const styles = StyleSheet.create({
   },
 
   reviewWrap: { alignItems: "flex-end" },
+  backBtn: {
+    position: "absolute",
+    zIndex: 10,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    width: 26,
+    height: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
 
   nextBtn: {
     backgroundColor: "#244180",

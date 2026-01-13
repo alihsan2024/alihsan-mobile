@@ -30,6 +30,7 @@ import { useEffect, useState } from "react";
 import { fetchCampaigns, Campaign } from "../../utils/api";
 import { Link } from "expo-router";
 import HeaderSearchBar from "@/components/ui/HeaderSearchBar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ActiveAppealsScreen() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -38,6 +39,7 @@ export default function ActiveAppealsScreen() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   let campaignsCache: Campaign[] | null = null;
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const loadCampaigns = async () => {
@@ -82,7 +84,14 @@ export default function ActiveAppealsScreen() {
   });
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{
+        paddingTop: insets.top + 8,
+        paddingBottom: 24,
+      }}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Search */}
       {/* <View style={styles.searchContainer}>
         <Ionicons name="search" size={18} color="#999" />
@@ -95,11 +104,9 @@ export default function ActiveAppealsScreen() {
         <Ionicons name="notifications-outline" size={20} color="#333" />
       </View> */}
       <HeaderSearchBar
-        value={search}
-        onChangeText={setSearch}
-        showNotificationDot
         variant="outlined"
         placeholder="Search Gaza, Education, or Zakat..."
+        onNotificationPress={() => {}}
       />
 
       {/* Title */}
