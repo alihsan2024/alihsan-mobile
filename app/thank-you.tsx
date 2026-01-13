@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Entypo, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image as ExpoImage } from "expo-image";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { formatPrice } from "@/utils/helper";
+import HeroBackground from "@/components/ui/GradientImage";
 
 export default function ThankYouScreen() {
   const [summary, setSummary] = useState<any>(null);
@@ -18,46 +19,21 @@ export default function ThankYouScreen() {
 
   if (!summary) return null;
 
-  const processingFee = 0.03;
+  const { subtotal, adminFee, total } = summary;
 
-  const subtotal = summary.items.reduce((sum: number, item: any) => {
-    const qty = item.quantity || 1;
-    const amount = parseFloat(item.amount || item.total || 0);
-    return sum + amount * qty;
-  }, 0);
-
-  const adminFee = subtotal * processingFee;
-  const total = subtotal + adminFee;
   return (
     <View style={styles.container}>
-      {/* ===== TOP IMAGE SECTION ===== */}
-
-      <View style={styles.header}>
-        {/* Solid background */}
-        <View style={styles.headerBgColor} />
-
-        {/* Image */}
-        <ExpoImage
-          source={require("../assets/header-image.png")}
-          style={StyleSheet.absoluteFillObject}
-          contentFit="cover"
-        />
-
-        {/* Gradient */}
-        <LinearGradient
-          colors={["rgba(36,107,225,0.55)", "rgba(36,107,225,0.0)"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={StyleSheet.absoluteFillObject}
-          pointerEvents="none"
-        />
-
-        {/* TEXT — MUST BE LAST */}
-        <View style={styles.textOverlay}>
+      <HeroBackground
+        source={require("../assets/header-image.png")}
+        containerStyle={{ height: 220 }}
+        gradientColors={["rgba(36,107,225,0.55)", "rgba(36,107,225,0.0)"]}
+        gradientLocations={[0, 1]}
+      >
+        <View style={{ marginBottom: 20 }}>
           <Text style={styles.headerTitle}>Alhamdulillah</Text>
           <Text style={styles.headerSubtitle}>Transaction Successful!</Text>
         </View>
-      </View>
+      </HeroBackground>
       {/* ===== CONTENT ===== */}
       <View style={styles.content}>
         <Text style={styles.title}>
@@ -71,20 +47,24 @@ export default function ThankYouScreen() {
 
         {/* ===== PRICE DETAILS ===== */}
         <View style={styles.priceBox}>
+          <View style={styles.horizontalLine} />
           <PriceRow label="Subtotal" value={`$${formatPrice(subtotal)}`} />
           <PriceRow label="Admin Fee" value={`$${formatPrice(adminFee)}`} />
+          <View style={styles.horizontalLine} />
           <PriceRow label="Total" value={`$${formatPrice(total)}`} bold />
+          <View style={styles.horizontalLine} />
         </View>
 
         {/* ===== SHARE ===== */}
-        <View style={styles.shareSection}>
+        <View>
           <Text style={styles.shareTitle}>Share</Text>
 
           <View style={styles.shareRow}>
             <ShareItem icon="logo-instagram" label="Instagram" />
             <ShareItem icon="logo-whatsapp" label="WhatsApp" />
             <ShareItem icon="logo-facebook" label="Facebook" />
-            <ShareItem icon="link-outline" label="Link" />
+            <ShareItem icon="entypo-link" label="Link" />
+
             <ShareItem icon="ellipsis-horizontal" label="More" />
           </View>
         </View>
@@ -93,10 +73,11 @@ export default function ThankYouScreen() {
       {/* ===== BOTTOM BUTTON ===== */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={styles.button}
+          style={styles.footerButton}
           onPress={() => router.push("/")}
+          activeOpacity={0.85}
         >
-          <Text style={styles.buttonText}>Back to Home</Text>
+          <Text style={styles.footerButtonText}>Back to Home</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -122,7 +103,11 @@ const PriceRow = ({
 const ShareItem = ({ icon, label }: { icon: any; label: string }) => (
   <TouchableOpacity style={styles.shareItem}>
     <View style={styles.shareIconCircle}>
-      <Ionicons name={icon} size={24} color="#4C63F0" />
+      {icon === "entypo-link" ? (
+        <Entypo name="link" size={24} color="#4C63F0" />
+      ) : (
+        <Ionicons name={icon} size={24} color="#4C63F0" />
+      )}
     </View>
     <Text style={styles.shareLabel}>{label}</Text>
   </TouchableOpacity>
@@ -162,10 +147,17 @@ const styles = StyleSheet.create({
     right: 0,
     padding: 20,
   },
-
+  horizontalLine: {
+    height: 1,
+    backgroundColor: "#E0E0E0",
+    marginBottom: 8,
+    marginTop: 8,
+    width: "100%",
+  },
   /* CONTENT */
   content: {
     padding: 20,
+    flex: 1,
   },
   background: {
     position: "absolute",
@@ -203,11 +195,8 @@ const styles = StyleSheet.create({
 
   /* PRICE */
   priceBox: {
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: "#EEE",
     paddingVertical: 12,
-    marginBottom: 20,
+    marginBottom: 4,
   },
   priceRow: {
     flexDirection: "row",
@@ -223,10 +212,6 @@ const styles = StyleSheet.create({
   },
 
   /* SHARE */
-  shareSection: {
-    marginTop: 4,
-  },
-
   shareTitle: {
     fontSize: 18,
     fontWeight: "700",
@@ -263,19 +248,22 @@ const styles = StyleSheet.create({
 
   /* FOOTER */
   footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderColor: "#EEE",
+    backgroundColor: "#246BE1",
+    paddingHorizontal: 16,
+    paddingVertical: 20,
   },
-  button: {
-    backgroundColor: "#5B66F0",
-    paddingVertical: 14,
-    borderRadius: 10,
+
+  footerButton: {
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 10,
+    borderRadius: 8,
     alignItems: "center",
+    justifyContent: "center",
   },
-  buttonText: {
-    color: "#FFF",
-    fontSize: 15,
+
+  footerButtonText: {
+    color: "#244180",
+    fontSize: 16,
     fontWeight: "600",
   },
 });

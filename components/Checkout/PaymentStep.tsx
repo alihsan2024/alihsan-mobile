@@ -141,7 +141,7 @@ export default function PaymentStep({ paymentState, setPaymentState }: Props) {
                 ...s,
                 paymentType: "card",
                 cardDetails: details,
-                cardComplete: details.complete,
+                cardComplete: !!details.complete,
               }));
             }}
           />

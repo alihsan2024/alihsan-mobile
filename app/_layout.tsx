@@ -1,6 +1,6 @@
 import "react-native-get-random-values";
 import { Stack } from "expo-router";
-import useNotificationNavigation from "../hooks/useNotificationNavigation";
+// import useNotificationNavigation from "../hooks/useNotificationNavigation";
 import React, { useEffect, useContext } from "react";
 import IntroSlide from "../components/ui/sliders/IntroSlide";
 
@@ -12,14 +12,13 @@ import IntroSlide from "../components/ui/sliders/IntroSlide";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "../context/AuthContext";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
-import {
-  getOrCreateGuestId,
-  getLastRegisteredDeviceInfo,
-  setLastRegisteredDeviceInfo,
-} from "@/utils/deviceRegistration";
-import { registerDeviceToken } from "@/utils/api";
+// import {
+//   getOrCreateGuestId,
+//   getLastRegisteredDeviceInfo,
+//   setLastRegisteredDeviceInfo,
+// } from "@/utils/deviceRegistration";
+// import { registerDeviceToken } from "@/utils/api";
 import { BasketProvider } from "../context/BasketContext";
 import { Provider } from "react-redux";
 import { store } from "@/store/store";

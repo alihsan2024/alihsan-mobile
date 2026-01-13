@@ -22,6 +22,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { getTopDonation } from "@/store/reduxSlice/quickDonationSlice";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { DimensionValue } from "react-native";
+import HeroBackground from "@/components/ui/GradientImage";
 
 export default function GazaDonationScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -44,10 +45,6 @@ export default function GazaDonationScreen() {
   const dispatch = useAppDispatch();
   const liveDonations =
     useSelector((state: any) => state.quickDonations?.liveDonations) ?? [];
-
-  console.log({ campaign });
-
-  console.log({ liveDonations });
 
   useEffect(() => {
     if (campaign?.id) {
@@ -142,17 +139,16 @@ export default function GazaDonationScreen() {
 
   if (loading || !campaign) return null;
 
+  console.log(campaign.name);
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* ===== HERO ===== */}
-      <ImageBackground
+      <HeroBackground
         source={{ uri: campaign.coverImage }}
-        style={styles.hero}
+        showBack
+        containerStyle={{ height: 320 }}
       >
-        <TouchableOpacity style={styles.backBtn} onPress={router.back}>
-          <Ionicons name="chevron-back" size={22} color="#fff" />
-        </TouchableOpacity>
-
         <View style={styles.heroText}>
           {campaign.campaignBriefTitle ? (
             <>
@@ -186,10 +182,13 @@ export default function GazaDonationScreen() {
             Lives Changed
           </Text>
         </View>
-      </ImageBackground>
+      </HeroBackground>
 
       {/* ===== CONTENT ===== */}
       <View style={styles.content}>
+        <Text style={{ fontSize: 24, fontWeight: "700", marginBottom: 8 }}>
+          {campaign.name}
+        </Text>
         <Text style={styles.raisedAmount}>${raised.toLocaleString()}</Text>
         <Text style={styles.goalText}>of ${goal.toLocaleString()} goal</Text>
 
@@ -422,12 +421,13 @@ const styles = StyleSheet.create({
     color: "#fff",
     marginTop: -4,
   },
+
   heroMeta: {
     marginTop: 10,
     fontSize: 13,
     color: "#fff",
   },
-  heroMetaBold: { fontWeight: "700" },
+  heroMetaBold: { fontWeight: "700", color: "#f4c430" },
 
   /* CONTENT */
   content: { padding: 16 },
@@ -461,8 +461,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: "700",
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#010D26",
   },
 
   bodyText: {
@@ -474,8 +475,9 @@ const styles = StyleSheet.create({
 
   chooseText: {
     marginTop: 10,
-    fontSize: 14,
-    color: "#444",
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#010D26",
   },
 
   amountRow: {

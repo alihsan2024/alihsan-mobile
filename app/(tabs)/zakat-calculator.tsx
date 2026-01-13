@@ -24,6 +24,7 @@ import {
 
 import ZakatSummaryModal from "@/components/ui/Modals/ZakatSummaryModal";
 import { useRouter } from "expo-router";
+import HeroBackground from "@/components/ui/GradientImage";
 
 const STEPS = [
   { key: 1, label: "Cash & Bank" },
@@ -651,9 +652,13 @@ const styles = StyleSheet.create({
 
   headerWrapper: { height: 220 },
   headerImage: { width: "100%", height: "100%", position: "absolute" },
-  headerContent: { position: "absolute", bottom: 20, left: 16, right: 16 },
   headerTitle: { color: "#fff", fontSize: 22, fontWeight: "700" },
-  headerSubtitle: { color: "#E6ECFF", fontSize: 14, marginTop: 6 },
+  headerSubtitle: {
+    color: "#E6ECFF",
+    fontSize: 14,
+    marginTop: 6,
+    marginBottom: 10,
+  },
 
   tabs: {
     flexDirection: "row",
@@ -801,6 +806,21 @@ const styles = StyleSheet.create({
   },
 
   reviewWrap: { alignItems: "flex-end" },
+  backBtn: {
+    position: "absolute",
+    zIndex: 10,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    width: 26,
+    height: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
 
   buttonSection: {
     backgroundColor: "#fff",

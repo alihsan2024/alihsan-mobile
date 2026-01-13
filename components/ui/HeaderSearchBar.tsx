@@ -1,79 +1,60 @@
 import React from "react";
 import {
   View,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
-  StyleProp,
+  TouchableOpacity,
+  TextInput,
   ViewStyle,
-  TextStyle,
 } from "react-native";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image as ExpoImage } from "expo-image";
 
-type Variant = "filled" | "outlined";
-
-type Props = {
+type HeaderSearchBarProps = {
   value?: string;
-  onChangeText?: (text: string) => void;
-  onPressNotification?: () => void;
-  showNotificationDot?: boolean;
   placeholder?: string;
+  showNotificationDot?: boolean;
+  variant?: "filled" | "outlined";
 
-  /** Styling control */
-  variant?: Variant;
-  containerStyle?: StyleProp<ViewStyle>;
-  searchContainerStyle?: StyleProp<ViewStyle>;
-  inputStyle?: StyleProp<TextStyle>;
+  onChangeText?: (text: string) => void;
+  onNotificationPress?: () => void;
+
+  containerStyle?: ViewStyle;
 };
 
 export default function HeaderSearchBar({
   value,
-  onChangeText,
-  onPressNotification,
-  showNotificationDot = true,
   placeholder = "Search",
+  showNotificationDot = true,
   variant = "filled",
+  onChangeText,
+  onNotificationPress,
   containerStyle,
-  searchContainerStyle,
-  inputStyle,
-}: Props) {
+}: HeaderSearchBarProps) {
   const isOutlined = variant === "outlined";
-  const insets = useSafeAreaInsets();
 
   return (
-    <View
-      style={[
-        styles.headerBar,
-        { paddingTop: insets.top + 8 }, // 👈 SAFE AREA
-        containerStyle,
-      ]}
-    >
+    <View style={[styles.headerBar, containerStyle]}>
       {/* Search */}
       <View
         style={[
           styles.searchContainer,
-          isOutlined && styles.searchOutlined,
-          searchContainerStyle,
+          isOutlined && styles.searchContainerOutlined,
         ]}
       >
-        <Feather
-          name="search"
-          size={16}
-          color={isOutlined ? "#010D26E5" : "#fff"}
+        <ExpoImage
+          source={
+            isOutlined
+              ? require("@/assets/search-gray.png")
+              : require("@/assets/search.png")
+          }
+          style={{ width: 16, height: 16 }}
+          contentFit="contain"
         />
 
         <TextInput
-          placeholder={placeholder}
-          placeholderTextColor={
-            isOutlined ? "#9AA4B2" : "rgba(255,255,255,0.6)"
-          }
-          style={[
-            styles.searchInput,
-            isOutlined && styles.inputOutlined,
-            inputStyle,
-          ]}
           value={value}
+          placeholder={placeholder}
+          placeholderTextColor={isOutlined ? "#9CA3AF" : "rgba(255,255,255)"}
+          style={[styles.searchInput, isOutlined && styles.searchInputOutlined]}
           onChangeText={onChangeText}
         />
       </View>
@@ -82,79 +63,93 @@ export default function HeaderSearchBar({
       <TouchableOpacity
         style={[
           styles.notificationButton,
-          isOutlined && styles.notificationOutlined,
+          isOutlined && styles.notificationButtonOutlined,
         ]}
-        onPress={onPressNotification}
         activeOpacity={0.8}
+        onPress={onNotificationPress}
       >
-        <Ionicons name="notifications" size={18} color={"#010D264D"} />
+        <ExpoImage
+          source={require("@/assets/bell.png")}
+          style={{ width: 18, height: 18, opacity: isOutlined ? 0.6 : 1 }}
+          contentFit="contain"
+        />
+
         {showNotificationDot && <View style={styles.notificationDot} />}
       </TouchableOpacity>
     </View>
   );
 }
 
+const HEADER_HEIGHT = 64;
+
 const styles = StyleSheet.create({
   headerBar: {
+    height: HEADER_HEIGHT,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 12,
+    marginBottom: 16,
   },
 
-  /* SEARCH */
+  /* ================= SEARCH ================= */
+
   searchContainer: {
+    flex: 1,
+    height: 44,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: 10,
+    gap: 8,
     paddingHorizontal: 12,
-    height: 40,
-    flex: 1,
-    marginRight: 12,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.50)",
   },
 
-  searchOutlined: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#D0D5DD",
+  searchContainerOutlined: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
   },
 
   searchInput: {
     flex: 1,
-    marginLeft: 8,
     color: "#fff",
     fontSize: 14,
+    fontWeight: "500",
   },
 
-  inputOutlined: {
-    color: "#010D26",
+  searchInputOutlined: {
+    color: "#111827",
+    fontWeight: "400",
   },
 
-  /* NOTIFICATION */
+  /* ================= NOTIFICATION ================= */
+
   notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#fff",
-    justifyContent: "center",
+    width: 44,
+    height: 44,
+    marginLeft: 12,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255)",
     alignItems: "center",
+    justifyContent: "center",
     position: "relative",
+    borderWidth: 2,
+    borderColor: "#010D261A",
   },
 
-  notificationOutlined: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#D0D5DD",
+  notificationButtonOutlined: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
   },
 
   notificationDot: {
     position: "absolute",
-    top: 8,
-    right: 8,
+    top: 2,
+    right: 2,
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#FF3B30",
+    backgroundColor: "#EF4444",
   },
 });

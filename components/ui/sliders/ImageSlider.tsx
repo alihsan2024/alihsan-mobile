@@ -51,6 +51,7 @@ export default function ImageSlider({ data, onPress }: Props) {
             source={item.image}
             style={styles.image}
             contentFit="cover"
+            contentPosition="center"
           />
           <Text style={styles.title} numberOfLines={1}>
             {item.title}
@@ -66,8 +67,8 @@ const styles = StyleSheet.create({
     width: ITEM_WIDTH,
     marginRight: ITEM_GAP,
     alignItems: "center",
-    marginTop: 20,
     marginBottom: 20,
+    marginTop: 10,
   },
   image: {
     width: ITEM_WIDTH,
