@@ -6,6 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Image as ExpoImage } from "expo-image";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { formatPrice } from "@/utils/helper";
+import HeroBackground from "@/components/ui/GradientImage";
 
 export default function ThankYouScreen() {
   const [summary, setSummary] = useState<any>(null);
@@ -22,31 +23,17 @@ export default function ThankYouScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        {/* Solid background */}
-        <View style={styles.headerBgColor} />
-
-        {/* Image */}
-        <ExpoImage
-          source={require("../assets/header-image.png")}
-          style={StyleSheet.absoluteFillObject}
-          contentFit="cover"
-        />
-
-        {/* Gradient */}
-        <LinearGradient
-          colors={["rgba(36,107,225,0.55)", "rgba(36,107,225,0.0)"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={StyleSheet.absoluteFillObject}
-          pointerEvents="none"
-        />
-
-        <View style={styles.textOverlay}>
+      <HeroBackground
+        source={require("../assets/header-image.png")}
+        containerStyle={{ height: 220 }}
+        gradientColors={["rgba(36,107,225,0.55)", "rgba(36,107,225,0.0)"]}
+        gradientLocations={[0, 1]}
+      >
+        <View style={{ marginBottom: 20 }}>
           <Text style={styles.headerTitle}>Alhamdulillah</Text>
           <Text style={styles.headerSubtitle}>Transaction Successful!</Text>
         </View>
-      </View>
+      </HeroBackground>
       {/* ===== CONTENT ===== */}
       <View style={styles.content}>
         <Text style={styles.title}>
