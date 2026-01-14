@@ -23,7 +23,6 @@ import {
 } from "@/store/reduxSlice/zakatSlice";
 
 import ZakatSummaryModal from "@/components/ui/Modals/ZakatSummaryModal";
-import { useRouter } from "expo-router";
 import HeroBackground from "@/components/ui/GradientImage";
 
 const STEPS = [
@@ -44,7 +43,6 @@ const formatPrice = (price: number): string => {
 
 export default function ZakatCalculatorScreen() {
   const dispatch: AppDispatch = useDispatch();
-  const router = useRouter();
   const scrollRef = useRef<ScrollView>(null);
 
   const { step, amounts, prices } = useSelector(
@@ -529,7 +527,8 @@ export default function ZakatCalculatorScreen() {
       <View style={styles.headerWrapper}>
         <Image
           source={require("@/assets/zakat-bg.png")}
-          style={styles.headerImage}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
         />
 
         <LinearGradient
@@ -601,48 +600,6 @@ export default function ZakatCalculatorScreen() {
           </TouchableOpacity>
         </View>
       </View>
-
-      <View style={styles.buttonSection}>
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => {
-              if (step === 1) {
-                router.push("/(tabs)/");
-              } else {
-                dispatch(zakatStep(-1));
-              }
-            }}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={step === 1 ? "home" : "chevron-back"}
-              size={16}
-              color="#264B8B"
-            />
-            <Text style={styles.backText}>{step === 1 ? "Home" : "Back"}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.nextBtn}
-            onPress={() => {
-              if (step === 4) {
-                setSummaryOpen(true);
-              } else {
-                dispatch(zakatStep(1));
-              }
-            }}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.nextText}>
-              {step === 4 ? "Finish" : "Next"}
-            </Text>
-            {step !== 4 && (
-              <Ionicons name="chevron-forward" size={16} color="#fff" />
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
     </View>
   );
 }
@@ -650,8 +607,20 @@ export default function ZakatCalculatorScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F6F7FB" },
 
-  headerWrapper: { height: 220 },
-  headerImage: { width: "100%", height: "100%", position: "absolute" },
+  headerWrapper: {
+    height: 220,
+    width: "100%",
+    position: "relative",
+    justifyContent: "flex-end",
+    overflow: "hidden",
+  },
+  headerContent: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+    right: 20,
+    zIndex: 1,
+  },
   headerTitle: { color: "#fff", fontSize: 22, fontWeight: "700" },
   headerSubtitle: {
     color: "#E6ECFF",
@@ -806,70 +775,7 @@ const styles = StyleSheet.create({
   },
 
   reviewWrap: { alignItems: "flex-end" },
-  backBtn: {
-    position: "absolute",
-    zIndex: 10,
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    width: 26,
-    height: 26,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
 
-  buttonSection: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-  },
-  buttonRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  backBtn: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderWidth: 1.5,
-    borderColor: "#264B8B",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 5,
-    minHeight: 44,
-  },
-  backText: {
-    color: "#264B8B",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  nextBtn: {
-    flex: 1,
-    backgroundColor: "#244180",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 5,
-    minHeight: 44,
-  },
-  nextText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
-  },
   footer: {
     backgroundColor: "#246BE1",
     padding: 16,

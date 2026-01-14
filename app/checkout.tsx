@@ -326,6 +326,8 @@ export default function CheckoutScreen() {
           onNext={handleNext}
           disabled={isCheckoutDisabled || isStep1Disabled}
           total={checkoutSummary?.total ?? 0}
+          subtotal={checkoutSummary?.subtotal ?? 0}
+          adminFee={checkoutSummary?.adminFee ?? 0}
         />
       </View>
     </StripeProvider>

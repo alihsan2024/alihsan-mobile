@@ -11,11 +11,12 @@ import {
   FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { Image as ExpoImage } from "expo-image";
 
 const categories = [
   { label: "All", icon: "apps" },
   { label: "Aqeeqah", icon: "restaurant" },
-  { label: "Expeditions", icon: "walk" },
+  { label: "Expiations", icon: "walk" },
   { label: "Emergency", icon: "alert-circle" },
   { label: "Gaza", icon: "flag" },
   { label: "Water", icon: "water" },
@@ -245,17 +246,18 @@ export default function ActiveAppealsScreen() {
         )}
 
         {filteredCampaigns.map((c) => (
-          <Link
-            key={c.id}
-            href={`/campaign/${c.slug}`}
-            asChild
-            style={{ padding: 8, backgroundColor: "#F2F6FF" }}
-          >
+          <Link key={c.id} href={`/campaign/${c.slug}`} asChild>
             <TouchableOpacity activeOpacity={0.85} style={styles.card}>
-              <Image source={{ uri: c.coverImage }} style={styles.cardImage} />
-              <View style={styles.cardContentWrapper}>
-                <View style={styles.cardContentTop}>
-                  <Text style={styles.cardTitle}>{c.name}</Text>
+              <ExpoImage
+                source={{ uri: c.coverImage }}
+                style={styles.cardImage}
+                contentFit="cover"
+              />
+              <View style={styles.cardContent}>
+                <View style={styles.cardTextContainer}>
+                  <Text style={styles.cardTitle} numberOfLines={1}>
+                    {c.name}
+                  </Text>
                   <Text style={styles.cardSubtitle} numberOfLines={2}>
                     {c.description
                       ? c.description
@@ -282,8 +284,18 @@ export default function ActiveAppealsScreen() {
                       : ""}
                   </Text>
                 </View>
-                <View style={styles.button}>
-                  <Text style={styles.buttonText}>Donate Now</Text>
+                <View style={styles.cardFooter}>
+                  <TouchableOpacity
+                    style={styles.donateButton}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.donateButtonText}>Donate</Text>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={14}
+                      color="#010D26"
+                    />
+                  </TouchableOpacity>
                 </View>
               </View>
             </TouchableOpacity>
@@ -368,49 +380,69 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+    gap: 12,
   },
   card: {
     width: "48%",
-    borderRadius: 10,
-    marginBottom: 16,
+    borderRadius: 12,
+    marginBottom: 12,
     overflow: "hidden",
-    minHeight: 210,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    height: 240,
     flexDirection: "column",
   },
   cardImage: {
     width: "100%",
-    height: 110,
-    borderRadius: 10,
+    height: 120,
+    flexShrink: 0,
   },
-  cardContentWrapper: {
-    flex: 1,
-    flexDirection: "column",
+  cardContent: {
+    height: 120,
+    padding: 12,
     justifyContent: "space-between",
-    paddingTop: 10,
+    overflow: "hidden",
   },
-  cardContentTop: {
-    flexShrink: 1,
+  cardTextContainer: {
+    flex: 1,
+    minHeight: 0,
+    marginBottom: 8,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "700",
     marginBottom: 4,
     color: "#010D26",
+    lineHeight: 16,
   },
   cardSubtitle: {
-    fontSize: 14,
-    color: "#010D26",
-    marginBottom: 10,
+    fontSize: 11,
+    color: "#6B7280",
+    lineHeight: 14,
   },
-  button: {
-    backgroundColor: "#FFD600",
-    borderRadius: 20,
-    paddingVertical: 6,
+  cardFooter: {
+    height: 32,
+    justifyContent: "center",
+  },
+  donateButton: {
+    backgroundColor: "#FFD602",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
+    justifyContent: "center",
+    gap: 4,
   },
-  buttonText: {
+  donateButtonText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "700",
+    color: "#010D26",
   },
 });

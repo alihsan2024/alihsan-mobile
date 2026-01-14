@@ -59,26 +59,32 @@ export default function CampaignSlider({ data, onPress }: Props) {
             />
           </View>
           <View style={styles.infoContainer}>
-            <Text style={styles.donors}>
-              {item.donors} donors • {item.status}
-            </Text>
             <Text style={styles.title} numberOfLines={2}>
               {item.title}
             </Text>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <Text style={styles.amount}>of {item.goal} goal</Text>
-              <Text
-                style={[styles.amount, { fontSize: 18, fontWeight: "600" }]}
-              >
-                {item.amountRaised}
-              </Text>
-            </View>
+            
+            {/* Progress Bar with Amount and Goal */}
+            {(() => {
+              const raised = parseFloat(item.amountRaised.replace(/[^0-9.]/g, ''));
+              const goalValue = parseFloat(item.goal.replace(/[^0-9.]/g, ''));
+              const progress = goalValue > 0 ? Math.min((raised / goalValue) * 100, 100) : 0;
+              
+              return (
+                <View style={styles.progressContainer}>
+                  <View style={styles.amountRow}>
+                    <Text style={styles.amountRaised}>{item.amountRaised}</Text>
+                    <Text style={styles.amountGoal}>{item.goal}</Text>
+                  </View>
+                  <View style={styles.progressBarBackground}>
+                    <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
+                  </View>
+                </View>
+              );
+            })()}
+
+            <Text style={styles.donors}>
+              {item.donors} donors • {item.status}
+            </Text>
           </View>
         </TouchableOpacity>
       )}
@@ -90,15 +96,20 @@ const styles = StyleSheet.create({
   card: {
     width: ITEM_WIDTH,
     borderRadius: 12,
-    backgroundColor: "#F2F6FF",
+    backgroundColor: "#fff",
     overflow: "hidden",
-    padding: 10,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
   },
   imageWrapper: {
     width: "100%",
-    height: 180,
+    height: 120,
     overflow: "hidden",
-    borderRadius: 12,
   },
   image: {
     width: "100%",
@@ -106,24 +117,48 @@ const styles = StyleSheet.create({
   },
   infoContainer: {
     padding: 10,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-  },
-  donors: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#010D26",
-    opacity: 0.8,
   },
   title: {
-    fontSize: 17,
+    fontSize: 13,
     fontWeight: "700",
     color: "#010D26",
-    marginVertical: 8,
+    marginBottom: 8,
+    lineHeight: 17,
   },
-  amount: {
-    fontSize: 14,
+  progressContainer: {
+    marginBottom: 6,
+  },
+  amountRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  progressBarBackground: {
+    width: "100%",
+    height: 6,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 6,
+    overflow: "hidden",
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: "#FFD602",
+    borderRadius: 6,
+  },
+  donors: {
+    fontSize: 10,
     fontWeight: "500",
+    color: "#6B7280",
+  },
+  amountRaised: {
+    fontSize: 15,
+    fontWeight: "700",
     color: "#010D26",
+  },
+  amountGoal: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6B7280",
   },
 });

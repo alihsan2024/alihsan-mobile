@@ -1,23 +1,128 @@
-import React from "react";
+import React, { useEffect, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  fetchProfileData,
+  setProfileDetails,
+} from "@/store/reduxSlice/profileStatisticsSlice";
+import { getProfile } from "@/store/reduxSlice/authenticationSlice";
+
+// Format currency
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat("en-AU", {
+    style: "currency",
+    currency: "AUD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+};
+
+// Format date
+const formatDate = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("en-AU", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(date);
+  } catch {
+    return dateString;
+  }
+};
+
+// Get status badge color
+const getStatusBadgeStyle = (status: string) => {
+  const upperStatus = status?.toUpperCase() || "";
+  if (upperStatus === "COMPLETED" || upperStatus === "DISTRIBUTED") {
+    return { backgroundColor: "#E8F7EF", color: "#16A34A" };
+  }
+  if (upperStatus === "ACTIVE") {
+    return { backgroundColor: "#EFF6FF", color: "#2563EB" };
+  }
+  return { backgroundColor: "#FEF3C7", color: "#D97706" };
+};
 
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const dispatch = useDispatch();
+
+  // Redux state
   const user = useSelector((state: any) => state.authentication.user);
-  const isAuthenticated = !!user;
+  const authUser = useSelector((state: any) => state.authentication.auth);
+  const profileDetails = useSelector(
+    (state: any) => state.profileStatistics.profileDetails
+  );
+  const statistics = useSelector(
+    (state: any) => state.profileStatistics.statistics
+  );
+  const recentDonations = useSelector(
+    (state: any) => state.profileStatistics.recentDonations
+  );
+  const loading = useSelector((state: any) => state.profileStatistics.loading);
+  const error = useSelector((state: any) => state.profileStatistics.error);
+
+  const isAuthenticated = !!user || !!authUser;
+  const currentUser = user || authUser;
+
+  // Fetch profile data on mount and when user changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Fetch profile details
+      dispatch(getProfile()).then((action: any) => {
+        if (action.payload) {
+          dispatch(setProfileDetails(action.payload));
+        }
+      });
+
+      // Fetch donation statistics and recent donations
+      dispatch(fetchProfileData(5));
+    }
+  }, [isAuthenticated, dispatch]);
+
+  // Refresh handler
+  const onRefresh = useCallback(() => {
+    if (isAuthenticated) {
+      dispatch(getProfile()).then((action: any) => {
+        if (action.payload) {
+          dispatch(setProfileDetails(action.payload));
+        }
+      });
+      dispatch(fetchProfileData(5));
+    }
+  }, [isAuthenticated, dispatch]);
+
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (profileDetails?.firstName) {
+      return profileDetails.firstName;
+    }
+    if (currentUser?.firstName) {
+      return currentUser.firstName;
+    }
+    return "Friend";
+  };
+
+  // Get greeting message
+  const getGreeting = () => {
+    const name = getUserDisplayName();
+    const currentYear = new Date().getFullYear();
+    return `Assalamualaikum ${name},`;
+  };
 
   if (!isAuthenticated) {
     return (
@@ -48,6 +153,9 @@ export default function ProfileScreen() {
     <ScrollView
       style={[styles.container, { paddingTop: insets.top }]}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={loading} onRefresh={onRefresh} />
+      }
     >
       {/* Header */}
       <View style={styles.header}>
@@ -61,12 +169,22 @@ export default function ProfileScreen() {
       {/* Profile */}
       <View style={styles.profileRow}>
         <Image
-          source={{ uri: "https://i.pravatar.cc/150?img=12" }}
+          source={{
+            uri:
+              profileDetails?.profileImage ||
+              currentUser?.profileImage ||
+              "https://i.pravatar.cc/150?img=12",
+          }}
           style={styles.avatar}
+          contentFit="cover"
         />
         <View>
-          <Text style={styles.greeting}>Assalamualaikum Jho,</Text>
-          <Text style={styles.subGreeting}>Your 2025 impact is amazing.</Text>
+          <Text style={styles.greeting}>{getGreeting()}</Text>
+          <Text style={styles.subGreeting}>
+            {statistics.total > 0
+              ? `Your ${new Date().getFullYear()} impact is amazing.`
+              : "Start making a difference today."}
+          </Text>
         </View>
       </View>
 
@@ -77,112 +195,175 @@ export default function ProfileScreen() {
       >
         <View style={styles.summaryHeader}>
           <Text style={styles.summaryLabel}>Total Donation</Text>
-          <Text style={styles.summaryAmount}>AUD 5,240</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <Text style={styles.summaryAmount}>
+              {formatCurrency(statistics.total || 0)}
+            </Text>
+          )}
         </View>
 
         <View style={styles.statsRow}>
           {[
-            { icon: "hand-left-outline", label: "Zakat", value: "1,549.41" },
-            { icon: "wallet-outline", label: "Sadaqah", value: "2,450.00" },
-            { icon: "people-outline", label: "Orphan", value: "1,240.59" },
+            {
+              icon: "hand-left-outline",
+              label: "Zakat",
+              value: statistics.zakat || 0,
+            },
+            {
+              icon: "wallet-outline",
+              label: "Sadaqah",
+              value: statistics.sadaqah || 0,
+            },
+            {
+              icon: "people-outline",
+              label: "Orphan",
+              value: statistics.orphan || 0,
+            },
           ].map((item, index) => (
             <View key={index} style={styles.statItem}>
               <View style={styles.statIcon}>
                 <Ionicons name={item.icon as any} size={20} color="#4F5DFB" />
               </View>
-              <Text style={styles.statValue}>{item.value}</Text>
+              {loading ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.statValue}>
+                  {formatCurrency(item.value)}
+                </Text>
+              )}
               <Text style={styles.statLabel}>{item.label}</Text>
             </View>
           ))}
         </View>
       </LinearGradient>
 
-      {/* Zakat Tracker */}
-      <Text style={styles.sectionTitle}>Zakat Tracker</Text>
-
-      <View style={styles.card}>
-        <View style={styles.cardRow}>
-          <Image
-            source={{ uri: "https://i.pravatar.cc/150?img=32" }}
-            style={styles.smallAvatar}
-          />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.cardTitle}>Next Zakat Due : 8 Months</Text>
-            <Text style={styles.cardSub}>Based on AUD 1,750 Nisab</Text>
-            <View style={styles.progressBg}>
-              <View style={[styles.progressFill, { width: "65%" }]} />
-            </View>
-          </View>
-          <Text style={styles.link}>Recalculate</Text>
+      {/* Error Message */}
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => dispatch(fetchProfileData(5))}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
         </View>
-      </View>
-
-      {/* Active Sponsorship */}
-      <Text style={styles.sectionTitle}>Active Sponsorship</Text>
-
-      <View style={styles.card}>
-        <View style={styles.cardRow}>
-          <Image
-            source={{ uri: "https://i.pravatar.cc/150?img=47" }}
-            style={styles.smallAvatar}
-          />
-          <View style={{ flex: 1 }}>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-              }}
-            >
-              <View>
-                <Text style={styles.cardTitle}>
-                  Monthly Sponsorship - Amina
-                </Text>
-                <Text style={styles.cardSub}>
-                  Jordan | Support for education & meals
-                </Text>
-              </View>
-              <View>
-                <Text style={[styles.link, { textAlign: "right" }]}>Renew</Text>
-                <Text style={styles.percent}>80% Funded</Text>
-              </View>
-            </View>
-
-            <View style={styles.progressBg}>
-              <View style={[styles.progressFill, { width: "80%" }]} />
-            </View>
-
-            <Text style={styles.updatedText}>
-              Last updated 11:00:01 AM 12/9/2025
-            </Text>
-          </View>
-        </View>
-      </View>
+      )}
 
       {/* Recent History */}
       <View style={styles.historyHeader}>
         <Text style={styles.sectionTitle}>Recent History</Text>
-        <Text style={styles.link}>See All</Text>
+        <TouchableOpacity onPress={() => router.push("/user-donations")}>
+          <Text style={styles.link}>See All</Text>
+        </TouchableOpacity>
       </View>
 
-      {[
-        "Monthly Sponsorship - A...",
-        "Zakat Al-Maal",
-        "Gaza Emergency Food Pa...",
-      ].map((title, index) => (
-        <View key={index} style={styles.historyItem}>
-          <Image
-            source={{ uri: "https://i.pravatar.cc/150?img=20" }}
-            style={styles.historyImg}
-          />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.historyTitle}>{title}</Text>
-            <Text style={styles.historySub}>12 Nov 2025 • AUD 50.00</Text>
-          </View>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>Distributed</Text>
-          </View>
+      {loading && recentDonations.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#6A7BFF" />
+          <Text style={styles.loadingText}>Loading donations...</Text>
         </View>
-      ))}
+      ) : recentDonations.length > 0 ? (
+        recentDonations.map((donation, index) => {
+          const campaignName =
+            donation.Campaign?.name || "Donation" || "Unknown Campaign";
+          const coverImage =
+            donation.Campaign?.coverImage ||
+            "https://i.pravatar.cc/150?img=20";
+          const status = donation.status || "COMPLETED";
+          const badgeStyle = getStatusBadgeStyle(status);
+
+          return (
+            <TouchableOpacity
+              key={donation.id || index}
+              style={styles.historyItem}
+              onPress={() => {
+                if (donation.Campaign?.slug) {
+                  router.push(`/campaign/${donation.Campaign.slug}`);
+                }
+              }}
+            >
+              <Image
+                source={{ uri: coverImage }}
+                style={styles.historyImg}
+                contentFit="cover"
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.historyTitle} numberOfLines={1}>
+                  {campaignName.length > 25
+                    ? `${campaignName.substring(0, 25)}...`
+                    : campaignName}
+                </Text>
+                <Text style={styles.historySub}>
+                  {formatDate(donation.donatedAt || donation.createdAt)} •{" "}
+                  {formatCurrency(parseFloat(donation.total) || 0)}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.badge,
+                  { backgroundColor: badgeStyle.backgroundColor },
+                ]}
+              >
+                <Text
+                  style={[styles.badgeText, { color: badgeStyle.color }]}
+                >
+                  {status === "COMPLETED" ? "Distributed" : status}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })
+      ) : (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No donations yet</Text>
+          <Text style={styles.emptySubText}>
+            Start making a difference by donating to a cause
+          </Text>
+          <TouchableOpacity
+            style={styles.donateButton}
+            onPress={() => router.push("/(tabs)/campaigns")}
+          >
+            <Text style={styles.donateButtonText}>Browse Campaigns</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Profile Details Section */}
+      <View style={styles.profileDetailsSection}>
+        <Text style={styles.sectionTitle}>Profile Details</Text>
+        <View style={styles.detailsCard}>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Email</Text>
+            <Text style={styles.detailValue}>
+              {profileDetails?.email || currentUser?.email || "—"}
+            </Text>
+          </View>
+          {profileDetails?.phone && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Phone</Text>
+              <Text style={styles.detailValue}>{profileDetails.phone}</Text>
+            </View>
+          )}
+          {(profileDetails?.address || profileDetails?.city) && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Address</Text>
+              <Text style={styles.detailValue}>
+                {[
+                  profileDetails.address,
+                  profileDetails.city,
+                  profileDetails.state,
+                  profileDetails.country,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "—"}
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
     </ScrollView>
   );
 }
@@ -270,6 +451,7 @@ const styles = StyleSheet.create({
   summaryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   summaryLabel: {
@@ -299,11 +481,12 @@ const styles = StyleSheet.create({
   statValue: {
     color: "#FFF",
     fontWeight: "700",
-    fontSize: 14,
+    fontSize: 12,
   },
   statLabel: {
     color: "#E0E4FF",
-    fontSize: 12,
+    fontSize: 11,
+    marginTop: 2,
   },
 
   sectionTitle: {
@@ -313,67 +496,46 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 
-  card: {
-    borderWidth: 1,
-    borderColor: "#010D261A",
-    borderRadius: 14,
+  errorContainer: {
+    backgroundColor: "#FEE2E2",
     padding: 12,
-    marginBottom: 16,
-  },
-  cardRow: {
-    flexDirection: "row",
-  },
-  smallAvatar: {
-    width: 50,
-    height: 55,
     borderRadius: 8,
-    marginRight: 10,
+    marginBottom: 16,
+    alignItems: "center",
   },
-  cardTitle: {
+  errorText: {
+    color: "#DC2626",
+    fontSize: 14,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  retryButton: {
+    backgroundColor: "#DC2626",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  retryButtonText: {
+    color: "#FFF",
     fontSize: 14,
     fontWeight: "600",
-    color: "#111",
   },
-  cardSub: {
-    fontSize: 12,
+
+  loadingContainer: {
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
     color: "#6B7280",
-    marginVertical: 4,
-  },
-
-  progressBg: {
-    height: 6,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 3,
-    overflow: "hidden",
-    marginTop: 6,
-  },
-  progressFill: {
-    height: 6,
-    backgroundColor: "#FFD602",
-  },
-
-  link: {
-    fontSize: 12,
-    color: "#010D26",
-    fontWeight: "600",
-  },
-
-  percent: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginVertical: 4,
-  },
-
-  updatedText: {
-    fontSize: 11,
-    color: "#9CA3AF",
-    marginTop: 6,
+    fontSize: 14,
   },
 
   historyHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 8,
   },
 
   historyItem: {
@@ -403,14 +565,67 @@ const styles = StyleSheet.create({
   },
 
   badge: {
-    backgroundColor: "#E8F7EF",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
   },
   badgeText: {
     fontSize: 11,
-    color: "#16A34A",
+    fontWeight: "600",
+  },
+
+  emptyContainer: {
+    alignItems: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111",
+    marginBottom: 8,
+  },
+  emptySubText: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  donateButton: {
+    backgroundColor: "#6A7BFF",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  donateButtonText: {
+    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  profileDetailsSection: {
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  detailsCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#010D261A",
+  },
+  detailRow: {
+    marginBottom: 12,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginBottom: 4,
+    fontWeight: "500",
+  },
+  detailValue: {
+    fontSize: 14,
+    color: "#111",
     fontWeight: "600",
   },
 });

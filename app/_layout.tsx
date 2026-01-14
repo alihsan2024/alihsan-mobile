@@ -22,8 +22,30 @@ import { Platform } from "react-native";
 import { BasketProvider } from "../context/BasketContext";
 import { Provider } from "react-redux";
 import { store } from "@/store/store";
-import { Alert, View } from "react-native";
+import { Alert, View, Text, TextInput } from "react-native";
 import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  useFonts,
+  AlbertSans_100Thin,
+  AlbertSans_200ExtraLight,
+  AlbertSans_300Light,
+  AlbertSans_400Regular,
+  AlbertSans_500Medium,
+  AlbertSans_600SemiBold,
+  AlbertSans_700Bold,
+  AlbertSans_800ExtraBold,
+  AlbertSans_900Black,
+  AlbertSans_100Thin_Italic,
+  AlbertSans_200ExtraLight_Italic,
+  AlbertSans_300Light_Italic,
+  AlbertSans_400Regular_Italic,
+  AlbertSans_500Medium_Italic,
+  AlbertSans_600SemiBold_Italic,
+  AlbertSans_700Bold_Italic,
+  AlbertSans_800ExtraBold_Italic,
+  AlbertSans_900Black_Italic,
+} from "@expo-google-fonts/albert-sans";
 
 function DeviceRegistrationManager() {
   const { user } = useAuth();
@@ -84,6 +106,41 @@ const INTRO_STORAGE_KEY = "@alihsan:intro_completed";
 const INTRO_VERSION_KEY = "@alihsan:intro_version";
 
 export default function RootLayout() {
+  // Load fonts
+  const [fontsLoaded] = useFonts({
+    AlbertSans_100Thin,
+    AlbertSans_200ExtraLight,
+    AlbertSans_300Light,
+    AlbertSans_400Regular,
+    AlbertSans_500Medium,
+    AlbertSans_600SemiBold,
+    AlbertSans_700Bold,
+    AlbertSans_800ExtraBold,
+    AlbertSans_900Black,
+    AlbertSans_100Thin_Italic,
+    AlbertSans_200ExtraLight_Italic,
+    AlbertSans_300Light_Italic,
+    AlbertSans_400Regular_Italic,
+    AlbertSans_500Medium_Italic,
+    AlbertSans_600SemiBold_Italic,
+    AlbertSans_700Bold_Italic,
+    AlbertSans_800ExtraBold_Italic,
+    AlbertSans_900Black_Italic,
+  });
+
+  // Set default font for Text and TextInput components
+  React.useEffect(() => {
+    if (fontsLoaded) {
+      // Set default font for Text component
+      if (!Text.defaultProps) Text.defaultProps = {};
+      Text.defaultProps.style = { fontFamily: "AlbertSans_400Regular" };
+
+      // Set default font for TextInput component
+      if (!TextInput.defaultProps) TextInput.defaultProps = {};
+      TextInput.defaultProps.style = { fontFamily: "AlbertSans_400Regular" };
+    }
+  }, [fontsLoaded]);
+
   // useNotificationNavigation();
   // useEffect(() => {
   //   const unsubscribe = onMessageListener((message) => {
@@ -148,6 +205,11 @@ export default function RootLayout() {
       setShowIntro(false);
     }
   };
+
+  // Wait for fonts to load
+  if (!fontsLoaded) {
+    return null;
+  }
 
   // Wait for intro status check to complete
   if (showIntro === null) {

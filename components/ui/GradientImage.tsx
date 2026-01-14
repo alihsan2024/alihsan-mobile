@@ -4,12 +4,16 @@ import {
   ViewStyle,
   ColorValue,
   TouchableOpacity,
+  Image,
 } from "react-native";
 import { Image as ExpoImage, ImageSource } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { ReactNode } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+
+// Import ellipse image
+const Ellipse = require("@/assets/Ellipse.png");
 
 type GradientColors = readonly [ColorValue, ColorValue, ...ColorValue[]];
 type GradientLocations = readonly [number, number, ...number[]];
@@ -43,12 +47,8 @@ export default function HeroBackground({
   onBackPress = () => router.back(),
   backIconStyle,
 
-  gradientColors = [
-    "rgba(36,107,225,0.5)",
-    "rgba(36,107,225,0.5)",
-    "rgba(36,107,225,0.0)",
-  ],
-  gradientLocations = [0, 0.7, 1],
+  gradientColors = ["rgba(36,107,225,0.1)", "rgba(36,107,225,0.9)"],
+  gradientLocations = [0.1, 0.67],
   containerStyle,
   contentStyle,
 }: HeroBackgroundProps) {
@@ -65,8 +65,8 @@ export default function HeroBackground({
       <LinearGradient
         colors={gradientColors}
         locations={gradientLocations}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
+        start={{ x: 0.85, y: 0.15 }}
+        end={{ x: 0.15, y: 0.85 }}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
@@ -80,6 +80,17 @@ export default function HeroBackground({
         >
           <Ionicons name="chevron-back" size={22} color="#010D264D" />
         </TouchableOpacity>
+      )}
+
+      {/* Ellipse decorative elements for homepage - after gradient, before content */}
+      {isHome && (
+        <View style={styles.ellipseContainer}>
+          <ExpoImage
+            source={Ellipse}
+            style={styles.ellipse}
+            contentFit="cover"
+          />
+        </View>
       )}
 
       {/* Foreground content */}
@@ -133,5 +144,25 @@ const styles = StyleSheet.create({
     right: 16,
   },
 
-  content: {},
+  content: {
+    zIndex: 10,
+  },
+  ellipseContainer: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: "100%",
+    height: "100%",
+    overflow: "hidden",
+    zIndex: 3,
+    pointerEvents: "none",
+  },
+  ellipse: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: 600,
+    height: "100%",
+    opacity: 1,
+  },
 });
