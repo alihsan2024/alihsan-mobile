@@ -324,7 +324,6 @@ export default function HomeScreen() {
         raised={109690.51}
         goal={150000}
       />
-
       <View
         style={{
           width: "100%",
@@ -341,7 +340,6 @@ export default function HomeScreen() {
           // onNotificationPress={() => router.push("/notifications")}
         />
       </View>
-
       {/* Main content */}
       <HeroBackground
         source={{ uri: GAZA_CAMPAIGN.coverImage }}
@@ -495,7 +493,6 @@ export default function HomeScreen() {
           </TouchableOpacity> */}
         </View>
       </HeroBackground>
-
       {/* Main content */}
       <View style={{ paddingTop: 10 }}>
         {/* Categories Section - Below Banner */}

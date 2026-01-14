@@ -32,10 +32,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Configure API URLs for different environments
 // IMPORTANT: Replace YOUR_LAN_IP below with your computer's actual LAN IP address
 const API_URLS = {
-  // development: "http://192.168.20.16:4001", // e.g., http://192.168.1.100:4000
-  development: "http://192.168.1.116:4001", // e.g., http://192.168.1.100:4000
-
-  production: "http://localhost:4001",
+  development: "http://192.168.1.2:4000", // e.g., http://192.168.1.100:4000
+  production: "https://deenstream.live",
   // production: "https://api.alihsan.org.au",
 };
 
@@ -335,12 +333,19 @@ export const getDonationStatistics = async (): Promise<DonationStatistics> => {
     // Fetch all donation types to calculate statistics
     // Using a reasonable limit to avoid performance issues
     const limit = 500; // Fetch up to 500 donations per type
-    
-    const [onetimeRes, activeRecurringRes, inactiveRecurringRes] = await Promise.all([
-      api.get(`/donations/of-user/onetime?page=1&limit=${limit}&sort=date&order=desc`),
-      api.get(`/donations/of-user/recurring/active?page=1&limit=${limit}&sort=date&order=desc`),
-      api.get(`/donations/of-user/recurring/inactive?page=1&limit=${limit}&sort=date&order=desc`),
-    ]);
+
+    const [onetimeRes, activeRecurringRes, inactiveRecurringRes] =
+      await Promise.all([
+        api.get(
+          `/donations/of-user/onetime?page=1&limit=${limit}&sort=date&order=desc`
+        ),
+        api.get(
+          `/donations/of-user/recurring/active?page=1&limit=${limit}&sort=date&order=desc`
+        ),
+        api.get(
+          `/donations/of-user/recurring/inactive?page=1&limit=${limit}&sort=date&order=desc`
+        ),
+      ]);
 
     const allDonations = [
       ...(onetimeRes.data?.payload?.rows || []),
@@ -353,17 +358,22 @@ export const getDonationStatistics = async (): Promise<DonationStatistics> => {
       (acc, donation) => {
         const amount = parseFloat(donation.total) || 0;
         if (amount <= 0) return acc; // Skip invalid amounts
-        
-        const checkoutType = donation.Campaign?.checkoutType?.toUpperCase() || "";
+
+        const checkoutType =
+          donation.Campaign?.checkoutType?.toUpperCase() || "";
         const campaignName = (donation.Campaign?.name || "").toLowerCase();
-        
+
         acc.total += amount;
-        
+
         // Categorize by checkout type or campaign name
-        if (checkoutType === "ZAQAT" || checkoutType === "ZAKAT" || campaignName.includes("zakat")) {
+        if (
+          checkoutType === "ZAQAT" ||
+          checkoutType === "ZAKAT" ||
+          campaignName.includes("zakat")
+        ) {
           acc.zakat += amount;
         } else if (
-          checkoutType === "ORPHAN" || 
+          checkoutType === "ORPHAN" ||
           campaignName.includes("orphan") ||
           campaignName.includes("sponsorship")
         ) {
@@ -371,7 +381,7 @@ export const getDonationStatistics = async (): Promise<DonationStatistics> => {
         } else {
           acc.sadaqah += amount;
         }
-        
+
         return acc;
       },
       { total: 0, zakat: 0, sadaqah: 0, orphan: 0 }
@@ -386,7 +396,9 @@ export const getDonationStatistics = async (): Promise<DonationStatistics> => {
 };
 
 // Get recent donations
-export const getRecentDonations = async (limit: number = 5): Promise<RecentDonation[]> => {
+export const getRecentDonations = async (
+  limit: number = 5
+): Promise<RecentDonation[]> => {
   try {
     const response = await api.get(
       `/donations/of-user/onetime?page=1&limit=${limit}&sort=date&order=desc`

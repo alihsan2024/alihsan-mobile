@@ -270,8 +270,7 @@ export default function ProfileScreen() {
           const campaignName =
             donation.Campaign?.name || "Donation" || "Unknown Campaign";
           const coverImage =
-            donation.Campaign?.coverImage ||
-            "https://i.pravatar.cc/150?img=20";
+            donation.Campaign?.coverImage || "https://i.pravatar.cc/150?img=20";
           const status = donation.status || "COMPLETED";
           const badgeStyle = getStatusBadgeStyle(status);
 
@@ -307,9 +306,7 @@ export default function ProfileScreen() {
                   { backgroundColor: badgeStyle.backgroundColor },
                 ]}
               >
-                <Text
-                  style={[styles.badgeText, { color: badgeStyle.color }]}
-                >
+                <Text style={[styles.badgeText, { color: badgeStyle.color }]}>
                   {status === "COMPLETED" ? "Distributed" : status}
                 </Text>
               </View>

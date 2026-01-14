@@ -6,6 +6,10 @@ import { useGetBasketQuery } from "@/store/reduxSlice/api/basketApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
+import Home from "../../assets/home.svg";
+import Compass from "../../assets/compass.svg";
+import HandsHolding from "../../assets/hands-holding.svg";
+import User from "../../assets/user.svg";
 
 const TabIcon = ({
   name,
@@ -18,6 +22,24 @@ const TabIcon = ({
     <Ionicons name={name} size={22} color={focused ? "#4F6EF7" : "#9CA3AF"} />
   </View>
 );
+
+const SvgTabIcon = ({
+  Icon,
+  focused,
+  size = 22,
+}: {
+  Icon: React.FC<any>;
+  focused: boolean;
+  size?: number;
+}) => {
+  const color = focused ? "#4F6EF7" : "#9CA3AF";
+
+  return (
+    <View style={[styles.tabItem, { marginTop: 8 }]}>
+      <Icon width={size} height={size} color={color} />
+    </View>
+  );
+};
 
 export default function TabsLayout() {
   const { user } = useSelector((state: any) => state.authentication);
@@ -91,7 +113,7 @@ export default function TabsLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ focused }) => (
-            <TabIcon name="home" focused={focused} />
+            <SvgTabIcon Icon={Home} focused={focused} />
           ),
         }}
       />
@@ -101,7 +123,7 @@ export default function TabsLayout() {
         options={{
           title: "Explore",
           tabBarIcon: ({ focused }) => (
-            <TabIcon name="compass" focused={focused} />
+            <SvgTabIcon Icon={Compass} focused={focused} />
           ),
         }}
       />
@@ -154,7 +176,7 @@ export default function TabsLayout() {
         options={{
           title: "Zakat",
           tabBarIcon: ({ focused }) => (
-            <TabIcon name="hand-left" focused={focused} />
+            <SvgTabIcon Icon={HandsHolding} focused={focused} />
           ),
         }}
       />
@@ -164,7 +186,7 @@ export default function TabsLayout() {
         options={{
           title: "My Profile",
           tabBarIcon: ({ focused }) => (
-            <TabIcon name="person" focused={focused} />
+            <SvgTabIcon Icon={User} focused={focused} />
           ),
         }}
       />

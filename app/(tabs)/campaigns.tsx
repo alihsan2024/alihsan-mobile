@@ -12,20 +12,31 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
+import Earth from "../../assets/earth.svg";
+import BabyCarriage from "../../assets/baby-carriage.svg";
+import HandHoldingHeart from "../../assets/hand-holding-heart.svg";
+import Bell from "../../assets/bell.svg";
+import Bullhorn from "../../assets/bullhorn.svg";
+import FaucetDrip from "../../assets/faucet-drip.svg";
+import BriefcaseMedical from "../../assets/briefcase-medical.svg";
+import GraduationCap from "../../assets/graduation-cap.svg";
+import HandHoldingMedical from "../../assets/hand-holding-medical.svg";
+import StarAndCrecent from "../../assets/star-and-crescent.svg";
+import HouseChimney from "../../assets/house-chimney.svg";
 
 const categories = [
-  { label: "All", icon: "apps" },
-  { label: "Aqeeqah", icon: "restaurant" },
-  { label: "Expiations", icon: "walk" },
-  { label: "Emergency", icon: "alert-circle" },
-  { label: "Gaza", icon: "flag" },
-  { label: "Water", icon: "water" },
-  { label: "General", icon: "megaphone" },
-  { label: "Appeals", icon: "heart" },
-  { label: "Education", icon: "school" },
-  { label: "Health", icon: "medkit" },
-  { label: "Ramadhan", icon: "moon" },
-  { label: "Shelter", icon: "home" },
+  { label: "All", Icon: Earth },
+  { label: "Aqeeqah", Icon: BabyCarriage },
+  { label: "Expiations", Icon: HandHoldingHeart },
+  { label: "Emergency", Icon: Bell },
+  { label: "Gaza", Icon: Bullhorn },
+  { label: "Water", Icon: FaucetDrip },
+  { label: "General", Icon: Bullhorn },
+  { label: "Appeals", Icon: BriefcaseMedical },
+  { label: "Education", Icon: GraduationCap },
+  { label: "Health", Icon: HandHoldingMedical },
+  { label: "Ramadhan", Icon: StarAndCrecent },
+  { label: "Shelter", Icon: HouseChimney },
 ];
 
 import { useEffect, useState } from "react";
@@ -118,38 +129,41 @@ export default function ActiveAppealsScreen() {
       {/* Categories */}
       {!isCategoriesCollapsed ? (
         <View style={styles.categories}>
-          {categories.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.categoryItem,
-                selectedCategory === item.label && {
-                  backgroundColor: "#E3F0FF",
-                  borderRadius: 8,
-                },
-              ]}
-              onPress={() => setSelectedCategory(item.label)}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={item.icon as any}
-                size={20}
-                color={selectedCategory === item.label ? "#246BE1" : "#777"}
-                style={{ marginBottom: 6 }}
-              />
-              <Text
+          {categories.map((item, index) => {
+            const Icon = item.Icon;
+            const isSelected = selectedCategory === item.label;
+
+            const activeColor = isSelected ? "#246BE1" : "#010D264D";
+
+            return (
+              <TouchableOpacity
+                key={index}
                 style={[
-                  styles.categoryText,
-                  selectedCategory === item.label && {
-                    color: "#246BE1",
-                    fontWeight: "bold",
+                  styles.categoryItem,
+                  isSelected && {
+                    backgroundColor: "#E3F0FF",
+                    borderRadius: 8,
                   },
                 ]}
+                onPress={() => setSelectedCategory(item.label)}
+                activeOpacity={0.7}
               >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Icon width={20} height={20} color={activeColor} />
+
+                <Text
+                  style={[
+                    styles.categoryText,
+                    {
+                      fontWeight: isSelected ? "600" : "500",
+                      opacity: isSelected ? 1 : 0.6,
+                    },
+                  ]}
+                >
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       ) : (
         <FlatList
@@ -171,7 +185,7 @@ export default function ActiveAppealsScreen() {
               activeOpacity={0.7}
             >
               <Ionicons
-                name={item.icon as any}
+                name={item.Icon as any}
                 size={20}
                 color={selectedCategory === item.label ? "#246BE1" : "#777"}
                 style={{ marginBottom: 6 }}
@@ -356,9 +370,12 @@ const styles = StyleSheet.create({
     minWidth: 70,
   },
   categoryText: {
-    fontSize: 11,
-    color: "#444",
+    fontSize: 12,
+    color: "#010D26",
     textAlign: "center",
+    marginTop: 6,
+    fontWeight: "500",
+    opacity: 0.6,
   },
 
   sortRow: {
