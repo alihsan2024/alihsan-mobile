@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  Image as RNImage,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -19,6 +20,61 @@ import {
   setProfileDetails,
 } from "@/store/reduxSlice/profileStatisticsSlice";
 import { getProfile } from "@/store/reduxSlice/authenticationSlice";
+import DonationDetailsModal from "@/components/ui/Modals/DonationDetailsModal";
+
+// Safe Image component wrapper to handle NativeEventEmitter errors
+export const SafeImage = ({
+  source,
+  style,
+  contentFit = "cover",
+  onError,
+  ...props
+}: any) => {
+  const [useFallback, setUseFallback] = useState(false);
+
+  useEffect(() => {
+    // Reset fallback when source changes
+    setUseFallback(false);
+  }, [source]);
+
+  if (useFallback || !source?.uri) {
+    return (
+      <RNImage
+        source={source}
+        style={style}
+        resizeMode={contentFit}
+        onError={onError}
+      />
+    );
+  }
+
+  try {
+    return (
+      <Image
+        source={source}
+        style={style}
+        contentFit={contentFit}
+        onError={() => {
+          setUseFallback(true);
+          onError?.();
+        }}
+        transition={200}
+        {...props}
+      />
+    );
+  } catch (error) {
+    console.warn("expo-image error, falling back to RN Image:", error);
+    setUseFallback(true);
+    return (
+      <RNImage
+        source={source}
+        style={style}
+        resizeMode={contentFit}
+        onError={onError}
+      />
+    );
+  }
+};
 
 // Format currency
 const formatCurrency = (amount: number): string => {
@@ -60,6 +116,8 @@ export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
+  const [imageError, setImageError] = useState(false);
+  const [selectedDonationId, setSelectedDonationId] = useState<string | number | null>(null);
 
   // Redux state
   const user = useSelector((state: any) => state.authentication.user);
@@ -79,30 +137,59 @@ export default function ProfileScreen() {
   const isAuthenticated = !!user || !!authUser;
   const currentUser = user || authUser;
 
+  // Get avatar source
+  const getAvatarSource = () => {
+    const profileImage =
+      profileDetails?.profileImage ||
+      currentUser?.profileImage ||
+      "https://i.pravatar.cc/150?img=12";
+    return { uri: profileImage };
+  };
+
   // Fetch profile data on mount and when user changes
   useEffect(() => {
     if (isAuthenticated) {
-      // Fetch profile details
-      dispatch(getProfile()).then((action: any) => {
-        if (action.payload) {
-          dispatch(setProfileDetails(action.payload));
-        }
-      });
+      try {
+        // Fetch profile details
+        dispatch(getProfile())
+          .then((action: any) => {
+            if (action.payload) {
+              dispatch(setProfileDetails(action.payload));
+            }
+          })
+          .catch((error: any) => {
+            console.warn("Error fetching profile:", error);
+          });
 
-      // Fetch donation statistics and recent donations
-      dispatch(fetchProfileData(5));
+        // Fetch donation statistics and recent donations
+        dispatch(fetchProfileData(5)).catch((error: any) => {
+          console.warn("Error fetching profile data:", error);
+        });
+      } catch (error) {
+        console.error("Error in profile useEffect:", error);
+      }
     }
   }, [isAuthenticated, dispatch]);
 
   // Refresh handler
   const onRefresh = useCallback(() => {
     if (isAuthenticated) {
-      dispatch(getProfile()).then((action: any) => {
-        if (action.payload) {
-          dispatch(setProfileDetails(action.payload));
-        }
-      });
-      dispatch(fetchProfileData(5));
+      try {
+        dispatch(getProfile())
+          .then((action: any) => {
+            if (action.payload) {
+              dispatch(setProfileDetails(action.payload));
+            }
+          })
+          .catch((error: any) => {
+            console.warn("Error refreshing profile:", error);
+          });
+        dispatch(fetchProfileData(5)).catch((error: any) => {
+          console.warn("Error refreshing profile data:", error);
+        });
+      } catch (error) {
+        console.error("Error in onRefresh:", error);
+      }
     }
   }, [isAuthenticated, dispatch]);
 
@@ -168,16 +255,18 @@ export default function ProfileScreen() {
 
       {/* Profile */}
       <View style={styles.profileRow}>
-        <Image
-          source={{
-            uri:
-              profileDetails?.profileImage ||
-              currentUser?.profileImage ||
-              "https://i.pravatar.cc/150?img=12",
-          }}
-          style={styles.avatar}
-          contentFit="cover"
-        />
+        {!imageError ? (
+          <SafeImage
+            source={getAvatarSource()}
+            style={styles.avatar}
+            contentFit="cover"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <View style={[styles.avatar, styles.avatarPlaceholder]}>
+            <Ionicons name="person" size={28} color="#6B7280" />
+          </View>
+        )}
         <View>
           <Text style={styles.greeting}>{getGreeting()}</Text>
           <Text style={styles.subGreeting}>
@@ -280,16 +369,24 @@ export default function ProfileScreen() {
               key={donation.id || index}
               style={styles.historyItem}
               onPress={() => {
-                if (donation.Campaign?.slug) {
+                if (donation.id) {
+                  setSelectedDonationId(donation.id);
+                } else if (donation.Campaign?.slug) {
                   router.push(`/campaign/${donation.Campaign.slug}`);
                 }
               }}
             >
-              <Image
-                source={{ uri: coverImage }}
-                style={styles.historyImg}
-                contentFit="cover"
-              />
+              {coverImage ? (
+                <SafeImage
+                  source={{ uri: coverImage }}
+                  style={styles.historyImg}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={[styles.historyImg, styles.historyImgPlaceholder]}>
+                  <Ionicons name="image-outline" size={20} color="#9CA3AF" />
+                </View>
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={styles.historyTitle} numberOfLines={1}>
                   {campaignName.length > 25
@@ -364,6 +461,13 @@ export default function ProfileScreen() {
           )}
         </View>
       </View>
+
+      {/* Donation Details Modal */}
+      <DonationDetailsModal
+        isVisible={selectedDonationId !== null}
+        onClose={() => setSelectedDonationId(null)}
+        donationId={selectedDonationId}
+      />
     </ScrollView>
   );
 }
@@ -431,6 +535,11 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     marginRight: 12,
+  },
+  avatarPlaceholder: {
+    backgroundColor: "#E5E7EB",
+    justifyContent: "center",
+    alignItems: "center",
   },
   greeting: {
     fontSize: 16,
@@ -552,6 +661,11 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 8,
     marginRight: 10,
+  },
+  historyImgPlaceholder: {
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
   },
   historyTitle: {
     fontSize: 14,

@@ -112,46 +112,81 @@ export const loginUser = createAsyncThunk(
       api.defaults.headers.common["Authorization"] = `Bearer ${payload.token}`;
 
       // Device registration logic (copied from api.ts login)
-      try {
-        const { requestUserPermission } = await import("@/utils/notifications");
-        const { getOrCreateGuestId, setLastRegisteredDeviceInfo } =
-          await import("@/utils/deviceRegistration");
-        const { Platform } = await import("react-native");
-        console.log(
-          "[DeviceReg] Starting device registration after login (redux)"
-        );
-        const token = await requestUserPermission();
-        console.log("[DeviceReg] FCM token from requestUserPermission:", token);
-        if (token) {
-          const guest_id = await getOrCreateGuestId();
-          console.log("[DeviceReg] guest_id:", guest_id);
-          const user_id = payload.id;
-          const platform = Platform.OS;
-          const { registerDeviceToken } = await import("@/utils/api");
-          console.log("[DeviceReg] About to call registerDeviceToken with:", {
-            token,
-            user_id,
-            guest_id,
-            platform,
-          });
-          await registerDeviceToken({ token, user_id, guest_id, platform });
-          console.log("[DeviceReg] registerDeviceToken call finished");
-          await setLastRegisteredDeviceInfo({
-            token,
-            user_id,
-            guest_id,
-            platform,
-          });
-          console.log("[DeviceReg] setLastRegisteredDeviceInfo call finished");
-        } else {
-          console.log("[DeviceReg] No FCM token, skipping device registration");
+      // Wrap in setTimeout to ensure it doesn't block the login flow
+      setTimeout(async () => {
+        try {
+          const { requestUserPermission } = await import(
+            "@/utils/notifications"
+          );
+          const { getOrCreateGuestId, setLastRegisteredDeviceInfo } =
+            await import("@/utils/deviceRegistration");
+          const { Platform } = await import("react-native");
+          console.log(
+            "[DeviceReg] Starting device registration after login (redux)"
+          );
+
+          // Check if Firebase is available before proceeding
+          let token: string | null = null;
+          try {
+            token = await requestUserPermission();
+          } catch (firebaseError: any) {
+            console.warn(
+              "[DeviceReg] Firebase messaging error (non-critical):",
+              firebaseError?.message || firebaseError
+            );
+            // Continue without token - device registration is optional
+          }
+
+          console.log(
+            "[DeviceReg] FCM token from requestUserPermission:",
+            token
+          );
+          if (token) {
+            try {
+              const guest_id = await getOrCreateGuestId();
+              console.log("[DeviceReg] guest_id:", guest_id);
+              const user_id = payload.id;
+              const platform = Platform.OS;
+              const { registerDeviceToken } = await import("@/utils/api");
+              console.log(
+                "[DeviceReg] About to call registerDeviceToken with:",
+                {
+                  token,
+                  user_id,
+                  guest_id,
+                  platform,
+                }
+              );
+              await registerDeviceToken({ token, user_id, guest_id, platform });
+              console.log("[DeviceReg] registerDeviceToken call finished");
+              await setLastRegisteredDeviceInfo({
+                token,
+                user_id,
+                guest_id,
+                platform,
+              });
+              console.log(
+                "[DeviceReg] setLastRegisteredDeviceInfo call finished"
+              );
+            } catch (regError: any) {
+              console.warn(
+                "[DeviceReg] Device registration failed (non-critical):",
+                regError?.message || regError
+              );
+            }
+          } else {
+            console.log(
+              "[DeviceReg] No FCM token, skipping device registration"
+            );
+          }
+        } catch (e: any) {
+          console.warn(
+            "[DeviceReg] Device registration after login (redux) failed (non-critical):",
+            e?.message || e
+          );
+          // Don't throw - device registration is optional and shouldn't block login
         }
-      } catch (e) {
-        console.log(
-          "[DeviceReg] Device registration after login (redux) failed",
-          e
-        );
-      }
+      }, 100); // Small delay to ensure login completes first
 
       return response.data;
     } catch (e: any) {
