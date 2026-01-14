@@ -2,7 +2,6 @@ import React from "react";
 import {
   View,
   Text,
-  FlatList,
   StyleSheet,
   Dimensions,
   TouchableOpacity,
@@ -31,20 +30,12 @@ const ITEM_WIDTH =
 
 export default function ImageSlider({ data, onPress }: Props) {
   return (
-    <FlatList
-      data={data}
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      keyExtractor={(item) => item.id.toString()}
-      contentContainerStyle={{ paddingHorizontal: 0 }}
-      renderItem={({ item, index }) => (
+    <View style={styles.container}>
+      {data.map((item, index) => (
         <TouchableOpacity
+          key={item.id.toString()}
           activeOpacity={0.85}
-          style={[
-            styles.card,
-            index === 0 && { marginLeft: 5 },
-            index === data.length - 1 && { marginRight: HORIZONTAL_PADDING },
-          ]}
+          style={styles.card}
           onPress={() => onPress?.(item)}
         >
           <ExpoImage
@@ -57,15 +48,19 @@ export default function ImageSlider({ data, onPress }: Props) {
             {item.title}
           </Text>
         </TouchableOpacity>
-      )}
-    />
+      ))}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 0,
+  },
   card: {
     width: ITEM_WIDTH,
-    marginRight: ITEM_GAP,
     alignItems: "center",
     marginBottom: 20,
     marginTop: 10,
@@ -77,7 +72,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   title: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
     color: "#010D26",
     textAlign: "center",

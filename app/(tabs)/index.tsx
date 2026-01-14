@@ -7,12 +7,13 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  Animated,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Feather from "@expo/vector-icons/Feather";
 import SimpleLineIcons from "@expo/vector-icons/SimpleLineIcons";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import ImageSlider from "@/components/ui/sliders/ImageSlider";
@@ -38,23 +39,23 @@ const HEADER_HEIGHT = 64;
 const SLIDER_DATA = [
   {
     id: 1,
-    title: "Zakat",
-    image: require("../../assets/category-1.png"),
+    title: "Food Packs",
+    image: require("../../assets/FeaturedIcons/FoodPacks.png"),
   },
   {
     id: 2,
     title: "Sponsorship",
-    image: require("../../assets/card2.png"),
+    image: require("../../assets/FeaturedIcons/Sponsorships.png"),
   },
   {
     id: 3,
-    title: "Emergency",
-    image: require("../../assets/card1.png"),
+    title: "Winter Appeal",
+    image: require("../../assets/FeaturedIcons/WinterAppeal.png"),
   },
   {
     id: 4,
-    title: "Infaq",
-    image: require("../../assets/card1.png"),
+    title: "Gift of Sight",
+    image: require("../../assets/FeaturedIcons/GiftOfSight.png"),
   },
 ];
 
@@ -100,7 +101,7 @@ const BUTTONS = [
 ];
 
 const GIVING_OPTIONS = ["One-time", "Monthly", "Friday"];
-const AMOUNTS = [50, 25, 10];
+const AMOUNTS = [10, 30, 50];
 
 const CARDS = [
   {
@@ -151,9 +152,10 @@ export default function HomeScreen() {
 
   const [selectedIndex, setSelectedIndex] = useState<number | null>(0);
   const [selectedGiving, setSelectedGiving] = useState<number>(0);
-  const [selectedAmount, setSelectedAmount] = useState<number | null>(50);
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(10);
   const [customAmount, setCustomAmount] = useState<string>("");
   const [isModalVisible, setIsModalVisible] = useState(true);
+  const givingAnimation = useRef(new Animated.Value(0)).current;
   const [featuredCampaigns, setFeaturedCampaigns] = useState<CampaignItem[]>(
     []
   );
@@ -244,37 +246,55 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    const loadFeaturedCampaigns = async () => {
-      try {
-        setIsLoadingFeaturedCampaigns(true);
-        const S3_BASE_URL = "https://alihsan.s3.ap-southeast-2.amazonaws.com/";
+    // Hardcoded featured campaigns with hardcoded totals and donors
+    const campaignImageUrl =
+      "https://alihsan.s3.ap-southeast-2.amazonaws.com/updated-photos/1753924269927-alihsan-1708467468866-alihsan-coverImage.webp";
 
-        const response = await fetchFeaturedCampaigns();
+    const hardcodedCampaigns: CampaignItem[] = [
+      {
+        id: 1,
+        slug: "gaza-relief",
+        image: { uri: campaignImageUrl },
+        title: "Gaza Relief Appeal",
+        donors: 1250,
+        status: "Ongoing",
+        amountRaised: "$45,680",
+        goal: "$100,000",
+      },
+      {
+        id: 2,
+        slug: "orphan-support",
+        image: { uri: campaignImageUrl },
+        title: "Orphan Support Program",
+        donors: 890,
+        status: "Ongoing",
+        amountRaised: "$32,450",
+        goal: "$75,000",
+      },
+      {
+        id: 3,
+        slug: "food-aid",
+        image: { uri: campaignImageUrl },
+        title: "Food Aid Initiative",
+        donors: 1560,
+        status: "Ongoing",
+        amountRaised: "$58,920",
+        goal: "$80,000",
+      },
+      {
+        id: 4,
+        slug: "water-wells",
+        image: { uri: campaignImageUrl },
+        title: "Clean Water Wells",
+        donors: 720,
+        status: "Ongoing",
+        amountRaised: "$28,350",
+        goal: "$50,000",
+      },
+    ];
 
-        const mappedCampaigns: CampaignItem[] = response.map(
-          (campaign: any) => ({
-            id: campaign.id,
-            slug: campaign.slug, // ✅ IMPORTANT
-            image: campaign.coverImage
-              ? { uri: `${S3_BASE_URL}${campaign.coverImage}` }
-              : require("../../assets/card1.png"),
-            title: campaign.name,
-            donors: campaign.donorsCount ?? 0,
-            status: "Ongoing",
-            amountRaised: `$${campaign.amountDonated ?? 0}`,
-            goal: `$${campaign.fundraiserGoal ?? 0}`,
-          })
-        );
-
-        setFeaturedCampaigns(mappedCampaigns);
-      } catch (error) {
-        console.error("Failed to load featured campaigns:", error);
-      } finally {
-        setIsLoadingFeaturedCampaigns(false);
-      }
-    };
-
-    loadFeaturedCampaigns();
+    setFeaturedCampaigns(hardcodedCampaigns);
+    setIsLoadingFeaturedCampaigns(false);
   }, []);
 
   const handleAmountPress = (amount: number) => {
@@ -304,7 +324,7 @@ export default function HomeScreen() {
         raised={109690.51}
         goal={150000}
       />
-  
+
       <View
         style={{
           width: "100%",
@@ -323,10 +343,13 @@ export default function HomeScreen() {
       </View>
 
       {/* Main content */}
-      <View
-        style={{
+      <HeroBackground
+        source={{ uri: GAZA_CAMPAIGN.coverImage }}
+        isHome={true}
+        containerStyle={{
           paddingHorizontal: PADDING_HORIZONTAL,
           paddingTop: insets.top,
+          minHeight: screenHeight * 0.6,
         }}
       >
         {/* Header Bar */}
@@ -362,15 +385,17 @@ export default function HomeScreen() {
               style={[
                 styles.givingButton,
                 selectedGiving === idx && styles.givingButtonSelected,
-                idx === 0
-                  ? { borderTopLeftRadius: 10, borderBottomLeftRadius: 10 }
-                  : {},
-                idx === GIVING_OPTIONS.length - 1
-                  ? { borderTopRightRadius: 10, borderBottomRightRadius: 10 }
-                  : {},
               ]}
-              onPress={() => setSelectedGiving(idx)}
-              activeOpacity={0.8}
+              onPress={() => {
+                Animated.spring(givingAnimation, {
+                  toValue: idx,
+                  useNativeDriver: false,
+                  tension: 50,
+                  friction: 7,
+                }).start();
+                setSelectedGiving(idx);
+              }}
+              activeOpacity={0.7}
             >
               <Text
                 style={[
@@ -472,38 +497,12 @@ export default function HomeScreen() {
       </HeroBackground>
 
       {/* Main content */}
-      <View style={{ paddingHorizontal: PADDING_HORIZONTAL, paddingTop: 10 }}>
-        {/* Header Bar */}
-
-        <View style={styles.categoryRow}>
-          {SLIDER_DATA.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.categoryCard}
-              activeOpacity={0.85}
-              onPress={() => {
-                console.log("Pressed:", item.title);
-              }}
-            >
-              <View style={styles.categoryImageWrapper}>
-                <ExpoImage
-                  source={item.image}
-                  style={styles.categoryImage}
-                  contentFit="contain"
-                />
-              </View>
-
-              <Text style={styles.categoryTitle}>{item.title}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
+      <View style={{ paddingTop: 10 }}>
         {/* Categories Section - Below Banner */}
         <View
           style={{
             backgroundColor: "#fff",
             paddingTop: 16,
-            marginHorizontal: -PADDING_HORIZONTAL,
             paddingHorizontal: PADDING_HORIZONTAL,
             marginTop: 0,
           }}
@@ -514,48 +513,50 @@ export default function HomeScreen() {
               console.log("Pressed:", item.title);
             }}
           />
-          <View
-            style={{
-              height: 1,
-              backgroundColor: "#E0E0E0",
-              marginBottom: 18,
-              marginTop: 20,
-              width: "100%",
-            }}
-          />
         </View>
+        <View
+          style={{
+            height: 1,
+            backgroundColor: "#E0E0E0",
+            marginBottom: 18,
+            marginTop: 20,
+            width: screenWidth,
+          }}
+        />
 
         {/* Featured Campaigns Section */}
-        <View style={{ flex: 1 }}>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 12,
-            }}
-          >
-            <Text
+        <View style={{ paddingHorizontal: PADDING_HORIZONTAL }}>
+          <View style={{ flex: 1 }}>
+            <View
               style={{
-                fontSize: 24,
-                color: "#010D26",
-                fontWeight: "600",
-                marginBottom: 10,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 12,
               }}
             >
-              Featured Campaigns
-            </Text>
-            <TouchableOpacity onPress={() => router.push("/campaigns")}>
-              <Text style={{ color: "#010D26" }}>See All</Text>
-            </TouchableOpacity>
-          </View>
+              <Text
+                style={{
+                  fontSize: 24,
+                  color: "#010D26",
+                  fontWeight: "600",
+                  marginBottom: 10,
+                }}
+              >
+                Featured Campaigns
+              </Text>
+              <TouchableOpacity onPress={() => router.push("/campaigns")}>
+                <Text style={{ color: "#010D26" }}>See All</Text>
+              </TouchableOpacity>
+            </View>
 
-          {featuredCampaigns.length > 0 && (
-            <CampaignSlider
-              data={featuredCampaigns}
-              onPress={handleCampaignPress}
-            />
-          )}
+            {featuredCampaigns.length > 0 && (
+              <CampaignSlider
+                data={featuredCampaigns}
+                onPress={handleCampaignPress}
+              />
+            )}
+          </View>
         </View>
       </View>
     </ScrollView>
@@ -594,6 +595,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#fff",
     lineHeight: 60,
+    fontFamily: "AlbertSans_800ExtraBold",
   },
 
   heroSubtitle: {
@@ -670,7 +672,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(38,75,139,0.1)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
     overflow: "hidden", // important for gradient clipping
   },
 
@@ -737,22 +738,28 @@ const styles = StyleSheet.create({
   givingContainer: {
     flexDirection: "row",
     backgroundColor: "rgba(255,255,255,0.3)",
-    borderRadius: 10,
+    borderRadius: 12,
     overflow: "hidden",
-    marginBottom: 16,
-    padding: 2,
+    marginBottom: 20,
+    marginTop: 8,
+    padding: 6,
+    gap: 6,
   },
   givingButton: {
     flex: 1,
     paddingVertical: 14,
+    paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 8,
   },
-  givingButtonSelected: { backgroundColor: "#fff" },
+  givingButtonSelected: {
+    backgroundColor: "#fff",
+  },
   givingText: { color: "#fff", fontWeight: "600" },
   amountContainer: {
     backgroundColor: "#fff",
-    padding: 16,
+    padding: 12,
     borderRadius: 12,
     marginBottom: 10,
     elevation: 4,
@@ -762,16 +769,16 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   amountTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
     color: "#264B8B",
     marginBottom: 10,
   },
   amountGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 10,
+    gap: 8,
   },
 
   amountButtonSelected: { backgroundColor: "#264B8B" },
@@ -783,7 +790,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 10,
     height: 45,
-    marginBottom: 8,
+    marginBottom: 10,
     backgroundColor: "#fff",
   },
   inputLeft: { color: "#264B8B", fontWeight: "600", marginRight: 8 },
@@ -844,7 +851,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  donateText: { color: "#010D26", fontWeight: "700", fontSize: 16 },
+  donateText: { color: "#010D26", fontWeight: "700", fontSize: 14 },
   cardsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",

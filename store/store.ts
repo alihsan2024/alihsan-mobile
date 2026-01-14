@@ -8,6 +8,7 @@ import authenticationReducer from "./reduxSlice/authenticationSlice";
 import basketItemReducer from "./reduxSlice/basketSlice";
 import paymentDetailsReducer from "./reduxSlice/paymentDetailsSlice";
 import quickDonationsReducer from "./reduxSlice/quickDonationSlice";
+import profileStatisticsReducer from "./reduxSlice/profileStatisticsSlice";
 import { basketApi } from "./reduxSlice/api/basketApi";
 
 export const store = configureStore({
@@ -22,6 +23,7 @@ export const store = configureStore({
     zakatCalculator: zakatReducer,
     paymentDetails: paymentDetailsReducer,
     quickDonations: quickDonationsReducer,
+    profileStatistics: profileStatisticsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(basketApi.middleware),

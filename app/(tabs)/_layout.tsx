@@ -70,7 +70,16 @@ export default function TabsLayout() {
           height: Platform.OS === "ios" ? 88 : 68,
           backgroundColor: "#fff",
           borderTopWidth: 0,
-          elevation: 0,
+          // Shadow for iOS
+          shadowColor: "#000",
+          shadowOffset: {
+            width: 0,
+            height: -4,
+          },
+          shadowOpacity: 0.15,
+          shadowRadius: 12,
+          // Shadow for Android
+          elevation: 12,
         },
         tabBarItemStyle: {
           flex: 1,
@@ -108,6 +117,7 @@ export default function TabsLayout() {
                 alignItems: "center",
                 justifyContent: "center",
                 marginTop: 22,
+                position: "relative",
               }}
             >
               <LinearGradient
@@ -127,6 +137,13 @@ export default function TabsLayout() {
                   <Ionicons name="cart" size={22} color="#fff" />
                 </View>
               </LinearGradient>
+              {itemCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {itemCount > 99 ? "99+" : itemCount}
+                  </Text>
+                </View>
+              )}
             </View>
           ),
         }}
@@ -139,7 +156,6 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => (
             <TabIcon name="hand-left" focused={focused} />
           ),
-          tabBarStyle: { display: "none" },
         }}
       />
 
@@ -160,5 +176,24 @@ const styles = StyleSheet.create({
   tabItem: {
     alignItems: "center",
     justifyContent: "center",
+  },
+  badge: {
+    position: "absolute",
+    top: 18,
+    right: -6,
+    backgroundColor: "#EF4444",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
   },
 });

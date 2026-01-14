@@ -235,26 +235,26 @@ export default function GazaDonationScreen() {
                     }
                   )
               : campaign.description
-              ?.replace(/<[^>]*>/g, "")
-              .replace(
-                /&nbsp;|&amp;|&quot;|&lt;|&gt;/gi,
-                function (entity: string) {
-                  switch (entity) {
-                    case "&nbsp;":
-                      return " ";
-                    case "&amp;":
-                      return "&";
-                    case "&quot;":
-                      return '"';
-                    case "&lt;":
-                      return "<";
-                    case "&gt;":
-                      return ">";
-                    default:
-                      return "";
-                  }
-                }
-              )}
+                  ?.replace(/<[^>]*>/g, "")
+                  .replace(
+                    /&nbsp;|&amp;|&quot;|&lt;|&gt;/gi,
+                    function (entity: string) {
+                      switch (entity) {
+                        case "&nbsp;":
+                          return " ";
+                        case "&amp;":
+                          return "&";
+                        case "&quot;":
+                          return '"';
+                        case "&lt;":
+                          return "<";
+                        case "&gt;":
+                          return ">";
+                        default:
+                          return "";
+                      }
+                    }
+                  )}
           </Text>
         )}
 
