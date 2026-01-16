@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  ScrollView,
+  Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -78,88 +81,98 @@ export default function LoginScreen() {
       />
 
       {/* ===== CONTENT ===== */}
-      <View style={styles.content}>
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>
-          Enter details to continue your kindness journey.
-        </Text>
-
-        {/* ===== GOOGLE BUTTON (UI ONLY) ===== */}
-        <TouchableOpacity style={styles.googleBtn} activeOpacity={0.85}>
-          <Google width={20} height={20} />
-          <Text style={styles.googleText}>Continue with Google</Text>
-        </TouchableOpacity>
-
-        {/* ===== DIVIDER ===== */}
-        <View style={styles.divider}>
-          <View style={styles.line} />
-          <Text style={styles.dividerText}>Or Log in with your email</Text>
-          <View style={styles.line} />
-        </View>
-
-        {/* ===== ERROR MESSAGE ===== */}
-
-        {/* ===== EMAIL ===== */}
-        <Text style={styles.label}>Email</Text>
-        <View
-          style={[
-            styles.inputWrapper,
-            error ? styles.inputErrorBorder : styles.inputNormalBorder,
-          ]}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <TextInput
-            placeholder="Enter email"
-            placeholderTextColor="#9CA3AF"
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-          />
-        </View>
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>
+            Enter details to continue your kindness journey.
+          </Text>
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        {/* ===== PASSWORD ===== */}
-        <Text style={styles.label}>Password</Text>
-        <View style={[styles.inputWrapper, styles.inputNormalBorder]}>
-          <TextInput
-            placeholder="Enter Password"
-            placeholderTextColor="#9CA3AF"
-            secureTextEntry={!showPassword}
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            autoCapitalize="none"
-            autoComplete="password"
-          />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <Ionicons
-              name={showPassword ? "eye-off-outline" : "eye-outline"}
-              size={18}
-              color="#9CA3AF"
-            />
+          {/* ===== GOOGLE BUTTON (UI ONLY) ===== */}
+          <TouchableOpacity style={styles.googleBtn} activeOpacity={0.85}>
+            <Google width={20} height={20} />
+            <Text style={styles.googleText}>Continue with Google</Text>
           </TouchableOpacity>
-        </View>
 
-        {/* ===== LOGIN BUTTON ===== */}
-        <Button
-          label="Log In"
-          variant="secondary"
-          disabled={loading}
-          onPress={handleLogin}
-          textStyle={{ fontSize: 14, fontWeight: "500" }}
-        />
+          {/* ===== DIVIDER ===== */}
+          <View style={styles.divider}>
+            <View style={styles.line} />
+            <Text style={styles.dividerText}>Or Log in with your email</Text>
+            <View style={styles.line} />
+          </View>
 
-        {/* ===== FORGOT PASSWORD ===== */}
-        <TouchableOpacity>
-          <Text style={styles.forgot}>Forgot Password?</Text>
-        </TouchableOpacity>
+          {/* ===== ERROR MESSAGE ===== */}
 
-        <TouchableOpacity onPress={() => router.push("/signup")}>
-          <Text style={styles.forgot}>Don't have an account? Sign Up</Text>
-        </TouchableOpacity>
-      </View>
+          {/* ===== EMAIL ===== */}
+          <Text style={styles.label}>Email</Text>
+          <View
+            style={[
+              styles.inputWrapper,
+              error ? styles.inputErrorBorder : styles.inputNormalBorder,
+            ]}
+          >
+            <TextInput
+              placeholder="Enter email"
+              placeholderTextColor="#9CA3AF"
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+            />
+          </View>
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {/* ===== PASSWORD ===== */}
+          <Text style={styles.label}>Password</Text>
+          <View style={[styles.inputWrapper, styles.inputNormalBorder]}>
+            <TextInput
+              placeholder="Enter Password"
+              placeholderTextColor="#9CA3AF"
+              secureTextEntry={!showPassword}
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              autoCapitalize="none"
+              autoComplete="password"
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <Ionicons
+                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                size={18}
+                color="#9CA3AF"
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* ===== LOGIN BUTTON ===== */}
+          <Button
+            label="Log In"
+            variant="secondary"
+            disabled={loading}
+            onPress={handleLogin}
+            textStyle={{ fontSize: 14, fontWeight: "500" }}
+          />
+
+          {/* ===== FORGOT PASSWORD ===== */}
+          <TouchableOpacity>
+            <Text style={styles.forgot}>Forgot Password?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => router.push("/signup")}>
+            <Text style={styles.forgot}>Don't have an account? Sign Up</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }

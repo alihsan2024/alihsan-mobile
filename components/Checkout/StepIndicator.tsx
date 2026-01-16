@@ -35,8 +35,11 @@ export default function StepIndicator({ step, onStepPress }: Props) {
                     ]}
                   />
                 </TouchableOpacity>
+
                 {index === 0 && (
                   <Text
+                    numberOfLines={1}
+                    ellipsizeMode="clip"
                     style={[
                       styles.labelLeft,
                       isDoneOrActive && styles.labelActive,
@@ -45,8 +48,11 @@ export default function StepIndicator({ step, onStepPress }: Props) {
                     {label}
                   </Text>
                 )}
+
                 {index === 1 && (
                   <Text
+                    numberOfLines={1}
+                    ellipsizeMode="clip"
                     style={[
                       styles.labelAbsolute,
                       isDoneOrActive && styles.labelActive,
@@ -55,8 +61,11 @@ export default function StepIndicator({ step, onStepPress }: Props) {
                     {label}
                   </Text>
                 )}
+
                 {index === 2 && (
                   <Text
+                    numberOfLines={1}
+                    ellipsizeMode="clip"
                     style={[
                       styles.labelRight,
                       isDoneOrActive && styles.labelActive,
@@ -117,37 +126,41 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.2 }],
   },
 
+  /* LABELS — FIXED WIDTH & NO WRAP */
   labelAbsolute: {
     position: "absolute",
     top: 18,
     left: "50%",
-    transform: [{ translateX: -25 }],
-    width: 50,
+    transform: [{ translateX: -40 }],
+    width: 80,
     textAlign: "center",
     fontSize: 12,
     color: "#888",
     zIndex: 1,
   },
+
   labelLeft: {
     position: "absolute",
     top: 18,
     left: 0,
-    minWidth: 50,
+    width: 80,
     textAlign: "left",
     fontSize: 12,
     color: "#888",
     zIndex: 1,
   },
+
   labelRight: {
     position: "absolute",
     top: 18,
     right: 0,
-    minWidth: 50,
+    width: 80,
     textAlign: "right",
     fontSize: 12,
     color: "#888",
     zIndex: 1,
   },
+
   labelActive: {
     color: "#246BE1",
     fontWeight: "bold",
