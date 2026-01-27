@@ -20,15 +20,16 @@ import ImageSlider from "@/components/ui/sliders/ImageSlider";
 import CampaignSlider from "@/components/ui/sliders/CampaignSlider";
 import { DonationAppealModal } from "@/components/ui/Modals/DonationAppealModal";
 import { router } from "expo-router";
-import { fetchFeaturedCampaigns } from "@/utils/api";
+import { fetchFeaturedCampaigns, getCampaignDetails } from "@/utils/api";
 import {
   useAddToBasketMutation,
   useGetBasketQuery,
 } from "@/store/reduxSlice/api/basketApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSelector } from "react-redux";
-import HeroBackground from "@/components/ui/GradientImage";
-import HeaderSearchBar from "@/components/ui/HeaderSearchBar";
+import SupportCampaignsBanner from "@/components/ui/SupportCampaignsBanner";
+import QuickLinks from "@/components/ui/QuickLinks";
+import CommunityImpactVideo from "@/components/ui/CommunityImpactVideo";
 
 const ICON_SIZE = 16;
 const SIDE_BUTTON_WIDTH = 60;
@@ -324,175 +325,86 @@ export default function HomeScreen() {
         raised={109690.51}
         goal={150000}
       />
-      <View
-        style={{
-          width: "100%",
-          minHeight: screenHeight * 0.6,
-          position: "absolute",
-          top: 0,
-          left: 0,
+      {/* Top Banner Section - "Making a Difference Together" / "Support Our Campaigns" */}
+      <SupportCampaignsBanner
+        topInset={insets.top}
+        onCampaignPress={(campaign) => {
+          router.push(`/campaign/${campaign.slug}`);
         }}
-      >
-        <HeaderSearchBar
-          placeholder="Search"
-          showNotificationDot
-          // onChangeText={(text) => console.log(text)}
-          // onNotificationPress={() => router.push("/notifications")}
-        />
-      </View>
-      {/* Main content */}
-      <HeroBackground
-        source={{ uri: GAZA_CAMPAIGN.coverImage }}
-        isHome={true}
-        containerStyle={{
-          paddingHorizontal: PADDING_HORIZONTAL,
-          paddingTop: insets.top,
-          minHeight: screenHeight * 0.6,
+        onDonate={async (amount, frequency, campaignSlug) => {
+          try {
+            setAddingToCart(true);
+
+            // Fetch campaign details
+            const campaignData = await getCampaignDetails(campaignSlug);
+            const campaign = campaignData?.campaign || campaignData;
+
+            if (!campaign?.id) {
+              Alert.alert("Error", "Campaign not found");
+              return;
+            }
+
+            // Calculate period days based on frequency
+            const periodDays = frequency === "monthly" ? 30 : frequency === "weekly" ? 7 : 0;
+            const isRecurring = frequency === "monthly" || frequency === "weekly";
+
+            const basketItems = isAuthenticated
+              ? basketData?.payload ?? []
+              : guestBasket;
+
+            const isInCart = basketItems.some(
+              (item: any) => item.campaignId === campaign.id
+            );
+
+            if (isInCart) {
+              Alert.alert("Already in cart", "This campaign is already in your cart.", [
+                {
+                  text: "View Cart",
+                  onPress: () => router.push("/(tabs)/cart"),
+                },
+                { text: "OK", style: "cancel" },
+              ]);
+              return;
+            }
+
+            const basketItem = {
+              campaignId: campaign.id,
+              amount: amount,
+              quantity: 1,
+              name: campaign.name,
+              coverImage: campaign.coverImage,
+              checkoutType: campaign.checkoutType || "COMMON",
+              periodDays: periodDays,
+              isRecurring: isRecurring,
+            };
+
+            if (isAuthenticated) {
+              await addToBasket({ body: basketItem });
+            } else {
+              const updated = [...guestBasket, basketItem];
+              setGuestBasket(updated);
+              await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
+            }
+
+            Alert.alert(
+              "Added to cart",
+              "Your donation has been added to the cart.",
+              [
+                {
+                  text: "View Cart",
+                  onPress: () => router.push("/(tabs)/cart"),
+                },
+                { text: "OK", style: "cancel" },
+              ]
+            );
+          } catch (error: any) {
+            console.error("Donation error:", error);
+            Alert.alert("Error", error?.message || "Failed to add to cart");
+          } finally {
+            setAddingToCart(false);
+          }
         }}
-      >
-        {/* Header Bar */}
-        <View style={styles.headerBar}>
-          {/* Search */}
-          <View style={styles.searchContainer}>
-            <Feather name="search" size={16} color="#fff" />
-            <TextInput
-              placeholder="Search"
-              placeholderTextColor="rgba(255,255,255,0.6)"
-              style={styles.searchInput}
-            />
-          </View>
-
-          {/* Notification */}
-          <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons name="notifications" size={18} color="#010D264D" />
-            {/* Optional dot */}
-            <View style={styles.notificationDot} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.heroTextContainer}>
-          <Text style={styles.heroTitle}>Gaza</Text>
-          <Text style={styles.heroSubtitle}>is being Starved</Text>
-        </View>
-
-        {/* Giving options */}
-        <View style={styles.givingContainer}>
-          {GIVING_OPTIONS.map((option, idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={[
-                styles.givingButton,
-                selectedGiving === idx && styles.givingButtonSelected,
-              ]}
-              onPress={() => {
-                Animated.spring(givingAnimation, {
-                  toValue: idx,
-                  useNativeDriver: false,
-                  tension: 50,
-                  friction: 7,
-                }).start();
-                setSelectedGiving(idx);
-              }}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[
-                  styles.givingText,
-                  selectedGiving === idx && {
-                    color: "#264B8B",
-                    fontWeight: "700",
-                  },
-                ]}
-              >
-                {option}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Amount container */}
-        <View style={styles.amountContainer}>
-          <Text style={styles.amountTitle}>Choose an amount to give</Text>
-
-          {/* Grid of amount buttons */}
-          <View style={styles.amountGrid}>
-            {AMOUNTS.map((amt, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={styles.amountButton}
-                onPress={() => handleAmountPress(amt)}
-                activeOpacity={0.85}
-              >
-                {selectedAmount === amt ? (
-                  <LinearGradient
-                    colors={["#246BE1", "#064DC3"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.amountGradient}
-                  >
-                    <Text style={styles.amountTextSelected}>$ {amt}</Text>
-                  </LinearGradient>
-                ) : (
-                  <Text style={styles.amountText}>$ {amt}</Text>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Custom input */}
-          <View style={styles.inputWrapper}>
-            <TextInput
-              placeholder="Custom Amount"
-              placeholderTextColor={"#010D2640"}
-              keyboardType="numeric"
-              value={customAmount}
-              onChangeText={(text) => {
-                setCustomAmount(text);
-                setSelectedAmount(null);
-              }}
-              style={styles.inputMiddle}
-            />
-            <Text style={styles.inputRight}>AUD</Text>
-          </View>
-
-          {/* Donate button */}
-          <TouchableOpacity
-            style={styles.donateButton}
-            activeOpacity={0.8}
-            onPress={handleGazaDonate}
-            disabled={addingToCart}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Text style={styles.donateText}>
-                {addingToCart ? "Adding..." : "Donate Now"}
-              </Text>
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color="#010D26"
-                style={{ marginLeft: 8 }}
-              />
-            </View>
-          </TouchableOpacity>
-
-          {/* Link to Orphan Details */}
-          {/* <TouchableOpacity
-            style={{ marginTop: 16, alignSelf: "center" }}
-            onPress={() => router.push("/orphan-details")}
-            activeOpacity={0.8}
-          >
-            <Text style={{ color: "#246BE1", fontWeight: "600", fontSize: 16 }}>
-              View Orphan Details
-            </Text>
-          </TouchableOpacity> */}
-        </View>
-      </HeroBackground>
+      />
       {/* Main content */}
       <View style={{ paddingTop: 10 }}>
         {/* Categories Section - Below Banner */}
@@ -522,7 +434,7 @@ export default function HomeScreen() {
         />
 
         {/* Featured Campaigns Section */}
-        <View style={{ paddingHorizontal: PADDING_HORIZONTAL }}>
+        <View style={{ paddingHorizontal: PADDING_HORIZONTAL, marginBottom: 16 }}>
           <View style={{ flex: 1 }}>
             <View
               style={{
@@ -534,10 +446,11 @@ export default function HomeScreen() {
             >
               <Text
                 style={{
-                  fontSize: 24,
+                  fontSize: 28,
                   color: "#010D26",
-                  fontWeight: "600",
-                  marginBottom: 10,
+                  fontWeight: "800",
+                  marginBottom: 24,
+                  fontFamily: "AlbertSans_800ExtraBold",
                 }}
               >
                 Featured Campaigns
@@ -554,6 +467,21 @@ export default function HomeScreen() {
               />
             )}
           </View>
+        </View>
+
+        {/* Quick Links Section */}
+        <QuickLinks />
+
+        {/* Community Impact Video Section */}
+        <View style={{ paddingHorizontal: PADDING_HORIZONTAL, marginTop: 24, marginBottom: 32 }}>
+          <CommunityImpactVideo
+            videoUrl="https://alihsan.s3.ap-southeast-2.amazonaws.com/homepage-videos/1763512297065-alihsan-winter+appeal+16x9.mp4"
+            backgroundImage="https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/dac1a675d19a0d43be37299aebb6dd02.jpg"
+            coverImage="https://alihsan.s3.ap-southeast-2.amazonaws.com/media/1765499530018-alihsan-Sri%20Lanka%20Flood.jpeg"
+            title="Community Impact"
+            headline="Millions are facing hardship. Be the one who brings ease."
+            subheadline="Meet the passionate individuals working together to bring kindness, care, and impact to every community we touch."
+          />
         </View>
       </View>
     </ScrollView>

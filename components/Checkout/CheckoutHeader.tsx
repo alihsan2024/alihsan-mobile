@@ -26,20 +26,18 @@ export default function CheckoutHeader({
             router.back();
           }
         }}
-        style={{
-          padding: 4,
-          backgroundColor: "#FAFAFA",
-          borderRadius: 50,
-          borderWidth: 1,
-          borderColor: "#010D261A",
-        }}
+        style={styles.backButton}
+        activeOpacity={0.8}
       >
-        <Ionicons name="chevron-back" size={20} color="#010D261A" />
+        <Ionicons name="chevron-back" size={22} color="#010D26" />
       </TouchableOpacity>
 
       <Text style={styles.title}>Checkout</Text>
 
-      <TouchableOpacity onPress={() => router.push("/(tabs)/cart")}>
+      <TouchableOpacity 
+        onPress={() => router.push("/(tabs)/cart")}
+        activeOpacity={0.8}
+      >
         <Text style={styles.cancel}>Cancel</Text>
       </TouchableOpacity>
     </View>
@@ -48,21 +46,34 @@ export default function CheckoutHeader({
 
 const styles = StyleSheet.create({
   container: {
-    height: 56,
     paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderBottomWidth: 1,
-    borderBottomColor: "#EEE",
+    borderBottomColor: "#F3F4F6",
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
   },
   title: {
+    flex: 1,
+    textAlign: "center",
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "800",
     color: "#010D26",
+    fontFamily: "AlbertSans_800ExtraBold",
   },
   cancel: {
     fontSize: 14,
-    color: "#010D26",
+    fontWeight: "600",
+    color: "#6B7280",
+    fontFamily: "AlbertSans_600SemiBold",
   },
 });

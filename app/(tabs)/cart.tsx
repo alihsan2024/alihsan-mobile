@@ -23,7 +23,6 @@ import {
 } from "@/store/reduxSlice/api/basketApi";
 import RemoveDonationModal from "@/components/ui/Modals/RemoveDonationModal";
 import { useFocusEffect } from "@react-navigation/native";
-import BasketItemRow from "@/components/ui/Basket/BasketItemRow";
 
 // Format price helper
 const formatPrice = (price: number): string => {
@@ -33,6 +32,14 @@ const formatPrice = (price: number): string => {
         maximumFractionDigits: 2,
       })
     : "0.00";
+};
+
+// Format currency helper
+const formatCurrency = (value: number): string => {
+  return `$${value.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 };
 
 // Get recurring label helper
@@ -213,58 +220,55 @@ export default function BasketScreen() {
         }}
         onConfirm={confirmRemoveItem}
       />
+      
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
-          style={{
-            backgroundColor: "#FAFAFA",
-            borderWidth: 1,
-            borderColor: "#010D264D",
-            padding: 5,
-            borderRadius: 40,
-          }}
+          style={styles.backButton}
+          activeOpacity={0.8}
         >
-          <Ionicons name="chevron-back" size={16} color="#010D264D" />
+          <Ionicons name="chevron-back" size={22} color="#010D26" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Your Basket</Text>
-        <View style={{ width: 24 }} />
+        <View style={{ width: 40 }} />
       </View>
-      <Divider />
 
-      {/* Scrollable Basket Items Section */}
-      <View style={styles.scrollableSectionWrapper}>
-        <ScrollView
-          style={styles.scrollableSection}
-          contentContainerStyle={styles.scrollableContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Basket Items */}
-          <View style={styles.card}>
-            {basketItems.length === 0 ? (
-              <View style={styles.emptyBasketContainer}>
-                <Ionicons
-                  name="cart-outline"
-                  size={48}
-                  color="#E5E7EB"
-                  style={{ marginBottom: 12 }}
-                />
-                <Text style={styles.emptyBasketText}>Your basket is empty</Text>
-                <Text style={styles.emptyBasketSubtext}>
-                  Browse our projects and add items to your basket
-                </Text>
-                <TouchableOpacity
-                  style={styles.browseButton}
-                  onPress={() => router.push("/(tabs)/campaigns")}
-                >
-                  <Text style={styles.browseButtonText}>Browse Projects</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              basketItems.map((item: any, index: number) => {
+      {/* Scrollable Content */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {basketItems.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="cart-outline" size={64} color="#E5E7EB" />
+            </View>
+            <Text style={styles.emptyTitle}>Your basket is empty</Text>
+            <Text style={styles.emptySubtitle}>
+              Browse our projects and add items to your basket
+            </Text>
+            <TouchableOpacity
+              style={styles.browseButton}
+              onPress={() => router.push("/(tabs)/campaigns")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.browseButtonText}>Browse Projects</Text>
+              <Ionicons name="arrow-forward" size={18} color="#010D26" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            {/* Basket Items */}
+            <View style={styles.itemsSection}>
+              <Text style={styles.sectionTitle}>
+                Your Items ({basketItems.length})
+              </Text>
+              {basketItems.map((item: any, index: number) => {
                 const checkoutType =
                   item.checkoutType || item.Campaign?.checkoutType;
                 const isAdeeqah = checkoutType === "ADEEQAH_GENERAL_SACRIFICE";
@@ -274,7 +278,6 @@ export default function BasketScreen() {
                 const price = parseFloat(
                   item.amount?.toString() || item.ricePrice?.toString() || "0"
                 );
-                // For logged-in user, use item.total; for guest, use amount * quantity
                 const itemTotal =
                   item.total !== undefined && item.total !== null
                     ? parseFloat(item.total?.toString() || "0")
@@ -287,114 +290,113 @@ export default function BasketScreen() {
                 ].includes(checkoutType || "");
 
                 return (
-                  <View key={item.id || index} style={styles.itemWrapper}>
-                    <View style={styles.itemRow}>
-                      <ExpoImage
-                        source={{
-                          uri:
-                            item.coverImage ||
-                            item.Campaign?.coverImage ||
-                            item.Orphan?.coverImage ||
-                            "https://via.placeholder.com/64",
-                        }}
-                        style={styles.itemImage}
-                        contentFit="cover"
-                      />
-                      <View style={styles.itemContent}>
-                        <Text style={styles.itemTitle} numberOfLines={2}>
-                          {item.name ||
-                            item.Campaign?.name ||
-                            item.Orphan?.name ||
-                            "Campaign"}
-                        </Text>
-                        <View style={styles.itemMetaRow}>
-                          {item.isRecurring && (
-                            <View style={styles.recurringBadge}>
-                              <Ionicons
-                                name="repeat"
-                                size={10}
-                                color="#264B8B"
-                              />
-                              <Text style={styles.recurringText}>
-                                {getRecurringLabel(item.periodDays)}
-                              </Text>
-                            </View>
-                          )}
-                          {item.donationItem && (
-                            <Text style={styles.donationItem}>
-                              {item.donationItem}
+                  <View key={item.id || index} style={styles.itemCard}>
+                    <ExpoImage
+                      source={{
+                        uri:
+                          item.coverImage ||
+                          item.Campaign?.coverImage ||
+                          item.Orphan?.coverImage ||
+                          "https://via.placeholder.com/64",
+                      }}
+                      style={styles.itemImage}
+                      contentFit="cover"
+                    />
+                    <View style={styles.itemContent}>
+                      <Text style={styles.itemTitle} numberOfLines={2}>
+                        {item.name ||
+                          item.Campaign?.name ||
+                          item.Orphan?.name ||
+                          "Campaign"}
+                      </Text>
+                      <View style={styles.itemMetaRow}>
+                        {item.isRecurring && (
+                          <View style={styles.recurringBadge}>
+                            <Ionicons
+                              name="repeat"
+                              size={12}
+                              color="#264B8B"
+                            />
+                            <Text style={styles.recurringText}>
+                              {getRecurringLabel(item.periodDays)}
                             </Text>
-                          )}
-                        </View>
-                        <View style={styles.itemPriceRow}>
-                          <Text style={styles.itemPrice}>
-                            ${formatPrice(itemTotal)}
+                          </View>
+                        )}
+                        {item.donationItem && (
+                          <Text style={styles.donationItem}>
+                            {item.donationItem}
                           </Text>
-                          {isCommonORZaqat && quantity > 1 && (
-                            <Text style={styles.itemUnitPrice}>
-                              ${formatPrice(price)} each
-                            </Text>
-                          )}
-                        </View>
+                        )}
                       </View>
-                      <TouchableOpacity
-                        onPress={() =>
-                          handleRemoveItem(
-                            item.campaignId,
-                            item.orphanId,
-                            item.donationItem,
-                            item.name || item.Campaign?.name
-                          )
-                        }
-                        style={styles.deleteButton}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons
-                          name="trash-outline"
-                          size={18}
-                          color="#DC2626"
-                        />
-                      </TouchableOpacity>
+                      <View style={styles.itemPriceRow}>
+                        <Text style={styles.itemPrice}>
+                          {formatCurrency(itemTotal)}
+                        </Text>
+                        {isCommonORZaqat && quantity > 1 && (
+                          <Text style={styles.itemUnitPrice}>
+                            {formatCurrency(price)} each
+                          </Text>
+                        )}
+                      </View>
                     </View>
+                    <TouchableOpacity
+                      onPress={() =>
+                        handleRemoveItem(
+                          item.campaignId,
+                          item.orphanId,
+                          item.donationItem,
+                          item.name || item.Campaign?.name
+                        )
+                      }
+                      style={styles.deleteButton}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={18}
+                        color="#DC2626"
+                      />
+                    </TouchableOpacity>
                   </View>
                 );
-              })
-            )}
-          </View>
-        </ScrollView>
-        {/* Shadow indicator at bottom of scrollable section */}
-        {basketItems.length > 0 && (
-          <LinearGradient
-            colors={[
-              "rgba(255,255,255,0)",
-              "rgba(255,255,255,0.4)",
-              "rgba(255,255,255,0.9)",
-              "#FFFFFF",
-            ]}
-            locations={[0, 0.3, 0.7, 1]}
-            style={styles.shadowIndicator}
-            pointerEvents="none"
-          />
-        )}
-      </View>
+              })}
+            </View>
 
-      {/* Price Details - Fixed at bottom */}
-      {basketItems.length > 0 && (
-        <View style={styles.fixedBottomSection}>
-          <View style={{ marginHorizontal: 16 }}>
-            <Text style={styles.sectionTitle}>Price details</Text>
+            {/* Summary Card */}
+            <LinearGradient
+              colors={["#6A7BFF", "#5663F7"]}
+              style={styles.summaryCard}
+            >
+              <Text style={styles.summaryLabel}>Total Amount</Text>
+              <Text style={styles.summaryAmount}>{formatCurrency(total)}</Text>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryDetails}>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryRowLabel}>Subtotal</Text>
+                  <Text style={styles.summaryRowValue}>
+                    {formatCurrency(subtotal)}
+                  </Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryRowLabel}>Admin Fee</Text>
+                  <Text style={styles.summaryRowValue}>
+                    {formatCurrency(parseFloat(processingAmount))}
+                  </Text>
+                </View>
+              </View>
+            </LinearGradient>
 
-            <View style={styles.priceBox}>
-              <Row label="Subtotal" value={`$${formatPrice(subtotal)}`} />
-              <Row
-                label="Admin Fee"
-                value={`$${formatPrice(parseFloat(processingAmount))}`}
-              />
-              <Divider />
-              <View style={styles.infoRow}>
-                <Text style={styles.infoText}>
-                  Do you want to remain anonymous?
-                </Text>
+            {/* Anonymous Toggle */}
+            <View style={styles.anonymousCard}>
+              <View style={styles.anonymousRow}>
+                <View style={styles.anonymousContent}>
+                  <Text style={styles.anonymousTitle}>
+                    Remain Anonymous
+                  </Text>
+                  <Text style={styles.anonymousSubtitle}>
+                    Do you want to remain anonymous?
+                  </Text>
+                </View>
                 <TouchableOpacity
                   onPress={() => setIsAnonymous(!isAnonymous)}
                   activeOpacity={0.8}
@@ -414,221 +416,212 @@ export default function BasketScreen() {
                   </View>
                 </TouchableOpacity>
               </View>
-              <Divider />
-              <Row label="Total" value={`$${formatPrice(total)}`} />
             </View>
-          </View>
+          </>
+        )}
+      </ScrollView>
 
-          {/* Checkout Button */}
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={styles.checkoutButton}
-              onPress={handleCheckout}
-              disabled={
-                subtotal <= 0 ||
-                basketItems.some(
-                  (item: any) =>
-                    parseFloat(
-                      isAuthenticated
-                        ? item.total?.toString() || "0"
-                        : item.amount?.toString() || "0"
-                    ) === 0
-                )
-              }
-            >
-              <Text style={styles.checkoutText}>Proceed to Checkout</Text>
-              <Ionicons name="chevron-forward" size={18} color="#000" />
-            </TouchableOpacity>
-
-            <Text style={styles.termsText}>
-              By continuing, you agree to the{" "}
-              <Text style={{ textDecorationLine: "underline" }}>
-                terms and conditions.
-              </Text>
-            </Text>
-          </View>
-        </View>
+      {/* Footer with Checkout Button */}
+      {basketItems.length > 0 && (
+        <LinearGradient
+          colors={["#264B8B", "#1E3A8A"]}
+          style={styles.footer}
+        >
+          <TouchableOpacity
+            style={styles.checkoutButton}
+            onPress={handleCheckout}
+            disabled={
+              subtotal <= 0 ||
+              basketItems.some(
+                (item: any) =>
+                  parseFloat(
+                    isAuthenticated
+                      ? item.total?.toString() || "0"
+                      : item.amount?.toString() || "0"
+                  ) === 0
+              )
+            }
+            activeOpacity={0.8}
+          >
+            <Text style={styles.checkoutText}>Proceed to Checkout</Text>
+            <Ionicons name="chevron-forward" size={18} color="#010D26" />
+          </TouchableOpacity>
+          <Text style={styles.termsText}>
+            By continuing, you agree to the{" "}
+            <Text style={styles.termsLink}>terms and conditions</Text>
+          </Text>
+        </LinearGradient>
       )}
     </View>
   );
 }
 
-const Row = ({ label, value }: { label: string; value: string }) => (
-  <View style={styles.row}>
-    <Text style={[styles.rowLabel]}>{label}</Text>
-    <Text style={[styles.rowValue, styles.boldText]}>{value}</Text>
-  </View>
-);
-
-const Divider = () => <View style={styles.divider} />;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#fff",
   },
-  scrollableSectionWrapper: {
-    flex: 1,
-    position: "relative",
-  },
-  scrollableSection: {
-    flex: 1,
-  },
-  scrollableContent: {
-    paddingBottom: 16,
-  },
-  shadowIndicator: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 24,
-    pointerEvents: "none",
-  },
-  fixedBottomSection: {
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-    paddingTop: 16,
-  },
-  emptyBasketContainer: {
-    alignItems: "center",
-    padding: 32,
-    minHeight: 400,
-    justifyContent: "center",
-  },
-  emptyBasketText: {
-    fontSize: 16,
-    color: "#888",
-    marginBottom: 8,
-  },
-  emptyBasketSubtext: {
-    fontSize: 13,
-    color: "#aaa",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  browseButton: {
-    backgroundColor: "#264B8B",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  browseButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
   },
-
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   headerTitle: {
     flex: 1,
     textAlign: "center",
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "800",
+    color: "#010D26",
+    fontFamily: "AlbertSans_800ExtraBold",
   },
-
-  card: {
-    borderRadius: 12,
+  scrollView: {
+    flex: 1,
   },
-
-  donationItem: {
-    fontSize: 11,
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 16,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+    minHeight: 300,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#010D26",
+    marginBottom: 6,
+    fontFamily: "AlbertSans_800ExtraBold",
+  },
+  emptySubtitle: {
+    fontSize: 14,
     color: "#6B7280",
-    fontWeight: "500",
+    textAlign: "center",
+    marginBottom: 24,
+    fontFamily: "AlbertSans_400Regular",
   },
-
-  itemWrapper: {
-    marginBottom: 10,
-    marginHorizontal: 16,
+  browseButton: {
+    backgroundColor: "#FFD602",
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
-  itemRow: {
+  browseButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  itemsSection: {
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#010D26",
+    marginBottom: 12,
+    fontFamily: "AlbertSans_800ExtraBold",
+  },
+  itemCard: {
+    backgroundColor: "#fff",
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
-    padding: 10,
+    padding: 12,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 3,
+    shadowRadius: 4,
     elevation: 2,
   },
-
   itemImage: {
     width: 56,
     height: 56,
     borderRadius: 10,
     backgroundColor: "#F3F4F6",
   },
-
   itemContent: {
     flex: 1,
     minWidth: 0,
   },
-
   itemTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#111827",
-    lineHeight: 18,
+    fontWeight: "700",
+    color: "#010D26",
     marginBottom: 4,
+    fontFamily: "AlbertSans_700Bold",
   },
-
   itemMetaRow: {
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
     gap: 6,
-    marginBottom: 6,
+    marginBottom: 4,
   },
-
-  itemSubtitle: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginTop: 2,
-  },
-
-  itemPrice: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111827",
-  },
-
-  itemPriceRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 6,
-  },
-
-  itemUnitPrice: {
-    fontSize: 11,
-    color: "#6B7280",
-    fontWeight: "500",
-  },
-
   recurringBadge: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#E3F2FD",
     paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 4,
     gap: 3,
   },
-
   recurringText: {
     fontSize: 10,
     fontWeight: "600",
     color: "#264B8B",
+    fontFamily: "AlbertSans_600SemiBold",
   },
-
+  donationItem: {
+    fontSize: 11,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
+  },
+  itemPriceRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 6,
+  },
+  itemPrice: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  itemUnitPrice: {
+    fontSize: 11,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
+  },
   deleteButton: {
     padding: 8,
     borderRadius: 8,
@@ -636,63 +629,86 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
-  divider: {
-    height: 1,
-    backgroundColor: "#E5E7EB",
-    marginVertical: 12,
-  },
-
-  sectionTitle: {
-    marginTop: 20,
-    marginBottom: 8,
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#010D26",
-  },
-
-  priceBox: {
+  summaryCard: {
     borderRadius: 12,
-    paddingVertical: 12,
+    padding: 14,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
   },
-
-  row: {
+  summaryLabel: {
+    fontSize: 12,
+    color: "#E0E4FF",
+    marginBottom: 2,
+    fontFamily: "AlbertSans_400Regular",
+  },
+  summaryAmount: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#fff",
+    marginBottom: 12,
+    fontFamily: "AlbertSans_800ExtraBold",
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    marginBottom: 12,
+  },
+  summaryDetails: {
+    gap: 8,
+  },
+  summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
+    alignItems: "center",
   },
-
-  rowLabel: {
-    fontSize: 14,
-    color: "#010D26",
+  summaryRowLabel: {
+    fontSize: 13,
+    color: "#E0E4FF",
+    fontFamily: "AlbertSans_500Medium",
   },
-
-  rowValue: {
-    fontSize: 14,
-    color: "#111827",
-  },
-
-  boldText: {
+  summaryRowValue: {
+    fontSize: 13,
     fontWeight: "700",
+    color: "#fff",
+    fontFamily: "AlbertSans_700Bold",
   },
-
-  infoRow: {
+  anonymousCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    marginBottom: 12,
+  },
+  anonymousRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-
-  infoText: {
+  anonymousContent: {
     flex: 1,
-    fontSize: 12,
-    color: "#010D26",
-    marginRight: 8,
+    marginRight: 12,
   },
-
+  anonymousTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#010D26",
+    marginBottom: 2,
+    fontFamily: "AlbertSans_700Bold",
+  },
+  anonymousSubtitle: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
+  },
   customToggle: {
-    width: 36,
-    height: 20,
-    borderRadius: 12,
+    width: 40,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: "#E5E7EB",
     justifyContent: "center",
     alignItems: "flex-start",
@@ -703,40 +719,48 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   toggleThumb: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: "#fff",
   },
   toggleThumbActive: {
     backgroundColor: "#fff",
   },
-
   footer: {
     padding: 16,
-    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 6,
   },
-
   checkoutButton: {
+    backgroundColor: "#FFD602",
+    borderRadius: 10,
+    paddingVertical: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FACC15",
-    borderRadius: 10,
-    paddingVertical: 10,
     gap: 6,
+    marginBottom: 10,
   },
-
   checkoutText: {
     fontSize: 15,
-    fontWeight: "600",
-    color: "#000",
-  },
-
-  termsText: {
-    marginTop: 8,
-    fontSize: 12,
-    textAlign: "center",
+    fontWeight: "700",
     color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  termsText: {
+    fontSize: 11,
+    textAlign: "center",
+    color: "#E6ECFF",
+    fontFamily: "AlbertSans_400Regular",
+  },
+  termsLink: {
+    textDecorationLine: "underline",
+    color: "#FFD602",
   },
 });

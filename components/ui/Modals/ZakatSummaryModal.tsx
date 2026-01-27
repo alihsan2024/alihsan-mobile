@@ -8,7 +8,9 @@ import {
   Alert,
   Animated,
   Easing,
+  ScrollView,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -78,6 +80,13 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
       ]).start();
     }
   }, [visible]);
+
+  const formatCurrency = (value: number): string => {
+    return `$${value.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
 
   const sumArray = (arr: any[] = []) =>
     arr.reduce((s, i) => s + (i.value || 0), 0);
@@ -177,104 +186,135 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
         <Animated.View
           style={[styles.modalContainer, { transform: [{ scale }] }]}
         >
-          {/* ===== TOP ===== */}
-          <View style={styles.topContainer}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
             {/* CLOSE BUTTON */}
             <TouchableOpacity
               onPress={onClose}
               style={styles.closeButton}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="close" size={14} color="#FFFFFF" />
+              <Ionicons name="close" size={20} color="#010D26" />
             </TouchableOpacity>
 
-            <Text style={styles.title}>Your estimated Zakat Payment</Text>
+            {/* Main Summary Card with Gradient */}
+            <LinearGradient
+              colors={["#6A7BFF", "#5663F7"]}
+              style={styles.summaryCard}
+            >
+              <Text style={styles.guthenText}>Zakat Summary</Text>
+              <Text style={styles.summaryTitle}>Your Estimated Zakat Payment</Text>
 
-            <View style={styles.amountBox}>
-              <Text style={styles.amountText}>AUD {zakatOwed.toFixed(2)}</Text>
-            </View>
-
-            {[
-              { label: "Total Assets", value: totalAssets },
-              { label: "Total Liabilities", value: totalLiabilities },
-              { label: "Zakatable Wealth", value: zakatableWealth },
-              { label: "Zakat Owed", value: zakatOwed },
-            ].map((i) => (
-              <View key={i.label} style={styles.row}>
-                <Text style={styles.rowTextLeft}>{i.label}</Text>
-                <Text style={styles.rowTextRight}>{i.value.toFixed(2)}</Text>
+              <View style={styles.amountContainer}>
+                <Text style={styles.amountLabel}>Total Amount</Text>
+                <Text style={styles.amountValue}>
+                  {formatCurrency(zakatOwed)}
+                </Text>
               </View>
-            ))}
 
-            <View style={{ marginTop: 12 }}>
-              <Button
-                label="Pay Zakat Now"
-                variant="secondary"
+              <View style={styles.summaryDivider} />
+
+              <View style={styles.summaryDetails}>
+                {[
+                  { label: "Total Assets", value: totalAssets },
+                  { label: "Total Liabilities", value: totalLiabilities },
+                  { label: "Zakatable Wealth", value: zakatableWealth },
+                ].map((item) => (
+                  <View key={item.label} style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>{item.label}</Text>
+                    <Text style={styles.summaryValue}>
+                      {formatCurrency(item.value)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </LinearGradient>
+
+            {/* Action Buttons */}
+            <View style={styles.actionsContainer}>
+              <TouchableOpacity
+                style={styles.payButton}
                 onPress={handlePayZakat}
-                disabled={loading}
-              />
+                disabled={loading || zakatOwed <= 0}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.payButtonText}>
+                  {loading ? "Processing..." : "Pay Zakat Now"}
+                </Text>
+                <Ionicons name="arrow-forward" size={18} color="#010D26" />
+              </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={() => {
                   dispatch(zakatResetInput());
-                  dispatch(zakatStep(1 - step)); // Reset to step 1
+                  dispatch(zakatStep(1 - step));
                   onClose();
                 }}
                 style={styles.resetButton}
+                activeOpacity={0.8}
               >
-                <Text style={styles.resetText}>Reset</Text>
+                <Ionicons name="refresh-outline" size={16} color="#6B7280" />
+                <Text style={styles.resetText}>Reset Calculator</Text>
               </TouchableOpacity>
             </View>
-          </View>
 
-          {/* ===== BOTTOM ===== */}
-          <View style={styles.bottomContainer}>
-            <Text style={styles.subTitle}>
-              Calculation is Based on Silver NISAB
-            </Text>
-
-            <View style={styles.rowDark}>
-              <Text style={styles.darkTextLeft}>
-                Current price of gold per gram (24K)
+            {/* Details Card */}
+            <View style={styles.detailsCard}>
+              <Text style={styles.detailsTitle}>
+                Calculation Details
               </Text>
-              <Text style={styles.darkTextRight}>
-                {goldPriceAud.toFixed(2)} AUD
+              <Text style={styles.detailsSubtitle}>
+                Based on Silver NISAB
               </Text>
-            </View>
 
-            <View style={styles.rowDark}>
-              <Text style={styles.darkTextLeft}>
-                Current price of silver per gram (Fine)
-              </Text>
-              <Text style={styles.darkTextRight}>
-                {silverPriceAud.toFixed(2)} AUD
-              </Text>
-            </View>
+              <View style={styles.detailsDivider} />
 
-            <View style={styles.nisabRow}>
-              <View style={styles.goldBox}>
-                <Text style={styles.nisabText}>Gold Nisab</Text>
-                <Text style={styles.nisabText}>{goldNisab.toFixed(2)} AUD</Text>
-              </View>
-
-              <View style={styles.silverBox}>
-                <Text style={styles.nisabTextDark}>Silver Nisab</Text>
-                <Text style={styles.nisabTextDark}>
-                  {silverNisab.toFixed(2)} AUD
+              <View style={styles.detailsRow}>
+                <Text style={styles.detailsLabel}>
+                  Gold price per gram (24K)
+                </Text>
+                <Text style={styles.detailsValue}>
+                  {formatCurrency(goldPriceAud)}
                 </Text>
               </View>
-            </View>
 
-            {prices.price?.updatedAt && (
-              <View style={styles.footer}>
-                <Ionicons name="reload" size={12} color="#555" />
-                <Text style={styles.footerText}>
-                  Prices were last updated at{" "}
-                  {new Date(prices.price.updatedAt).toLocaleString()}
+              <View style={styles.detailsRow}>
+                <Text style={styles.detailsLabel}>
+                  Silver price per gram (Fine)
+                </Text>
+                <Text style={styles.detailsValue}>
+                  {formatCurrency(silverPriceAud)}
                 </Text>
               </View>
-            )}
-          </View>
+
+              <View style={styles.nisabContainer}>
+                <View style={styles.nisabCard}>
+                  <Text style={styles.nisabLabel}>Gold Nisab</Text>
+                  <Text style={styles.nisabValue}>
+                    {formatCurrency(goldNisab)}
+                  </Text>
+                </View>
+
+                <View style={[styles.nisabCard, styles.nisabCardSecondary]}>
+                  <Text style={styles.nisabLabel}>Silver Nisab</Text>
+                  <Text style={styles.nisabValue}>
+                    {formatCurrency(silverNisab)}
+                  </Text>
+                </View>
+              </View>
+
+              {prices.price?.updatedAt && (
+                <View style={styles.updateInfo}>
+                  <Ionicons name="time-outline" size={12} color="#9CA3AF" />
+                  <Text style={styles.updateText}>
+                    Last updated: {new Date(prices.price.updatedAt).toLocaleString()}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -284,161 +324,236 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.9)",
+    backgroundColor: "rgba(0,0,0,0.7)",
     justifyContent: "center",
     alignItems: "center",
+    padding: 12,
   },
   modalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    width: "100%",
+    maxWidth: 400,
+    maxHeight: "90%",
     overflow: "hidden",
-    backgroundColor: "transparent",
-    minWidth: 320,
-    width: "90%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 12,
+    position: "relative",
+  },
+  scrollContent: {
+    padding: 16,
   },
   closeButton: {
     position: "absolute",
-    top: 10,
-    right: 10,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F3F4F6",
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 10,
+    zIndex: 100,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  topContainer: {
-    backgroundColor: "#1E6EF2",
+  summaryCard: {
+    borderRadius: 16,
     padding: 16,
-    borderRadius: 14,
-    marginBottom: 10,
+    marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 6,
   },
-  title: {
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "600",
-    textAlign: "center",
-    marginBottom: 10,
-    marginTop: 4,
-  },
-  amountBox: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 12,
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  amountText: {
+  guthenText: {
     fontSize: 20,
-    fontWeight: "700",
-    color: "#1E6EF2",
+    fontFamily: "Guthen Bloots",
+    color: "#FFD602",
+    marginBottom: 4,
   },
-  row: {
+  summaryTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#fff",
+    marginBottom: 16,
+    fontFamily: "AlbertSans_800ExtraBold",
+  },
+  amountContainer: {
+    marginBottom: 16,
+  },
+  amountLabel: {
+    fontSize: 13,
+    color: "#E0E4FF",
+    marginBottom: 4,
+    fontFamily: "AlbertSans_400Regular",
+  },
+  amountValue: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#fff",
+    fontFamily: "AlbertSans_800ExtraBold",
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    marginVertical: 16,
+  },
+  summaryDetails: {
+    gap: 12,
+  },
+  summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.4)",
-    paddingVertical: 6,
+    alignItems: "center",
   },
-  rowTextLeft: {
-    color: "#FFFFFFCC",
+  summaryLabel: {
     fontSize: 14,
+    color: "#E0E4FF",
+    fontFamily: "AlbertSans_500Medium",
   },
-  rowTextRight: {
-    color: "#FFFFFF",
+  summaryValue: {
     fontSize: 14,
+    fontWeight: "700",
+    color: "#fff",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  actionsContainer: {
+    gap: 12,
+    marginBottom: 12,
+  },
+  payButton: {
+    backgroundColor: "#FFD602",
+    borderRadius: 12,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    minHeight: 52,
+  },
+  payButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
   },
   resetButton: {
-    backgroundColor: "#FFFFFF1A",
-    padding: 8,
-    borderRadius: 8,
-    marginTop: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    minHeight: 52,
   },
   resetText: {
-    color: "#fff",
-    textAlign: "center",
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6B7280",
+    fontFamily: "AlbertSans_600SemiBold",
   },
-  bottomContainer: {
+  detailsCard: {
     backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
-  subTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 10,
+  detailsTitle: {
+    fontSize: 18,
+    fontWeight: "800",
     color: "#010D26",
+    marginBottom: 4,
+    fontFamily: "AlbertSans_800ExtraBold",
   },
-  rowDark: {
+  detailsSubtitle: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginBottom: 16,
+    fontFamily: "AlbertSans_400Regular",
+  },
+  detailsDivider: {
+    height: 1,
+    backgroundColor: "#E5E7EB",
+    marginBottom: 16,
+  },
+  detailsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-    paddingVertical: 6,
+    borderBottomColor: "#F3F4F6",
   },
-  darkTextLeft: {
+  detailsLabel: {
     fontSize: 14,
-    color: "#010D26",
-    opacity: 0.7,
+    color: "#6B7280",
+    flex: 1,
+    fontFamily: "AlbertSans_400Regular",
   },
-  darkTextRight: {
+  detailsValue: {
     fontSize: 14,
+    fontWeight: "700",
     color: "#010D26",
-    fontWeight: "600",
+    fontFamily: "AlbertSans_700Bold",
   },
-  nisabRow: {
+  nisabContainer: {
     flexDirection: "row",
-    marginTop: 12,
-    gap: 6,
+    gap: 12,
+    marginTop: 16,
   },
-  goldBox: {
+  nisabCard: {
     flex: 1,
-    backgroundColor: "#FFD60233",
-    padding: 8,
-    borderRadius: 8,
-    flexDirection: "row",
-    justifyContent: "space-between",
+    backgroundColor: "#FFD602",
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
   },
-  silverBox: {
-    flex: 1,
-    backgroundColor: "#F5F5F5",
-    padding: 8,
-    borderRadius: 8,
-    flexDirection: "row",
-    justifyContent: "space-between",
+  nisabCardSecondary: {
+    backgroundColor: "#F3F4F6",
   },
-  nisabText: {
+  nisabLabel: {
     fontSize: 12,
     fontWeight: "600",
     color: "#010D26",
+    marginBottom: 4,
     opacity: 0.7,
+    fontFamily: "AlbertSans_600SemiBold",
   },
-  nisabTextDark: {
-    fontSize: 13,
-    fontWeight: "600",
+  nisabValue: {
+    fontSize: 14,
+    fontWeight: "700",
     color: "#010D26",
-    opacity: 0.7,
+    fontFamily: "AlbertSans_700Bold",
   },
-  footer: {
+  updateInfo: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 12,
-    gap: 4,
+    gap: 6,
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
   },
-  footerText: {
-    fontSize: 10,
-    color: "#666",
-    textAlign: "center",
+  updateText: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    fontFamily: "AlbertSans_400Regular",
   },
 });

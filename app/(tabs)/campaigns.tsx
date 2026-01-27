@@ -124,7 +124,10 @@ export default function ActiveAppealsScreen() {
       />
 
       {/* Title */}
-      <Text style={styles.heading}>Active Appeals</Text>
+      <View style={styles.headingContainer}>
+        <Text style={styles.guthenText}>Explore</Text>
+        <Text style={styles.heading}>Active Appeals</Text>
+      </View>
 
       {/* Categories */}
       {!isCategoriesCollapsed ? (
@@ -133,30 +136,24 @@ export default function ActiveAppealsScreen() {
             const Icon = item.Icon;
             const isSelected = selectedCategory === item.label;
 
-            const activeColor = isSelected ? "#246BE1" : "#010D264D";
+            const activeColor = isSelected ? "#264B8B" : "#6B7280";
 
             return (
               <TouchableOpacity
                 key={index}
                 style={[
                   styles.categoryItem,
-                  isSelected && {
-                    backgroundColor: "#E3F0FF",
-                    borderRadius: 8,
-                  },
+                  isSelected && styles.categoryItemSelected,
                 ]}
                 onPress={() => setSelectedCategory(item.label)}
                 activeOpacity={0.7}
               >
-                <Icon width={20} height={20} color={activeColor} />
+                <Icon width={22} height={22} color={activeColor} />
 
                 <Text
                   style={[
                     styles.categoryText,
-                    {
-                      fontWeight: isSelected ? "600" : "500",
-                      opacity: isSelected ? 1 : 0.6,
-                    },
+                    isSelected && styles.categoryTextSelected,
                   ]}
                 >
                   {item.label}
@@ -176,27 +173,21 @@ export default function ActiveAppealsScreen() {
             <TouchableOpacity
               style={[
                 styles.categoryItemHorizontal,
-                selectedCategory === item.label && {
-                  backgroundColor: "#E3F0FF",
-                  borderRadius: 8,
-                },
+                selectedCategory === item.label && styles.categoryItemSelected,
               ]}
               onPress={() => setSelectedCategory(item.label)}
               activeOpacity={0.7}
             >
               <Ionicons
                 name={item.Icon as any}
-                size={20}
-                color={selectedCategory === item.label ? "#246BE1" : "#777"}
+                size={22}
+                color={selectedCategory === item.label ? "#264B8B" : "#6B7280"}
                 style={{ marginBottom: 6 }}
               />
               <Text
                 style={[
                   styles.categoryText,
-                  selectedCategory === item.label && {
-                    color: "#246BE1",
-                    fontWeight: "bold",
-                  },
+                  selectedCategory === item.label && styles.categoryTextSelected,
                 ]}
               >
                 {item.label}
@@ -208,23 +199,16 @@ export default function ActiveAppealsScreen() {
 
       <TouchableOpacity
         onPress={() => setIsCategoriesCollapsed(!isCategoriesCollapsed)}
-        style={{ alignSelf: "center", marginBottom: 12, padding: 4 }}
+        style={styles.collapseButton}
         activeOpacity={0.7}
       >
         <Ionicons
           name={isCategoriesCollapsed ? "chevron-down" : "chevron-up"}
           size={20}
-          color="#777"
+          color="#6B7280"
         />
       </TouchableOpacity>
-      <View
-        style={{
-          height: 1,
-          backgroundColor: "#E0E0E0",
-          marginVertical: 10,
-          width: "100%",
-        }}
-      />
+      <View style={styles.divider} />
 
       {/* Sort */}
       <View style={styles.sortRow}>
@@ -324,7 +308,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
   },
 
   searchContainer: {
@@ -342,55 +326,98 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
+  headingContainer: {
+    marginVertical: 20,
+  },
+  guthenText: {
+    fontSize: 24,
+    fontFamily: "Guthen Bloots",
+    color: "#FFD602",
+    marginBottom: 4,
+  },
   heading: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginVertical: 16,
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#010D26",
+    fontFamily: "AlbertSans_800ExtraBold",
   },
 
   categories: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+    gap: 8,
   },
   categoriesHorizontal: {
     paddingVertical: 8,
   },
   categoryItem: {
-    width: "25%",
+    width: "23%",
     alignItems: "center",
     marginBottom: 16,
-    paddingVertical: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    backgroundColor: "#F9FAFB",
   },
   categoryItemHorizontal: {
     alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     marginRight: 8,
-    minWidth: 70,
+    minWidth: 80,
+    borderRadius: 12,
+    backgroundColor: "#F9FAFB",
   },
   categoryText: {
     fontSize: 12,
-    color: "#010D26",
+    color: "#6B7280",
     textAlign: "center",
-    marginTop: 6,
+    marginTop: 8,
     fontWeight: "500",
-    opacity: 0.6,
+    fontFamily: "AlbertSans_500Medium",
+  },
+  categoryItemSelected: {
+    backgroundColor: "#EEF4FF",
+    borderWidth: 1,
+    borderColor: "#264B8B",
+  },
+  categoryTextSelected: {
+    color: "#264B8B",
+    fontWeight: "700",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  collapseButton: {
+    alignSelf: "center",
+    marginBottom: 12,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "#F9FAFB",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#E5E7EB",
+    marginVertical: 16,
+    width: "100%",
   },
 
   sortRow: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    gap: 6,
-    marginBottom: 12,
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
   },
   sortText: {
-    fontSize: 12,
-    color: "#777",
+    fontSize: 14,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
   },
   sortValue: {
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#010D26",
+    fontFamily: "AlbertSans_600SemiBold",
   },
 
   cards: {
@@ -401,51 +428,57 @@ const styles = StyleSheet.create({
   },
   card: {
     width: "48%",
-    borderRadius: 12,
-    marginBottom: 12,
+    borderRadius: 16,
+    marginBottom: 16,
     overflow: "hidden",
     backgroundColor: "#fff",
     borderWidth: 1,
     borderColor: "#E5E7EB",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    height: 240,
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+    height: 250,
     flexDirection: "column",
   },
   cardImage: {
     width: "100%",
-    height: 120,
+    height: 125,
     flexShrink: 0,
   },
   cardContent: {
-    height: 120,
-    padding: 12,
+    flex: 1,
+    padding: 14,
+    paddingBottom: 12,
     justifyContent: "space-between",
     overflow: "hidden",
   },
   cardTextContainer: {
     flex: 1,
     minHeight: 0,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   cardTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
-    marginBottom: 4,
+    marginBottom: 6,
     color: "#010D26",
-    lineHeight: 16,
+    lineHeight: 18,
+    fontFamily: "AlbertSans_700Bold",
   },
   cardSubtitle: {
     fontSize: 11,
     color: "#6B7280",
-    lineHeight: 14,
+    lineHeight: 15,
+    fontFamily: "AlbertSans_400Regular",
   },
   cardFooter: {
-    height: 32,
     justifyContent: "center",
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+    marginTop: 8,
   },
   donateButton: {
     backgroundColor: "#FFD602",
@@ -461,5 +494,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
   },
 });

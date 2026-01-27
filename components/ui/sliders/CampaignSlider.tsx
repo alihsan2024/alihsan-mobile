@@ -39,7 +39,7 @@ export default function CampaignSlider({ data, onPress }: Props) {
     <FlatList
       data={data}
       horizontal
-      style={{ marginBottom: 100 }}
+      style={{ marginBottom: 0 }}
       showsHorizontalScrollIndicator={false}
       keyExtractor={(item) => item.id.toString()}
       renderItem={({ item, index }) => (

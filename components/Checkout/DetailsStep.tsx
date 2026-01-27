@@ -111,38 +111,40 @@ const DetailsStep = ({ values, onChange, onValidChange }: Props) => {
   }, [formik.values.fullName, formik.values.email, formik.values.phone]);
 
   return (
-    <View>
+    <View style={styles.container}>
       <Text style={styles.sectionTitle}>Your Identity</Text>
       <Text style={styles.helperText}>
         Ensure your details are correct for receipts.
       </Text>
 
-      <Input
-        label="Full Name"
-        placeholder="Enter full name"
-        value={formik.values.fullName}
-        onChangeText={formik.handleChange("fullName")}
-        error={formik.touched.fullName ? formik.errors.fullName : undefined}
-      />
+      <View style={styles.formContainer}>
+        <Input
+          label="Full Name"
+          placeholder="Enter full name"
+          value={formik.values.fullName}
+          onChangeText={formik.handleChange("fullName")}
+          error={formik.touched.fullName ? formik.errors.fullName : undefined}
+        />
 
-      <Input
-        label="Email"
-        placeholder="Enter email"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        value={formik.values.email}
-        onChangeText={formik.handleChange("email")}
-        error={formik.touched.email ? formik.errors.email : undefined}
-      />
+        <Input
+          label="Email"
+          placeholder="Enter email"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={formik.values.email}
+          onChangeText={formik.handleChange("email")}
+          error={formik.touched.email ? formik.errors.email : undefined}
+        />
 
-      <Input
-        label="Phone"
-        placeholder="Enter phone number"
-        keyboardType="phone-pad"
-        value={formik.values.phone}
-        onChangeText={formik.handleChange("phone")}
-        error={formik.touched.phone ? formik.errors.phone : undefined}
-      />
+        <Input
+          label="Phone"
+          placeholder="Enter phone number"
+          keyboardType="phone-pad"
+          value={formik.values.phone}
+          onChangeText={formik.handleChange("phone")}
+          error={formik.touched.phone ? formik.errors.phone : undefined}
+        />
+      </View>
     </View>
   );
 };
@@ -150,6 +152,28 @@ const DetailsStep = ({ values, onChange, onValidChange }: Props) => {
 export default DetailsStep;
 
 const styles = StyleSheet.create({
-  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 4 },
-  helperText: { color: "#777", marginBottom: 16 },
+  container: {
+    alignItems: "center",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#010D26",
+    marginBottom: 4,
+    fontFamily: "AlbertSans_800ExtraBold",
+    textAlign: "center",
+    width: "100%",
+  },
+  helperText: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginBottom: 16,
+    fontFamily: "AlbertSans_400Regular",
+    textAlign: "center",
+    width: "100%",
+  },
+  formContainer: {
+    width: "100%",
+    gap: 12,
+  },
 });

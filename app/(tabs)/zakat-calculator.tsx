@@ -67,27 +67,34 @@ export default function ZakatCalculatorScreen() {
   }, [step]);
 
   const sumArray = (arr: any[] = []) =>
-    arr.reduce((s, i) => s + (i.value || 0), 0);
+    arr.reduce((s, i) => {
+      const value = i.value || 0;
+      return s + (isNaN(value) ? 0 : value);
+    }, 0);
 
   // Total zakatable wealth
-  const totalWealth =
-    (amounts.cash || 0) +
-    (amounts.bank || 0) +
-    sumArray(amounts.gold) +
-    sumArray(amounts.silver) +
-    (amounts.investmentProfit || 0) +
-    (amounts.shareResale || 0) +
-    (amounts.merchandise || 0) +
-    (amounts.loan || 0) +
-    (amounts.other || 0);
+  const totalWealth = (() => {
+    const cash = isNaN(amounts.cash) ? 0 : (amounts.cash || 0);
+    const bank = isNaN(amounts.bank) ? 0 : (amounts.bank || 0);
+    const gold = sumArray(amounts.gold);
+    const silver = sumArray(amounts.silver);
+    const investmentProfit = isNaN(amounts.investmentProfit) ? 0 : (amounts.investmentProfit || 0);
+    const shareResale = isNaN(amounts.shareResale) ? 0 : (amounts.shareResale || 0);
+    const merchandise = isNaN(amounts.merchandise) ? 0 : (amounts.merchandise || 0);
+    const loan = isNaN(amounts.loan) ? 0 : (amounts.loan || 0);
+    const other = isNaN(amounts.other) ? 0 : (amounts.other || 0);
+    
+    const total = cash + bank + gold + silver + investmentProfit + shareResale + merchandise + loan + other;
+    return isNaN(total) ? 0 : total;
+  })();
 
-  const goldPriceAud = Number(prices.price?.goldPriceInAud || 0);
-  const silverPriceAud = Number(prices.silverFinePriceInAud || 0);
+  const goldPriceAud = isNaN(Number(prices.price?.goldPriceInAud)) ? 0 : Number(prices.price?.goldPriceInAud || 0);
+  const silverPriceAud = isNaN(Number(prices.silverFinePriceInAud)) ? 0 : Number(prices.silverFinePriceInAud || 0);
 
-  const goldNisabAud = 87.48 * goldPriceAud;
-  const silverNisabAud = 612.36 * silverPriceAud;
+  const goldNisabAud = isNaN(87.48 * goldPriceAud) ? 0 : 87.48 * goldPriceAud;
+  const silverNisabAud = isNaN(612.36 * silverPriceAud) ? 0 : 612.36 * silverPriceAud;
 
-  const zakat = totalWealth >= silverNisabAud ? totalWealth / 40 : 0;
+  const zakat = totalWealth >= silverNisabAud ? (isNaN(totalWealth / 40) ? 0 : totalWealth / 40) : 0;
 
   // Helper function to calculate metal value in AUD
   const calculateMetalValue = (
@@ -95,9 +102,10 @@ export default function ZakatCalculatorScreen() {
     unit: string,
     pricePerGram: number
   ): number => {
-    if (!weight || !pricePerGram) return 0;
+    if (!weight || !pricePerGram || isNaN(weight) || isNaN(pricePerGram)) return 0;
     const weightInGrams = unit === "ounce" ? weight * 31.1035 : weight;
-    return weightInGrams * pricePerGram;
+    const result = weightInGrams * pricePerGram;
+    return isNaN(result) ? 0 : result;
   };
 
   const renderStep = () => {
@@ -114,9 +122,10 @@ export default function ZakatCalculatorScreen() {
                 style={styles.input}
                 keyboardType="numeric"
                 value={amounts.cash?.toString() || ""}
-                onChangeText={(v) =>
-                  dispatch(zakatInput({ name: "cash", value: Number(v) }))
-                }
+                onChangeText={(v) => {
+                  const numValue = Number(v) || 0;
+                  dispatch(zakatInput({ name: "cash", value: isNaN(numValue) ? 0 : numValue }));
+                }}
               />
             </View>
             <Text style={styles.tip}>
@@ -130,9 +139,10 @@ export default function ZakatCalculatorScreen() {
                 style={styles.input}
                 keyboardType="numeric"
                 value={amounts.bank?.toString() || ""}
-                onChangeText={(v) =>
-                  dispatch(zakatInput({ name: "bank", value: Number(v) }))
-                }
+                onChangeText={(v) => {
+                  const numValue = Number(v) || 0;
+                  dispatch(zakatInput({ name: "bank", value: isNaN(numValue) ? 0 : numValue }));
+                }}
               />
             </View>
             <Text style={styles.tip}>
@@ -153,14 +163,15 @@ export default function ZakatCalculatorScreen() {
                 style={styles.input}
                 keyboardType="numeric"
                 value={amounts.investmentProfit?.toString() || ""}
-                onChangeText={(v) =>
+                onChangeText={(v) => {
+                  const numValue = Number(v) || 0;
                   dispatch(
                     zakatInput({
                       name: "investmentProfit",
-                      value: Number(v),
+                      value: isNaN(numValue) ? 0 : numValue,
                     })
-                  )
-                }
+                  );
+                }}
               />
             </View>
             <Text style={styles.tip}>
@@ -174,14 +185,15 @@ export default function ZakatCalculatorScreen() {
                 style={styles.input}
                 keyboardType="numeric"
                 value={amounts.shareResale?.toString() || ""}
-                onChangeText={(v) =>
+                onChangeText={(v) => {
+                  const numValue = Number(v) || 0;
                   dispatch(
                     zakatInput({
                       name: "shareResale",
-                      value: Number(v),
+                      value: isNaN(numValue) ? 0 : numValue,
                     })
-                  )
-                }
+                  );
+                }}
               />
             </View>
             <Text style={styles.tip}>
@@ -195,14 +207,15 @@ export default function ZakatCalculatorScreen() {
                 style={styles.input}
                 keyboardType="numeric"
                 value={amounts.merchandise?.toString() || ""}
-                onChangeText={(v) =>
+                onChangeText={(v) => {
+                  const numValue = Number(v) || 0;
                   dispatch(
                     zakatInput({
                       name: "merchandise",
-                      value: Number(v),
+                      value: isNaN(numValue) ? 0 : numValue,
                     })
-                  )
-                }
+                  );
+                }}
               />
             </View>
             <Text style={styles.tip}>
@@ -228,7 +241,7 @@ export default function ZakatCalculatorScreen() {
                   value={amounts.gold?.[0]?.weight?.toString() || ""}
                   placeholder="0"
                   onChangeText={(v) => {
-                    const weight = Number(v) || 0;
+                    const weight = isNaN(Number(v)) ? 0 : (Number(v) || 0);
                     const unit = amounts.gold?.[0]?.unit || "gram";
                     const calculatedValue = calculateMetalValue(
                       weight,
@@ -240,7 +253,7 @@ export default function ZakatCalculatorScreen() {
                         name: "gold",
                         key: 0,
                         weight,
-                        value: calculatedValue,
+                        value: isNaN(calculatedValue) ? 0 : calculatedValue,
                         unit,
                         type: "gold",
                       })
@@ -268,7 +281,7 @@ export default function ZakatCalculatorScreen() {
                     <TouchableOpacity
                       style={[styles.dropdownItem, { borderBottomWidth: 1 }]}
                       onPress={() => {
-                        const weight = amounts.gold?.[0]?.weight || 0;
+                        const weight = isNaN(amounts.gold?.[0]?.weight) ? 0 : (amounts.gold?.[0]?.weight || 0);
                         const calculatedValue = calculateMetalValue(
                           weight,
                           "gram",
@@ -279,7 +292,7 @@ export default function ZakatCalculatorScreen() {
                             name: "gold",
                             key: 0,
                             weight,
-                            value: calculatedValue,
+                            value: isNaN(calculatedValue) ? 0 : calculatedValue,
                             unit: "gram",
                             type: "gold",
                           })
@@ -300,7 +313,7 @@ export default function ZakatCalculatorScreen() {
                     <TouchableOpacity
                       style={styles.dropdownItem}
                       onPress={() => {
-                        const weight = amounts.gold?.[0]?.weight || 0;
+                        const weight = isNaN(amounts.gold?.[0]?.weight) ? 0 : (amounts.gold?.[0]?.weight || 0);
                         const calculatedValue = calculateMetalValue(
                           weight,
                           "ounce",
@@ -311,7 +324,7 @@ export default function ZakatCalculatorScreen() {
                             name: "gold",
                             key: 0,
                             weight,
-                            value: calculatedValue,
+                            value: isNaN(calculatedValue) ? 0 : calculatedValue,
                             unit: "ounce",
                             type: "gold",
                           })
@@ -354,7 +367,7 @@ export default function ZakatCalculatorScreen() {
                   value={amounts.silver?.[0]?.weight?.toString() || ""}
                   placeholder="0"
                   onChangeText={(v) => {
-                    const weight = Number(v) || 0;
+                    const weight = isNaN(Number(v)) ? 0 : (Number(v) || 0);
                     const unit = amounts.silver?.[0]?.unit || "gram";
                     const calculatedValue = calculateMetalValue(
                       weight,
@@ -366,7 +379,7 @@ export default function ZakatCalculatorScreen() {
                         name: "silver",
                         key: 0,
                         weight,
-                        value: calculatedValue,
+                        value: isNaN(calculatedValue) ? 0 : calculatedValue,
                         unit,
                         type: "silver",
                       })
@@ -394,7 +407,7 @@ export default function ZakatCalculatorScreen() {
                     <TouchableOpacity
                       style={[styles.dropdownItem, { borderBottomWidth: 1 }]}
                       onPress={() => {
-                        const weight = amounts.silver?.[0]?.weight || 0;
+                        const weight = isNaN(amounts.silver?.[0]?.weight) ? 0 : (amounts.silver?.[0]?.weight || 0);
                         const calculatedValue = calculateMetalValue(
                           weight,
                           "gram",
@@ -405,7 +418,7 @@ export default function ZakatCalculatorScreen() {
                             name: "silver",
                             key: 0,
                             weight,
-                            value: calculatedValue,
+                            value: isNaN(calculatedValue) ? 0 : calculatedValue,
                             unit: "gram",
                             type: "silver",
                           })
@@ -426,7 +439,7 @@ export default function ZakatCalculatorScreen() {
                     <TouchableOpacity
                       style={styles.dropdownItem}
                       onPress={() => {
-                        const weight = amounts.silver?.[0]?.weight || 0;
+                        const weight = isNaN(amounts.silver?.[0]?.weight) ? 0 : (amounts.silver?.[0]?.weight || 0);
                         const calculatedValue = calculateMetalValue(
                           weight,
                           "ounce",
@@ -437,7 +450,7 @@ export default function ZakatCalculatorScreen() {
                             name: "silver",
                             key: 0,
                             weight,
-                            value: calculatedValue,
+                            value: isNaN(calculatedValue) ? 0 : calculatedValue,
                             unit: "ounce",
                             type: "silver",
                           })
@@ -484,9 +497,10 @@ export default function ZakatCalculatorScreen() {
                 style={styles.input}
                 keyboardType="numeric"
                 value={amounts.loan?.toString() || ""}
-                onChangeText={(v) =>
-                  dispatch(zakatInput({ name: "loan", value: Number(v) }))
-                }
+                onChangeText={(v) => {
+                  const numValue = Number(v) || 0;
+                  dispatch(zakatInput({ name: "loan", value: isNaN(numValue) ? 0 : numValue }));
+                }}
               />
             </View>
             <Text style={styles.tip}>
@@ -500,9 +514,10 @@ export default function ZakatCalculatorScreen() {
                 style={styles.input}
                 keyboardType="numeric"
                 value={amounts.other?.toString() || ""}
-                onChangeText={(v) =>
-                  dispatch(zakatInput({ name: "other", value: Number(v) }))
-                }
+                onChangeText={(v) => {
+                  const numValue = Number(v) || 0;
+                  dispatch(zakatInput({ name: "other", value: isNaN(numValue) ? 0 : numValue }));
+                }}
               />
             </View>
             <Text style={styles.tip}>
@@ -538,6 +553,7 @@ export default function ZakatCalculatorScreen() {
         />
 
         <View style={styles.headerContent}>
+          <Text style={styles.guthenText}>Calculate Your Zakat</Text>
           <Text style={styles.headerTitle}>Zakat Calculator</Text>
           <Text style={styles.headerSubtitle}>
             Accurately determine your Zakat with our scholar-verified
@@ -579,7 +595,7 @@ export default function ZakatCalculatorScreen() {
         {/* Row 1 */}
         <View style={styles.footerRow}>
           <Text style={styles.footerTitle}>Your estimated Zakat Payment</Text>
-          <Text style={styles.footerAmount}>AUD {zakat.toFixed(2)}</Text>
+          <Text style={styles.footerAmount}>AUD {isNaN(zakat) ? "0.00" : zakat.toFixed(2)}</Text>
         </View>
 
         {/* Divider */}
@@ -599,16 +615,50 @@ export default function ZakatCalculatorScreen() {
             <Ionicons name="chevron-forward" size={14} color="#fff" />
           </TouchableOpacity>
         </View>
+
+        {/* Navigation Buttons */}
+        <View style={styles.footerDivider} />
+        <View style={styles.navigationButtonsContainer}>
+          {step > 1 && (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => dispatch(zakatStep(-1))}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="chevron-back" size={18} color="#6B7280" />
+              <Text style={styles.backButtonText}>Back</Text>
+            </TouchableOpacity>
+          )}
+          {step < 4 ? (
+            <TouchableOpacity
+              style={styles.nextButton}
+              onPress={() => dispatch(zakatStep(1))}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.nextButtonText}>Continue</Text>
+              <Ionicons name="chevron-forward" size={18} color="#010D26" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.finishButton}
+              onPress={() => setSummaryOpen(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.finishButtonText}>Finish</Text>
+              <Ionicons name="checkmark-circle" size={18} color="#010D26" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F6F7FB" },
+  container: { flex: 1, backgroundColor: "#fff" },
 
   headerWrapper: {
-    height: 220,
+    height: 240,
     width: "100%",
     position: "relative",
     justifyContent: "flex-end",
@@ -616,35 +666,47 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     position: "absolute",
-    bottom: 20,
+    bottom: 24,
     left: 20,
     right: 20,
     zIndex: 1,
   },
-  headerTitle: { color: "#fff", fontSize: 22, fontWeight: "700" },
+  guthenText: {
+    fontSize: 24,
+    fontFamily: "Guthen Bloots",
+    color: "#FFD602",
+    marginBottom: 4,
+  },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 28,
+    fontWeight: "800",
+    fontFamily: "AlbertSans_800ExtraBold",
+    marginBottom: 8,
+  },
   headerSubtitle: {
     color: "#E6ECFF",
-    fontSize: 14,
-    marginTop: 6,
-    marginBottom: 10,
+    fontSize: 15,
+    lineHeight: 22,
+    fontFamily: "AlbertSans_400Regular",
   },
 
   tabs: {
     flexDirection: "row",
-    marginTop: 20,
-    marginHorizontal: 16,
-    marginBottom: 8,
+    marginTop: 24,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    gap: 8,
   },
   tabWrap: {
     flex: 1,
     alignItems: "center",
-    marginHorizontal: 4,
   },
   tabLine: {
     height: 4,
     width: "100%",
     borderRadius: 4,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   tabActive: {
     backgroundColor: "#264B8B",
@@ -653,67 +715,81 @@ const styles = StyleSheet.create({
     backgroundColor: "#E5E7EB",
   },
   tabText: {
-    fontSize: 11,
-    color: "#9AA0B5",
+    fontSize: 12,
+    color: "#9CA3AF",
     textAlign: "center",
     fontWeight: "500",
+    fontFamily: "AlbertSans_500Medium",
   },
   tabTextActive: {
     color: "#264B8B",
-    fontWeight: "600",
+    fontWeight: "700",
+    fontFamily: "AlbertSans_700Bold",
   },
 
-  content: { padding: 20, paddingTop: 28 },
+  content: { padding: 20, paddingTop: 24 },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 20,
+    fontSize: 24,
+    fontWeight: "800",
+    marginBottom: 16,
     color: "#010D26",
+    fontFamily: "AlbertSans_800ExtraBold",
   },
   label: {
-    fontSize: 12,
-    color: "#6B7280",
+    fontSize: 14,
+    color: "#374151",
     marginBottom: 8,
-    fontWeight: "500",
+    fontWeight: "600",
+    fontFamily: "AlbertSans_600SemiBold",
   },
   tip: {
-    fontSize: 11,
-    color: "#9CA3AF",
-    marginTop: -12,
-    marginBottom: 16,
-    fontStyle: "italic",
-    lineHeight: 14,
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 4,
+    marginBottom: 12,
+    lineHeight: 18,
+    fontFamily: "AlbertSans_400Regular",
   },
   valueDisplay: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#264B8B",
-    fontWeight: "600",
-    marginTop: -10,
-    marginBottom: 16,
+    fontWeight: "700",
+    marginTop: 4,
+    marginBottom: 12,
+    fontFamily: "AlbertSans_700Bold",
   },
   inputWithPrefix: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    marginBottom: 16,
-    paddingLeft: 12,
+    marginBottom: 12,
+    paddingLeft: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   prefix: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#6B7280",
-    fontWeight: "500",
-    marginRight: 4,
+    fontWeight: "600",
+    marginRight: 6,
+    fontFamily: "AlbertSans_600SemiBold",
   },
   input: {
     flex: 1,
     backgroundColor: "transparent",
     borderWidth: 0,
-    padding: 12,
+    padding: 14,
     paddingLeft: 0,
     marginBottom: 0,
+    fontSize: 15,
+    color: "#010D26",
+    fontFamily: "AlbertSans_400Regular",
   },
 
   row: { flexDirection: "row", gap: 10 },
@@ -733,16 +809,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "#fff",
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     padding: 12,
     height: 44,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   dropdownText: {
     fontSize: 14,
     color: "#264B8B",
-    fontWeight: "500",
+    fontWeight: "600",
+    fontFamily: "AlbertSans_600SemiBold",
   },
   dropdownMenu: {
     position: "absolute",
@@ -750,36 +832,45 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: "#fff",
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 8,
     zIndex: 1000,
     overflow: "hidden",
   },
   dropdownItem: {
-    padding: 12,
+    padding: 14,
     borderBottomColor: "#F3F4F6",
   },
   dropdownItemText: {
     fontSize: 14,
     color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
   },
   dropdownItemTextActive: {
     color: "#264B8B",
-    fontWeight: "600",
+    fontWeight: "700",
+    fontFamily: "AlbertSans_700Bold",
   },
 
   reviewWrap: { alignItems: "flex-end" },
 
   footer: {
-    backgroundColor: "#246BE1",
-    padding: 16,
+    backgroundColor: "#264B8B",
+    padding: 20,
     marginTop: 16,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
   },
 
   footerRow: {
@@ -791,38 +882,96 @@ const styles = StyleSheet.create({
   footerDivider: {
     height: 1,
     backgroundColor: "#fff",
-    opacity: 0.1,
-    marginVertical: 10,
+    opacity: 0.2,
+    marginVertical: 12,
   },
 
   footerTitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#fff",
-    opacity: 0.8,
+    opacity: 0.9,
+    fontFamily: "AlbertSans_500Medium",
   },
 
   footerAmount: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#fff",
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#FFD602",
+    fontFamily: "AlbertSans_800ExtraBold",
   },
 
   footerSub: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#fff",
-    opacity: 0.7,
+    opacity: 0.8,
+    fontFamily: "AlbertSans_400Regular",
   },
 
   reviewRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
 
   reviewText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#fff",
-    textDecorationLine: "underline",
+    fontWeight: "700",
+    color: "#FFD602",
+    fontFamily: "AlbertSans_700Bold",
+  },
+
+  navigationButtonsContainer: {
+    marginTop: 8,
+    gap: 12,
+  },
+  backButton: {
+    width: "100%",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#6B7280",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  nextButton: {
+    width: "100%",
+    backgroundColor: "#FFD602",
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  nextButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  finishButton: {
+    width: "100%",
+    backgroundColor: "#FFD602",
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  finishButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
   },
 });

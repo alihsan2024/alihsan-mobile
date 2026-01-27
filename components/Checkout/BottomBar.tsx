@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Animated,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 
 type Props = {
@@ -32,20 +33,12 @@ export default function BottomBar({
   const [isExpanded, setIsExpanded] = useState(false);
   const [animation] = useState(new Animated.Value(0));
 
-  const formattedTotal = total.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-
-  const formattedSubtotal = subtotal.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-
-  const formattedAdminFee = adminFee.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  const formatCurrency = (value: number): string => {
+    return `$${value.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
 
   const toggleExpand = () => {
     const toValue = isExpanded ? 0 : 1;
@@ -59,7 +52,7 @@ export default function BottomBar({
 
   const breakdownHeight = animation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 80],
+    outputRange: [0, 70],
   });
 
   const breakdownOpacity = animation.interpolate({
@@ -73,7 +66,10 @@ export default function BottomBar({
   });
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={["#264B8B", "#1E3A8A"]}
+      style={styles.container}
+    >
       {/* Expandable Breakdown */}
       <Animated.View
         style={[
@@ -88,69 +84,73 @@ export default function BottomBar({
         <View style={styles.breakdownContent}>
           <View style={styles.breakdownRow}>
             <Text style={styles.breakdownLabel}>Subtotal</Text>
-            <Text style={styles.breakdownValue}>AUD {formattedSubtotal}</Text>
+            <Text style={styles.breakdownValue}>{formatCurrency(subtotal)}</Text>
           </View>
           <View style={styles.breakdownRow}>
             <Text style={styles.breakdownLabel}>Admin Fee</Text>
-            <Text style={styles.breakdownValue}>AUD {formattedAdminFee}</Text>
+            <Text style={styles.breakdownValue}>{formatCurrency(adminFee)}</Text>
           </View>
         </View>
       </Animated.View>
 
       {/* Main Bottom Bar */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={styles.totalSection}
-          onPress={toggleExpand}
-          activeOpacity={0.7}
-        >
-          <Animated.View
-            style={[
-              styles.arrowCircle,
-              {
-                transform: [{ rotate: arrowRotation }],
-              },
-            ]}
+        <View style={styles.totalSection}>
+          <TouchableOpacity
+            style={styles.totalButton}
+            onPress={toggleExpand}
+            activeOpacity={0.7}
           >
-            <Ionicons name="chevron-up" size={14} color="#246BE1" />
-          </Animated.View>
-          <View style={styles.totalTextContainer}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.total}>AUD {formattedTotal}</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.button,
-            isLast && styles.checkoutButton,
-            disabled && styles.buttonDisabled,
-          ]}
-          onPress={onNext}
-          disabled={disabled || loading}
-          activeOpacity={0.85}
-        >
-          {/* Invisible content keeps width stable */}
-          <View style={[styles.content, loading && styles.contentHidden]}>
-            <Text style={[styles.buttonText, isLast && styles.checkoutText]}>
-              {isLast ? "Checkout" : "Next"}
-            </Text>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={isLast ? "#000" : "#244180"}
-            />
-          </View>
-
-          {/* Spinner overlay */}
-          {loading && (
-            <View style={styles.loaderOverlay}>
-              <ActivityIndicator color={isLast ? "#000" : "#244180"} />
+            <Animated.View
+              style={[
+                styles.arrowCircle,
+                {
+                  transform: [{ rotate: arrowRotation }],
+                },
+              ]}
+            >
+              <Ionicons name="chevron-up" size={12} color="#264B8B" />
+            </Animated.View>
+            <View style={styles.totalTextContainer}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.total}>{formatCurrency(total)}</Text>
             </View>
-          )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[
+              styles.button,
+              isLast && styles.checkoutButton,
+              disabled && styles.buttonDisabled,
+            ]}
+            onPress={onNext}
+            disabled={disabled || loading}
+            activeOpacity={0.85}
+          >
+            {/* Invisible content keeps width stable */}
+            <View style={[styles.content, loading && styles.contentHidden]}>
+              <Text style={[styles.buttonText, isLast && styles.checkoutText]}>
+                {isLast ? "Complete Payment" : "Next"}
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={isLast ? "#010D26" : "#264B8B"}
+              />
+            </View>
+
+            {/* Spinner overlay */}
+            {loading && (
+              <View style={styles.loaderOverlay}>
+                <ActivityIndicator color={isLast ? "#010D26" : "#264B8B"} />
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -158,18 +158,21 @@ export default function BottomBar({
 
 const styles = StyleSheet.create({
   container: {
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-    backgroundColor: "#246BE1",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 6,
   },
   breakdownContainer: {
-    backgroundColor: "#246BE1",
     overflow: "hidden",
   },
   breakdownContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
   },
   breakdownRow: {
     flexDirection: "row",
@@ -178,60 +181,70 @@ const styles = StyleSheet.create({
   },
   breakdownLabel: {
     fontSize: 13,
-    color: "#fff",
-    opacity: 0.9,
-    fontWeight: "500",
+    color: "#E0E4FF",
+    fontFamily: "AlbertSans_500Medium",
   },
   breakdownValue: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#fff",
+    fontFamily: "AlbertSans_700Bold",
   },
   bottomBar: {
-    flexDirection: "row",
+    flexDirection: "column",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     gap: 12,
   },
   totalSection: {
+    width: "100%",
+    alignItems: "center",
+  },
+  totalButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    flex: 1,
+    gap: 8,
+    width: "100%",
+    justifyContent: "center",
   },
   totalTextContainer: {
-    flex: 1,
+    alignItems: "center",
   },
   totalLabel: {
-    fontSize: 11,
-    color: "#fff",
-    opacity: 0.9,
+    fontSize: 12,
+    color: "#E0E4FF",
     marginBottom: 2,
+    fontFamily: "AlbertSans_400Regular",
   },
   total: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#fff",
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#FFD602",
+    fontFamily: "AlbertSans_800ExtraBold",
   },
   arrowCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
+  },
+  buttonContainer: {
+    width: "100%",
+    alignItems: "center",
   },
   button: {
     backgroundColor: "#fff",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
     position: "relative",
-    minWidth: 100,
+    width: "100%",
     justifyContent: "center",
     alignItems: "center",
+    minHeight: 50,
   },
   content: {
     flexDirection: "row",
@@ -252,17 +265,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   buttonText: {
-    color: "#244180",
-    fontWeight: "600",
-    fontSize: 15,
+    color: "#264B8B",
+    fontWeight: "700",
+    fontSize: 14,
+    fontFamily: "AlbertSans_700Bold",
   },
   checkoutButton: {
     backgroundColor: "#FFD602",
   },
   buttonDisabled: {
     backgroundColor: "#E5E7EB",
+    opacity: 0.6,
   },
   checkoutText: {
-    color: "#000",
+    color: "#010D26",
   },
 });

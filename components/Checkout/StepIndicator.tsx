@@ -95,9 +95,9 @@ export default function StepIndicator({ step, onStepPress }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    marginBottom: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
   },
 
   row: {
@@ -111,59 +111,63 @@ const styles = StyleSheet.create({
   },
 
   dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#CFCFCF",
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#E5E7EB",
   },
 
   dotCompleted: {
-    backgroundColor: "#246BE1",
+    backgroundColor: "#264B8B",
   },
 
   dotActive: {
-    backgroundColor: "#246BE1",
-    transform: [{ scale: 1.2 }],
+    backgroundColor: "#264B8B",
+    transform: [{ scale: 1.3 }],
   },
 
   /* LABELS — FIXED WIDTH & NO WRAP */
   labelAbsolute: {
     position: "absolute",
-    top: 18,
+    top: 14,
     left: "50%",
-    transform: [{ translateX: -40 }],
-    width: 80,
+    transform: [{ translateX: -35 }],
+    width: 70,
     textAlign: "center",
-    fontSize: 12,
-    color: "#888",
+    fontSize: 11,
+    color: "#9CA3AF",
     zIndex: 1,
+    fontFamily: "AlbertSans_500Medium",
   },
 
   labelLeft: {
     position: "absolute",
-    top: 18,
+    top: 14,
     left: 0,
-    width: 80,
+    width: 70,
     textAlign: "left",
-    fontSize: 12,
-    color: "#888",
+    fontSize: 11,
+    color: "#9CA3AF",
     zIndex: 1,
+    fontFamily: "AlbertSans_500Medium",
   },
 
   labelRight: {
     position: "absolute",
-    top: 18,
+    top: 14,
     right: 0,
-    width: 80,
+    width: 70,
     textAlign: "right",
-    fontSize: 12,
-    color: "#888",
+    fontSize: 11,
+    color: "#9CA3AF",
     zIndex: 1,
+    fontFamily: "AlbertSans_500Medium",
   },
 
   labelActive: {
-    color: "#246BE1",
-    fontWeight: "bold",
+    color: "#264B8B",
+    fontWeight: "700",
+    fontFamily: "AlbertSans_700Bold",
   },
 
   /* LINE BETWEEN STEPS */
@@ -171,10 +175,10 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 2,
     backgroundColor: "#E5E7EB",
-    marginHorizontal: 6,
+    marginHorizontal: 4,
   },
 
   lineCompleted: {
-    backgroundColor: "#246BE1",
+    backgroundColor: "#264B8B",
   },
 });

@@ -117,13 +117,13 @@ type Props = {
 
 export default function PaymentStep({ paymentState, setPaymentState }: Props) {
   return (
-    <View>
+    <View style={styles.container}>
       <Text style={styles.sectionTitle}>Select Payment Method</Text>
 
       {/* CREDIT CARD */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Ionicons name="card-outline" size={18} color="#244180" />
+          <Ionicons name="card-outline" size={18} color="#264B8B" />
           <Text style={styles.cardTitle}>Credit Card</Text>
         </View>
 
@@ -162,7 +162,7 @@ export default function PaymentStep({ paymentState, setPaymentState }: Props) {
       {/* PAYPAL */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Ionicons name="logo-paypal" size={18} color="#244180" />
+          <Ionicons name="logo-paypal" size={18} color="#264B8B" />
           <Text style={styles.cardTitle}>Paypal</Text>
         </View>
 
@@ -175,31 +175,41 @@ export default function PaymentStep({ paymentState, setPaymentState }: Props) {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    alignItems: "center",
+  },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#010D26",
     marginBottom: 12,
+    fontFamily: "AlbertSans_800ExtraBold",
+    textAlign: "center",
+    width: "100%",
   },
 
   card: {
     borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    padding: 12,
+    marginBottom: 12,
     backgroundColor: "#fff",
+    width: "100%",
   },
 
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 10,
   },
 
   cardTitle: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
   },
 
   cardInputWrapper: {
@@ -207,24 +217,24 @@ const styles = StyleSheet.create({
     borderColor: "#D1D5DB",
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
 
   cardField: {
-    height: 50,
+    height: 44,
   },
 
   cardFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 12,
+    marginTop: 10,
   },
 
   checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
 
   checkbox: {
@@ -236,13 +246,15 @@ const styles = StyleSheet.create({
   },
 
   checkboxText: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
   },
 
   link: {
     fontSize: 12,
     color: "#264B8B",
-    fontWeight: "500",
+    fontWeight: "600",
+    fontFamily: "AlbertSans_600SemiBold",
   },
 });

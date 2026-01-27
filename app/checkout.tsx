@@ -338,5 +338,5 @@ export default function CheckoutScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  content: { padding: 16 },
+  content: { padding: 16, paddingBottom: 16 },
 });
