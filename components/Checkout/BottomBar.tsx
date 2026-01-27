@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Props = {
   step: 1 | 2 | 3;
@@ -29,6 +30,7 @@ export default function BottomBar({
   subtotal = 0,
   adminFee = 0,
 }: Props) {
+  const insets = useSafeAreaInsets();
   const isLast = step === 3;
   const [isExpanded, setIsExpanded] = useState(false);
   const [animation] = useState(new Animated.Value(0));
@@ -68,7 +70,7 @@ export default function BottomBar({
   return (
     <LinearGradient
       colors={["#264B8B", "#1E3A8A"]}
-      style={styles.container}
+      style={[styles.container, { paddingBottom: Math.max(insets.bottom, 16) }]}
     >
       {/* Expandable Breakdown */}
       <Animated.View
@@ -95,60 +97,56 @@ export default function BottomBar({
 
       {/* Main Bottom Bar */}
       <View style={styles.bottomBar}>
-        <View style={styles.totalSection}>
-          <TouchableOpacity
-            style={styles.totalButton}
-            onPress={toggleExpand}
-            activeOpacity={0.7}
-          >
-            <Animated.View
-              style={[
-                styles.arrowCircle,
-                {
-                  transform: [{ rotate: arrowRotation }],
-                },
-              ]}
-            >
-              <Ionicons name="chevron-up" size={12} color="#264B8B" />
-            </Animated.View>
-            <View style={styles.totalTextContainer}>
-              <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.total}>{formatCurrency(total)}</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
+        <TouchableOpacity
+          style={styles.totalSection}
+          onPress={toggleExpand}
+          activeOpacity={0.7}
+        >
+          <Animated.View
             style={[
-              styles.button,
-              isLast && styles.checkoutButton,
-              disabled && styles.buttonDisabled,
+              styles.arrowCircle,
+              {
+                transform: [{ rotate: arrowRotation }],
+              },
             ]}
-            onPress={onNext}
-            disabled={disabled || loading}
-            activeOpacity={0.85}
           >
-            {/* Invisible content keeps width stable */}
-            <View style={[styles.content, loading && styles.contentHidden]}>
-              <Text style={[styles.buttonText, isLast && styles.checkoutText]}>
-                {isLast ? "Complete Payment" : "Next"}
-              </Text>
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color={isLast ? "#010D26" : "#264B8B"}
-              />
-            </View>
+            <Ionicons name="chevron-up" size={12} color="#264B8B" />
+          </Animated.View>
+          <View style={styles.totalTextContainer}>
+            <Text style={styles.totalLabel}>Total</Text>
+            <Text style={styles.total}>{formatCurrency(total)}</Text>
+          </View>
+        </TouchableOpacity>
 
-            {/* Spinner overlay */}
-            {loading && (
-              <View style={styles.loaderOverlay}>
-                <ActivityIndicator color={isLast ? "#010D26" : "#264B8B"} />
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[
+            styles.button,
+            isLast && styles.checkoutButton,
+            disabled && styles.buttonDisabled,
+          ]}
+          onPress={onNext}
+          disabled={disabled || loading}
+          activeOpacity={0.85}
+        >
+          {/* Invisible content keeps width stable */}
+          <View style={[styles.content, loading && styles.contentHidden]}>
+            <Text style={[styles.buttonText, isLast && styles.checkoutText]}>
+              {isLast ? "Complete Payment" : "Next"}
+            </Text>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={isLast ? "#010D26" : "#264B8B"}
+            />
+          </View>
+
+          {/* Spinner overlay */}
+          {loading && (
+            <View style={styles.loaderOverlay}>
+              <ActivityIndicator color={isLast ? "#010D26" : "#264B8B"} />
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
     </LinearGradient>
   );
@@ -191,34 +189,31 @@ const styles = StyleSheet.create({
     fontFamily: "AlbertSans_700Bold",
   },
   bottomBar: {
-    flexDirection: "column",
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingTop: 14,
+    paddingBottom: 14,
     gap: 12,
   },
   totalSection: {
-    width: "100%",
-    alignItems: "center",
-  },
-  totalButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    width: "100%",
-    justifyContent: "center",
+    flex: 1,
   },
   totalTextContainer: {
-    alignItems: "center",
+    flex: 1,
   },
   totalLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#E0E4FF",
     marginBottom: 2,
     fontFamily: "AlbertSans_400Regular",
   },
   total: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "800",
     color: "#FFD602",
     fontFamily: "AlbertSans_800ExtraBold",
@@ -231,20 +226,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  buttonContainer: {
-    width: "100%",
-    alignItems: "center",
-  },
   button: {
     backgroundColor: "#fff",
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingVertical: 14,
     borderRadius: 12,
     position: "relative",
-    width: "100%",
+    minWidth: 120,
     justifyContent: "center",
     alignItems: "center",
-    minHeight: 50,
+    flexDirection: "row",
   },
   content: {
     flexDirection: "row",
