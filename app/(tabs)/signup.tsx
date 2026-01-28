@@ -79,7 +79,7 @@ export default function SignupScreen() {
       Alert.alert(
         "Registration Successful",
         "Please check your email for verification.",
-        [{ text: "OK", onPress: () => router.replace("/login") }]
+        [{ text: "OK", onPress: () => router.replace("/login") }],
       );
     } catch (err: any) {
       const msg = err.message || "Registration failed. Please try again.";
@@ -170,7 +170,11 @@ export default function SignupScreen() {
               {/* Password Input */}
               <Text style={styles.label}>Password</Text>
               <View style={[styles.inputWrapper, styles.inputNormal]}>
-                <Ionicons name="lock-closed-outline" size={18} color="#6B7280" />
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color="#6B7280"
+                />
                 <TextInput
                   placeholder="Enter password"
                   placeholderTextColor="#9CA3AF"
@@ -179,7 +183,9 @@ export default function SignupScreen() {
                   value={password}
                   onChangeText={setPassword}
                 />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                >
                   <Ionicons
                     name={showPassword ? "eye-off-outline" : "eye-outline"}
                     size={18}
@@ -191,7 +197,11 @@ export default function SignupScreen() {
               {/* Confirm Password Input */}
               <Text style={styles.label}>Confirm Password</Text>
               <View style={[styles.inputWrapper, styles.inputNormal]}>
-                <Ionicons name="lock-closed-outline" size={18} color="#6B7280" />
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color="#6B7280"
+                />
                 <TextInput
                   placeholder="Confirm password"
                   placeholderTextColor="#9CA3AF"
@@ -204,7 +214,9 @@ export default function SignupScreen() {
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   <Ionicons
-                    name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                    name={
+                      showConfirmPassword ? "eye-off-outline" : "eye-outline"
+                    }
                     size={18}
                     color="#6B7280"
                   />
@@ -299,7 +311,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: "800",
     color: "#010D26",
     fontFamily: "AlbertSans_800ExtraBold",
     marginBottom: 6,
@@ -363,7 +374,6 @@ const styles = StyleSheet.create({
   },
   signupButtonText: {
     fontSize: 15,
-    fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },
@@ -392,7 +402,6 @@ const styles = StyleSheet.create({
   loginLinkText: {
     fontSize: 13,
     color: "#264B8B",
-    fontWeight: "600",
     fontFamily: "AlbertSans_600SemiBold",
   },
 });

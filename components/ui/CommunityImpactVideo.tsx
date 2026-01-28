@@ -1,10 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-} from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Linking from "expo-linking";
@@ -27,7 +22,8 @@ export default function CommunityImpactVideo({
   subheadline = "Meet the passionate individuals working together to bring kindness, care, and impact to every community we touch.",
 }: CommunityImpactVideoProps) {
   const isYouTubeUrl =
-    videoUrl && (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be"));
+    videoUrl &&
+    (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be"));
 
   const handlePlay = async () => {
     if (videoUrl) {
@@ -57,10 +53,15 @@ export default function CommunityImpactVideo({
             style={styles.backgroundImage}
             contentFit="cover"
           />
-          
+
           {/* Gradient Overlay */}
           <LinearGradient
-            colors={["transparent", "rgba(1, 13, 38, 0.3)", "rgba(1, 13, 38, 0.7)", "rgba(1, 13, 38, 0.855)"]}
+            colors={[
+              "transparent",
+              "rgba(1, 13, 38, 0.3)",
+              "rgba(1, 13, 38, 0.7)",
+              "rgba(1, 13, 38, 0.855)",
+            ]}
             locations={[0, 0.2, 0.5, 0.8, 1]}
             style={styles.gradientOverlay}
           />
@@ -128,7 +129,6 @@ const styles = StyleSheet.create({
   },
   headlineText: {
     fontSize: 20,
-    fontWeight: "700",
     color: "#fff",
     marginBottom: 6,
     fontFamily: "AlbertSans_700Bold",

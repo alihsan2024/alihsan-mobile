@@ -100,7 +100,8 @@ const products = [
     price: 25,
     image:
       "https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/1708467587341-alihsan-coverImage.png",
-    description: "A simple act of kindness that benefits you in this life and the next.",
+    description:
+      "A simple act of kindness that benefits you in this life and the next.",
     postText: "per donation",
     category: "General Campaigns",
   },
@@ -123,7 +124,8 @@ const products = [
     price: 50,
     image:
       "https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/1708467619047-alihsan-coverImage.png",
-    description: "Support orphans with clothing, nutritious meals, education and safe shelter.",
+    description:
+      "Support orphans with clothing, nutritious meals, education and safe shelter.",
     postText: "per donation",
     category: "Orphans",
   },
@@ -135,7 +137,8 @@ const products = [
     price: 220,
     image:
       "https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/1708413130267-alihsan-coverImage.png",
-    description: "Provide essential food packs, Eid clothes/gifts, and nourishing hot meals this Ramadan.",
+    description:
+      "Provide essential food packs, Eid clothes/gifts, and nourishing hot meals this Ramadan.",
     postText: "per combo",
     category: "Ramadan",
   },
@@ -150,9 +153,7 @@ export default function QuickDonationTabs({
 }: QuickDonationTabsProps) {
   const [activeTab, setActiveTab] = useState(tabs[0]);
 
-  const filteredProducts = products.filter(
-    (p) => p.category === activeTab
-  );
+  const filteredProducts = products.filter((p) => p.category === activeTab);
 
   return (
     <View style={styles.container}>
@@ -166,10 +167,7 @@ export default function QuickDonationTabs({
           {tabs.map((tab) => (
             <TouchableOpacity
               key={tab}
-              style={[
-                styles.tab,
-                activeTab === tab && styles.tabActive,
-              ]}
+              style={[styles.tab, activeTab === tab && styles.tabActive]}
               onPress={() => setActiveTab(tab)}
             >
               <Text
@@ -250,7 +248,6 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 14,
-    fontWeight: "600",
     color: "#010D26B2",
     fontFamily: "AlbertSans_600SemiBold",
   },
@@ -283,7 +280,6 @@ const styles = StyleSheet.create({
   },
   productTitle: {
     fontSize: 14,
-    fontWeight: "700",
     color: "#010D26",
     marginBottom: 6,
     fontFamily: "AlbertSans_700Bold",
@@ -303,7 +299,6 @@ const styles = StyleSheet.create({
   },
   productPrice: {
     fontSize: 16,
-    fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },
@@ -323,7 +318,6 @@ const styles = StyleSheet.create({
   },
   addToCartText: {
     fontSize: 12,
-    fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },

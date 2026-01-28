@@ -180,7 +180,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "800",
     color: "#010D26",
     marginBottom: 12,
     fontFamily: "AlbertSans_800ExtraBold",
@@ -207,7 +206,6 @@ const styles = StyleSheet.create({
 
   cardTitle: {
     fontSize: 14,
-    fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },
@@ -254,7 +252,6 @@ const styles = StyleSheet.create({
   link: {
     fontSize: 12,
     color: "#264B8B",
-    fontWeight: "600",
     fontFamily: "AlbertSans_600SemiBold",
   },
 });

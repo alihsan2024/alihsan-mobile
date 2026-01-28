@@ -103,7 +103,9 @@ export default function BasketScreen() {
   }, [isAuthenticated, loadGuestBasket]);
 
   // Unified basketItems for rendering
-  const basketItems = isAuthenticated ? basketData?.payload ?? [] : guestBasket;
+  const basketItems = isAuthenticated
+    ? (basketData?.payload ?? [])
+    : guestBasket;
 
   useFocusEffect(
     useCallback(() => {
@@ -112,7 +114,7 @@ export default function BasketScreen() {
       } else {
         loadGuestBasket();
       }
-    }, [isAuthenticated, refetch, loadGuestBasket])
+    }, [isAuthenticated, refetch, loadGuestBasket]),
   );
 
   // Refresh logic
@@ -131,7 +133,7 @@ export default function BasketScreen() {
     campaignId: number,
     orphanId: number,
     donationItem?: string,
-    name?: string
+    name?: string,
   ) => {
     setPendingRemoveItem({
       campaignId,
@@ -153,7 +155,7 @@ export default function BasketScreen() {
         await refetch();
       } else {
         const updated = guestBasket.filter(
-          (item) => item.campaignId !== campaignId
+          (item) => item.campaignId !== campaignId,
         );
         setGuestBasket(updated);
         await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
@@ -220,7 +222,7 @@ export default function BasketScreen() {
         }}
         onConfirm={confirmRemoveItem}
       />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -276,7 +278,7 @@ export default function BasketScreen() {
                   ? parseInt(item.riceQuantity?.toString() || "1")
                   : item.quantity || 1;
                 const price = parseFloat(
-                  item.amount?.toString() || item.ricePrice?.toString() || "0"
+                  item.amount?.toString() || item.ricePrice?.toString() || "0",
                 );
                 const itemTotal =
                   item.total !== undefined && item.total !== null
@@ -312,11 +314,7 @@ export default function BasketScreen() {
                       <View style={styles.itemMetaRow}>
                         {item.isRecurring && (
                           <View style={styles.recurringBadge}>
-                            <Ionicons
-                              name="repeat"
-                              size={9}
-                              color="#264B8B"
-                            />
+                            <Ionicons name="repeat" size={9} color="#264B8B" />
                             <Text style={styles.recurringText}>
                               {getRecurringLabel(item.periodDays)}
                             </Text>
@@ -345,7 +343,7 @@ export default function BasketScreen() {
                           item.campaignId,
                           item.orphanId,
                           item.donationItem,
-                          item.name || item.Campaign?.name
+                          item.name || item.Campaign?.name,
                         )
                       }
                       style={styles.deleteButton}
@@ -390,9 +388,7 @@ export default function BasketScreen() {
             <View style={styles.anonymousCard}>
               <View style={styles.anonymousRow}>
                 <View style={styles.anonymousContent}>
-                  <Text style={styles.anonymousTitle}>
-                    Remain Anonymous
-                  </Text>
+                  <Text style={styles.anonymousTitle}>Remain Anonymous</Text>
                   <Text style={styles.anonymousSubtitle}>
                     Do you want to remain anonymous?
                   </Text>
@@ -423,10 +419,7 @@ export default function BasketScreen() {
 
       {/* Footer with Checkout Button */}
       {basketItems.length > 0 && (
-        <LinearGradient
-          colors={["#264B8B", "#1E3A8A"]}
-          style={styles.footer}
-        >
+        <LinearGradient colors={["#264B8B", "#1E3A8A"]} style={styles.footer}>
           <TouchableOpacity
             style={styles.checkoutButton}
             onPress={handleCheckout}
@@ -437,8 +430,8 @@ export default function BasketScreen() {
                   parseFloat(
                     isAuthenticated
                       ? item.total?.toString() || "0"
-                      : item.amount?.toString() || "0"
-                  ) === 0
+                      : item.amount?.toString() || "0",
+                  ) === 0,
               )
             }
             activeOpacity={0.8}
@@ -481,7 +474,6 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
     fontSize: 18,
-    fontWeight: "800",
     color: "#010D26",
     fontFamily: "AlbertSans_800ExtraBold",
   },
@@ -509,7 +501,6 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: "800",
     color: "#010D26",
     marginBottom: 6,
     fontFamily: "AlbertSans_800ExtraBold",
@@ -532,7 +523,6 @@ const styles = StyleSheet.create({
   },
   browseButtonText: {
     fontSize: 15,
-    fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },
@@ -541,7 +531,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "800",
     color: "#010D26",
     marginBottom: 12,
     fontFamily: "AlbertSans_800ExtraBold",
@@ -576,7 +565,6 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     fontSize: 14,
-    fontWeight: "500",
     color: "#010D26",
     marginBottom: 4,
     fontFamily: "AlbertSans_500Medium",
@@ -601,7 +589,6 @@ const styles = StyleSheet.create({
   },
   recurringText: {
     fontSize: 9,
-    fontWeight: "700",
     color: "#264B8B",
     fontFamily: "AlbertSans_700Bold",
     letterSpacing: 0.3,
@@ -621,7 +608,6 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     fontSize: 16,
-    fontWeight: "800",
     color: "#010D26",
     fontFamily: "AlbertSans_800ExtraBold",
     letterSpacing: -0.3,
@@ -660,7 +646,6 @@ const styles = StyleSheet.create({
   },
   summaryAmount: {
     fontSize: 24,
-    fontWeight: "800",
     color: "#fff",
     marginBottom: 12,
     fontFamily: "AlbertSans_800ExtraBold",
@@ -685,7 +670,6 @@ const styles = StyleSheet.create({
   },
   summaryRowValue: {
     fontSize: 13,
-    fontWeight: "700",
     color: "#fff",
     fontFamily: "AlbertSans_700Bold",
   },
@@ -708,7 +692,6 @@ const styles = StyleSheet.create({
   },
   anonymousTitle: {
     fontSize: 14,
-    fontWeight: "700",
     color: "#010D26",
     marginBottom: 2,
     fontFamily: "AlbertSans_700Bold",
@@ -762,7 +745,6 @@ const styles = StyleSheet.create({
   },
   checkoutText: {
     fontSize: 15,
-    fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },

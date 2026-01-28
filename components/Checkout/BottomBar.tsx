@@ -86,11 +86,15 @@ export default function BottomBar({
         <View style={styles.breakdownContent}>
           <View style={styles.breakdownRow}>
             <Text style={styles.breakdownLabel}>Subtotal</Text>
-            <Text style={styles.breakdownValue}>{formatCurrency(subtotal)}</Text>
+            <Text style={styles.breakdownValue}>
+              {formatCurrency(subtotal)}
+            </Text>
           </View>
           <View style={styles.breakdownRow}>
             <Text style={styles.breakdownLabel}>Admin Fee</Text>
-            <Text style={styles.breakdownValue}>{formatCurrency(adminFee)}</Text>
+            <Text style={styles.breakdownValue}>
+              {formatCurrency(adminFee)}
+            </Text>
           </View>
         </View>
       </Animated.View>
@@ -184,7 +188,6 @@ const styles = StyleSheet.create({
   },
   breakdownValue: {
     fontSize: 13,
-    fontWeight: "700",
     color: "#fff",
     fontFamily: "AlbertSans_700Bold",
   },
@@ -214,7 +217,6 @@ const styles = StyleSheet.create({
   },
   total: {
     fontSize: 18,
-    fontWeight: "800",
     color: "#FFD602",
     fontFamily: "AlbertSans_800ExtraBold",
   },
@@ -257,7 +259,6 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#264B8B",
-    fontWeight: "700",
     fontSize: 14,
     fontFamily: "AlbertSans_700Bold",
   },

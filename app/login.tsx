@@ -43,7 +43,7 @@ export default function LoginScreen() {
 
     try {
       const resultAction = await dispatch(
-        loginUser({ body: { email, password }, keepSession: true })
+        loginUser({ body: { email, password }, keepSession: true }),
       );
 
       if (loginUser.fulfilled.match(resultAction)) {
@@ -61,7 +61,7 @@ export default function LoginScreen() {
       setError(err.message || "Login failed. Please try again.");
       Alert.alert(
         "Login Failed",
-        err.message || "Login failed. Please try again."
+        err.message || "Login failed. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -150,7 +150,11 @@ export default function LoginScreen() {
               {/* Password Input */}
               <Text style={styles.label}>Password</Text>
               <View style={[styles.inputWrapper, styles.inputNormal]}>
-                <Ionicons name="lock-closed-outline" size={18} color="#6B7280" />
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color="#6B7280"
+                />
                 <TextInput
                   placeholder="Enter password"
                   placeholderTextColor="#9CA3AF"
@@ -161,7 +165,9 @@ export default function LoginScreen() {
                   autoCapitalize="none"
                   autoComplete="password"
                 />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                >
                   <Ionicons
                     name={showPassword ? "eye-off-outline" : "eye-outline"}
                     size={18}
@@ -253,7 +259,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: "800",
     color: "#010D26",
     fontFamily: "AlbertSans_800ExtraBold",
     marginBottom: 6,
@@ -350,7 +355,6 @@ const styles = StyleSheet.create({
   },
   loginButtonText: {
     fontSize: 15,
-    fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },
@@ -376,7 +380,6 @@ const styles = StyleSheet.create({
   signupLinkText: {
     fontSize: 13,
     color: "#264B8B",
-    fontWeight: "600",
     fontFamily: "AlbertSans_600SemiBold",
   },
 });

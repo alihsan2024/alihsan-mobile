@@ -1,5 +1,11 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Dimensions,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -80,7 +86,6 @@ const styles = StyleSheet.create({
   },
   header: {
     fontSize: 28,
-    fontWeight: "800",
     color: "#010D26",
     marginBottom: 24,
     fontFamily: "AlbertSans_800ExtraBold",
@@ -109,7 +114,6 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 24,
-    fontWeight: "800",
     color: "#fff",
     lineHeight: 28,
     fontFamily: "AlbertSans_800ExtraBold",
@@ -127,7 +131,6 @@ const styles = StyleSheet.create({
   },
   donateButtonText: {
     fontSize: 12,
-    fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },

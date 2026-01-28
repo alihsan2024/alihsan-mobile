@@ -166,7 +166,6 @@ const styles = StyleSheet.create({
 
   labelActive: {
     color: "#264B8B",
-    fontWeight: "700",
     fontFamily: "AlbertSans_700Bold",
   },
 

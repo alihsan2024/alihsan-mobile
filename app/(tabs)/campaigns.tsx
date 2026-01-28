@@ -187,7 +187,8 @@ export default function ActiveAppealsScreen() {
               <Text
                 style={[
                   styles.categoryText,
-                  selectedCategory === item.label && styles.categoryTextSelected,
+                  selectedCategory === item.label &&
+                    styles.categoryTextSelected,
                 ]}
               >
                 {item.label}
@@ -277,7 +278,7 @@ export default function ActiveAppealsScreen() {
                                 default:
                                   return "";
                               }
-                            }
+                            },
                           )
                       : ""}
                   </Text>
@@ -337,7 +338,6 @@ const styles = StyleSheet.create({
   },
   heading: {
     fontSize: 28,
-    fontWeight: "800",
     color: "#010D26",
     fontFamily: "AlbertSans_800ExtraBold",
   },
@@ -374,7 +374,6 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     textAlign: "center",
     marginTop: 8,
-    fontWeight: "500",
     fontFamily: "AlbertSans_500Medium",
   },
   categoryItemSelected: {
@@ -384,7 +383,6 @@ const styles = StyleSheet.create({
   },
   categoryTextSelected: {
     color: "#264B8B",
-    fontWeight: "700",
     fontFamily: "AlbertSans_700Bold",
   },
   collapseButton: {
@@ -415,7 +413,6 @@ const styles = StyleSheet.create({
   },
   sortValue: {
     fontSize: 14,
-    fontWeight: "600",
     color: "#010D26",
     fontFamily: "AlbertSans_600SemiBold",
   },
@@ -461,7 +458,6 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 14,
-    fontWeight: "700",
     marginBottom: 6,
     color: "#010D26",
     lineHeight: 18,
@@ -492,7 +488,6 @@ const styles = StyleSheet.create({
   },
   donateButtonText: {
     fontSize: 12,
-    fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },

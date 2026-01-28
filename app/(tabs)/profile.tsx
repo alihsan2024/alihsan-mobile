@@ -65,13 +65,13 @@ export default function ProfileScreen() {
   const user = useSelector((state: any) => state.authentication.user);
   const authUser = useSelector((state: any) => state.authentication.auth);
   const profileDetails = useSelector(
-    (state: any) => state.profileStatistics.profileDetails
+    (state: any) => state.profileStatistics.profileDetails,
   );
   const statistics = useSelector(
-    (state: any) => state.profileStatistics.statistics
+    (state: any) => state.profileStatistics.statistics,
   );
   const recentDonations = useSelector(
-    (state: any) => state.profileStatistics.recentDonations
+    (state: any) => state.profileStatistics.recentDonations,
   );
   const loading = useSelector((state: any) => state.profileStatistics.loading);
   const error = useSelector((state: any) => state.profileStatistics.error);
@@ -157,14 +157,13 @@ export default function ProfileScreen() {
 
               {/* Guthen Font Welcome Text */}
               <Text style={styles.guthenWelcomeText}>Welcome</Text>
-              <Text style={styles.notLoggedInHeading}>
-                Join Our Community
-              </Text>
+              <Text style={styles.notLoggedInHeading}>Join Our Community</Text>
             </LinearGradient>
 
             <View style={styles.cardContent}>
               <Text style={styles.notLoggedInDescription}>
-                Sign in to access your profile, track your donations, and make a lasting impact.
+                Sign in to access your profile, track your donations, and make a
+                lasting impact.
               </Text>
 
               {/* Action Buttons */}
@@ -183,7 +182,11 @@ export default function ProfileScreen() {
                   onPress={() => router.push("/signup")}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="person-add-outline" size={16} color="#010D26" />
+                  <Ionicons
+                    name="person-add-outline"
+                    size={16}
+                    color="#010D26"
+                  />
                   <Text style={styles.signUpButtonText}>Create Account</Text>
                 </TouchableOpacity>
               </View>
@@ -200,25 +203,41 @@ export default function ProfileScreen() {
                 <View style={styles.benefitsGrid}>
                   <View style={styles.benefitItem}>
                     <View style={styles.benefitIconContainer}>
-                      <Ionicons name="receipt-outline" size={16} color="#264B8B" />
+                      <Ionicons
+                        name="receipt-outline"
+                        size={16}
+                        color="#264B8B"
+                      />
                     </View>
                     <Text style={styles.benefitText}>Track donations</Text>
                   </View>
                   <View style={styles.benefitItem}>
                     <View style={styles.benefitIconContainer}>
-                      <Ionicons name="repeat-outline" size={16} color="#264B8B" />
+                      <Ionicons
+                        name="repeat-outline"
+                        size={16}
+                        color="#264B8B"
+                      />
                     </View>
                     <Text style={styles.benefitText}>Recurring gifts</Text>
                   </View>
                   <View style={styles.benefitItem}>
                     <View style={styles.benefitIconContainer}>
-                      <Ionicons name="document-text-outline" size={16} color="#264B8B" />
+                      <Ionicons
+                        name="document-text-outline"
+                        size={16}
+                        color="#264B8B"
+                      />
                     </View>
                     <Text style={styles.benefitText}>Project updates</Text>
                   </View>
                   <View style={styles.benefitItem}>
                     <View style={styles.benefitIconContainer}>
-                      <Ionicons name="settings-outline" size={16} color="#264B8B" />
+                      <Ionicons
+                        name="settings-outline"
+                        size={16}
+                        color="#264B8B"
+                      />
                     </View>
                     <Text style={styles.benefitText}>Manage profile</Text>
                   </View>
@@ -464,7 +483,6 @@ const styles = StyleSheet.create({
   },
   notLoggedInTitle: {
     fontSize: 24,
-    fontWeight: "800",
     color: "#010D26",
     fontFamily: "AlbertSans_800ExtraBold",
   },
@@ -518,7 +536,6 @@ const styles = StyleSheet.create({
   },
   notLoggedInHeading: {
     fontSize: 20,
-    fontWeight: "800",
     color: "#010D26",
     textAlign: "center",
     fontFamily: "AlbertSans_800ExtraBold",
@@ -548,7 +565,6 @@ const styles = StyleSheet.create({
   loginButtonText: {
     color: "#fff",
     fontSize: 14,
-    fontWeight: "700",
     fontFamily: "AlbertSans_700Bold",
   },
   signUpButton: {
@@ -563,7 +579,6 @@ const styles = StyleSheet.create({
   signUpButtonText: {
     color: "#010D26",
     fontSize: 14,
-    fontWeight: "700",
     fontFamily: "AlbertSans_700Bold",
   },
   divider: {
@@ -579,7 +594,6 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     fontSize: 12,
-    fontWeight: "600",
     color: "#9CA3AF",
     fontFamily: "AlbertSans_600SemiBold",
   },

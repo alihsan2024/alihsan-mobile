@@ -34,7 +34,7 @@ export default function CheckoutHeader({
 
       <Text style={styles.title}>Checkout</Text>
 
-      <TouchableOpacity 
+      <TouchableOpacity
         onPress={() => router.push("/(tabs)/cart")}
         activeOpacity={0.8}
       >
@@ -66,13 +66,11 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
     fontSize: 18,
-    fontWeight: "800",
     color: "#010D26",
     fontFamily: "AlbertSans_800ExtraBold",
   },
   cancel: {
     fontSize: 14,
-    fontWeight: "600",
     color: "#6B7280",
     fontFamily: "AlbertSans_600SemiBold",
   },

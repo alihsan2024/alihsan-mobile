@@ -158,7 +158,7 @@ export default function HomeScreen() {
   const [isModalVisible, setIsModalVisible] = useState(true);
   const givingAnimation = useRef(new Animated.Value(0)).current;
   const [featuredCampaigns, setFeaturedCampaigns] = useState<CampaignItem[]>(
-    []
+    [],
   );
   const [isLoadingFeaturedCampaigns, setIsLoadingFeaturedCampaigns] =
     useState(false);
@@ -190,11 +190,11 @@ export default function HomeScreen() {
     }
 
     const basketItems = isAuthenticated
-      ? basketData?.payload ?? []
+      ? (basketData?.payload ?? [])
       : guestBasket;
 
     const isInCart = basketItems.some(
-      (item: any) => item.campaignId === GAZA_CAMPAIGN.id
+      (item: any) => item.campaignId === GAZA_CAMPAIGN.id,
     );
 
     if (isInCart) {
@@ -237,7 +237,7 @@ export default function HomeScreen() {
             onPress: () => router.push("/(tabs)/cart"),
           },
           { text: "OK", style: "cancel" },
-        ]
+        ],
       );
     } catch {
       Alert.alert("Error", "Failed to add to cart");
@@ -345,25 +345,31 @@ export default function HomeScreen() {
             }
 
             // Calculate period days based on frequency
-            const periodDays = frequency === "monthly" ? 30 : frequency === "weekly" ? 7 : 0;
-            const isRecurring = frequency === "monthly" || frequency === "weekly";
+            const periodDays =
+              frequency === "monthly" ? 30 : frequency === "weekly" ? 7 : 0;
+            const isRecurring =
+              frequency === "monthly" || frequency === "weekly";
 
             const basketItems = isAuthenticated
-              ? basketData?.payload ?? []
+              ? (basketData?.payload ?? [])
               : guestBasket;
 
             const isInCart = basketItems.some(
-              (item: any) => item.campaignId === campaign.id
+              (item: any) => item.campaignId === campaign.id,
             );
 
             if (isInCart) {
-              Alert.alert("Already in cart", "This campaign is already in your cart.", [
-                {
-                  text: "View Cart",
-                  onPress: () => router.push("/(tabs)/cart"),
-                },
-                { text: "OK", style: "cancel" },
-              ]);
+              Alert.alert(
+                "Already in cart",
+                "This campaign is already in your cart.",
+                [
+                  {
+                    text: "View Cart",
+                    onPress: () => router.push("/(tabs)/cart"),
+                  },
+                  { text: "OK", style: "cancel" },
+                ],
+              );
               return;
             }
 
@@ -383,7 +389,10 @@ export default function HomeScreen() {
             } else {
               const updated = [...guestBasket, basketItem];
               setGuestBasket(updated);
-              await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
+              await AsyncStorage.setItem(
+                "guestBasket",
+                JSON.stringify(updated),
+              );
             }
 
             Alert.alert(
@@ -395,7 +404,7 @@ export default function HomeScreen() {
                   onPress: () => router.push("/(tabs)/cart"),
                 },
                 { text: "OK", style: "cancel" },
-              ]
+              ],
             );
           } catch (error: any) {
             console.error("Donation error:", error);
@@ -434,7 +443,9 @@ export default function HomeScreen() {
         />
 
         {/* Featured Campaigns Section */}
-        <View style={{ paddingHorizontal: PADDING_HORIZONTAL, marginBottom: 16 }}>
+        <View
+          style={{ paddingHorizontal: PADDING_HORIZONTAL, marginBottom: 16 }}
+        >
           <View style={{ flex: 1 }}>
             <View
               style={{
@@ -448,7 +459,6 @@ export default function HomeScreen() {
                 style={{
                   fontSize: 28,
                   color: "#010D26",
-                  fontWeight: "800",
                   marginBottom: 24,
                   fontFamily: "AlbertSans_800ExtraBold",
                 }}
@@ -473,7 +483,13 @@ export default function HomeScreen() {
         <QuickLinks />
 
         {/* Community Impact Video Section */}
-        <View style={{ paddingHorizontal: PADDING_HORIZONTAL, marginTop: 24, marginBottom: 32 }}>
+        <View
+          style={{
+            paddingHorizontal: PADDING_HORIZONTAL,
+            marginTop: 24,
+            marginBottom: 32,
+          }}
+        >
           <CommunityImpactVideo
             videoUrl="https://alihsan.s3.ap-southeast-2.amazonaws.com/homepage-videos/1763512297065-alihsan-winter+appeal+16x9.mp4"
             backgroundImage="https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/dac1a675d19a0d43be37299aebb6dd02.jpg"
@@ -517,7 +533,6 @@ const styles = StyleSheet.create({
 
   heroTitle: {
     fontSize: 56,
-    fontWeight: "800",
     color: "#fff",
     lineHeight: 60,
     fontFamily: "AlbertSans_800ExtraBold",

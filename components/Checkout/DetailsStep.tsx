@@ -103,7 +103,7 @@ const DetailsStep = ({ values, onChange, onValidChange }: Props) => {
           country: "PK",
           basketItems: [],
           status: true,
-        })
+        }),
       );
     };
 
@@ -157,7 +157,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "800",
     color: "#010D26",
     marginBottom: 4,
     fontFamily: "AlbertSans_800ExtraBold",

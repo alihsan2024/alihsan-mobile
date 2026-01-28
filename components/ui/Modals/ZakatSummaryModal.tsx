@@ -28,10 +28,10 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
   const dispatch = useAppDispatch();
 
   const { amounts, prices, step } = useSelector(
-    (state: any) => state.zakatCalculator
+    (state: any) => state.zakatCalculator,
   );
   const isLoggedIn = useSelector(
-    (state: any) => !!state.authentication.auth?.token
+    (state: any) => !!state.authentication.auth?.token,
   );
 
   const [loading, setLoading] = useState(false);
@@ -117,7 +117,7 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
     if (zakatOwed <= 0) {
       Alert.alert(
         "Zakat Not Due",
-        "You are not required to pay Zakat as your wealth is below the Nisab."
+        "You are not required to pay Zakat as your wealth is below the Nisab.",
       );
       return;
     }
@@ -144,7 +144,7 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
         const guestBasket = guestData ? JSON.parse(guestData) : [];
 
         const index = guestBasket.findIndex(
-          (item: any) => item.campaignId === "zakat"
+          (item: any) => item.campaignId === "zakat",
         );
 
         const updatedBasket =
@@ -158,7 +158,7 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
 
         await AsyncStorage.setItem(
           "guestBasket",
-          JSON.stringify(updatedBasket)
+          JSON.stringify(updatedBasket),
         );
       }
 
@@ -168,7 +168,7 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
     } catch {
       Alert.alert(
         "Error",
-        "Something went wrong while adding Zakat to basket."
+        "Something went wrong while adding Zakat to basket.",
       );
     } finally {
       setLoading(false);
@@ -205,7 +205,9 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
               style={styles.summaryCard}
             >
               <Text style={styles.guthenText}>Zakat Summary</Text>
-              <Text style={styles.summaryTitle}>Your Estimated Zakat Payment</Text>
+              <Text style={styles.summaryTitle}>
+                Your Estimated Zakat Payment
+              </Text>
 
               <View style={styles.amountContainer}>
                 <Text style={styles.amountLabel}>Total Amount</Text>
@@ -262,12 +264,8 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
 
             {/* Details Card */}
             <View style={styles.detailsCard}>
-              <Text style={styles.detailsTitle}>
-                Calculation Details
-              </Text>
-              <Text style={styles.detailsSubtitle}>
-                Based on Silver NISAB
-              </Text>
+              <Text style={styles.detailsTitle}>Calculation Details</Text>
+              <Text style={styles.detailsSubtitle}>Based on Silver NISAB</Text>
 
               <View style={styles.detailsDivider} />
 
@@ -309,7 +307,8 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
                 <View style={styles.updateInfo}>
                   <Ionicons name="time-outline" size={12} color="#9CA3AF" />
                   <Text style={styles.updateText}>
-                    Last updated: {new Date(prices.price.updatedAt).toLocaleString()}
+                    Last updated:{" "}
+                    {new Date(prices.price.updatedAt).toLocaleString()}
                   </Text>
                 </View>
               )}
@@ -381,7 +380,6 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontSize: 20,
-    fontWeight: "800",
     color: "#fff",
     marginBottom: 16,
     fontFamily: "AlbertSans_800ExtraBold",
@@ -397,7 +395,6 @@ const styles = StyleSheet.create({
   },
   amountValue: {
     fontSize: 28,
-    fontWeight: "800",
     color: "#fff",
     fontFamily: "AlbertSans_800ExtraBold",
   },
@@ -421,7 +418,6 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     fontSize: 14,
-    fontWeight: "700",
     color: "#fff",
     fontFamily: "AlbertSans_700Bold",
   },
@@ -446,7 +442,6 @@ const styles = StyleSheet.create({
   },
   payButtonText: {
     fontSize: 16,
-    fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },
@@ -464,7 +459,6 @@ const styles = StyleSheet.create({
   },
   resetText: {
     fontSize: 14,
-    fontWeight: "600",
     color: "#6B7280",
     fontFamily: "AlbertSans_600SemiBold",
   },
@@ -477,7 +471,6 @@ const styles = StyleSheet.create({
   },
   detailsTitle: {
     fontSize: 18,
-    fontWeight: "800",
     color: "#010D26",
     marginBottom: 4,
     fontFamily: "AlbertSans_800ExtraBold",
@@ -508,7 +501,6 @@ const styles = StyleSheet.create({
   },
   detailsValue: {
     fontSize: 14,
-    fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },
@@ -529,7 +521,6 @@ const styles = StyleSheet.create({
   },
   nisabLabel: {
     fontSize: 12,
-    fontWeight: "600",
     color: "#010D26",
     marginBottom: 4,
     opacity: 0.7,
@@ -537,7 +528,6 @@ const styles = StyleSheet.create({
   },
   nisabValue: {
     fontSize: 14,
-    fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },

@@ -47,7 +47,10 @@ const ConfirmStep = ({ summary }: Props) => {
               "https://via.placeholder.com/64";
 
             const title =
-              item.name || item.Campaign?.name || item.Orphan?.name || "Campaign";
+              item.name ||
+              item.Campaign?.name ||
+              item.Orphan?.name ||
+              "Campaign";
 
             const subtitle =
               item.donationItem ||
@@ -107,9 +110,7 @@ const ConfirmStep = ({ summary }: Props) => {
           <View style={styles.divider} />
           <View style={styles.summaryRow}>
             <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>
-              ${formatPrice(summary.total)}
-            </Text>
+            <Text style={styles.totalValue}>${formatPrice(summary.total)}</Text>
           </View>
         </View>
 
@@ -148,7 +149,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: "800",
     color: "#010D26",
     marginBottom: 8,
     fontFamily: "AlbertSans_800ExtraBold",
@@ -167,7 +167,6 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 16,
-    fontWeight: "700",
     color: "#010D26",
     marginBottom: 12,
     fontFamily: "AlbertSans_700Bold",
@@ -208,7 +207,6 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     fontSize: 14,
-    fontWeight: "600",
     color: "#111827",
     marginBottom: 2,
     fontFamily: "AlbertSans_600SemiBold",
@@ -220,7 +218,6 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     fontSize: 15,
-    fontWeight: "700",
     color: "#264B8B",
     fontFamily: "AlbertSans_700Bold",
   },
@@ -253,7 +250,6 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     fontSize: 15,
-    fontWeight: "600",
     color: "#111827",
     fontFamily: "AlbertSans_600SemiBold",
   },
@@ -264,13 +260,11 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 17,
-    fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },
   totalValue: {
     fontSize: 20,
-    fontWeight: "800",
     color: "#264B8B",
     fontFamily: "AlbertSans_800ExtraBold",
   },

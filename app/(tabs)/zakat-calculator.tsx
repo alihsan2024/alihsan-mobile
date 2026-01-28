@@ -46,7 +46,7 @@ export default function ZakatCalculatorScreen() {
   const scrollRef = useRef<ScrollView>(null);
 
   const { step, amounts, prices } = useSelector(
-    (state: any) => state.zakatCalculator
+    (state: any) => state.zakatCalculator,
   );
 
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -74,35 +74,62 @@ export default function ZakatCalculatorScreen() {
 
   // Total zakatable wealth
   const totalWealth = (() => {
-    const cash = isNaN(amounts.cash) ? 0 : (amounts.cash || 0);
-    const bank = isNaN(amounts.bank) ? 0 : (amounts.bank || 0);
+    const cash = isNaN(amounts.cash) ? 0 : amounts.cash || 0;
+    const bank = isNaN(amounts.bank) ? 0 : amounts.bank || 0;
     const gold = sumArray(amounts.gold);
     const silver = sumArray(amounts.silver);
-    const investmentProfit = isNaN(amounts.investmentProfit) ? 0 : (amounts.investmentProfit || 0);
-    const shareResale = isNaN(amounts.shareResale) ? 0 : (amounts.shareResale || 0);
-    const merchandise = isNaN(amounts.merchandise) ? 0 : (amounts.merchandise || 0);
-    const loan = isNaN(amounts.loan) ? 0 : (amounts.loan || 0);
-    const other = isNaN(amounts.other) ? 0 : (amounts.other || 0);
-    
-    const total = cash + bank + gold + silver + investmentProfit + shareResale + merchandise + loan + other;
+    const investmentProfit = isNaN(amounts.investmentProfit)
+      ? 0
+      : amounts.investmentProfit || 0;
+    const shareResale = isNaN(amounts.shareResale)
+      ? 0
+      : amounts.shareResale || 0;
+    const merchandise = isNaN(amounts.merchandise)
+      ? 0
+      : amounts.merchandise || 0;
+    const loan = isNaN(amounts.loan) ? 0 : amounts.loan || 0;
+    const other = isNaN(amounts.other) ? 0 : amounts.other || 0;
+
+    const total =
+      cash +
+      bank +
+      gold +
+      silver +
+      investmentProfit +
+      shareResale +
+      merchandise +
+      loan +
+      other;
     return isNaN(total) ? 0 : total;
   })();
 
-  const goldPriceAud = isNaN(Number(prices.price?.goldPriceInAud)) ? 0 : Number(prices.price?.goldPriceInAud || 0);
-  const silverPriceAud = isNaN(Number(prices.silverFinePriceInAud)) ? 0 : Number(prices.silverFinePriceInAud || 0);
+  const goldPriceAud = isNaN(Number(prices.price?.goldPriceInAud))
+    ? 0
+    : Number(prices.price?.goldPriceInAud || 0);
+  const silverPriceAud = isNaN(Number(prices.silverFinePriceInAud))
+    ? 0
+    : Number(prices.silverFinePriceInAud || 0);
 
   const goldNisabAud = isNaN(87.48 * goldPriceAud) ? 0 : 87.48 * goldPriceAud;
-  const silverNisabAud = isNaN(612.36 * silverPriceAud) ? 0 : 612.36 * silverPriceAud;
+  const silverNisabAud = isNaN(612.36 * silverPriceAud)
+    ? 0
+    : 612.36 * silverPriceAud;
 
-  const zakat = totalWealth >= silverNisabAud ? (isNaN(totalWealth / 40) ? 0 : totalWealth / 40) : 0;
+  const zakat =
+    totalWealth >= silverNisabAud
+      ? isNaN(totalWealth / 40)
+        ? 0
+        : totalWealth / 40
+      : 0;
 
   // Helper function to calculate metal value in AUD
   const calculateMetalValue = (
     weight: number,
     unit: string,
-    pricePerGram: number
+    pricePerGram: number,
   ): number => {
-    if (!weight || !pricePerGram || isNaN(weight) || isNaN(pricePerGram)) return 0;
+    if (!weight || !pricePerGram || isNaN(weight) || isNaN(pricePerGram))
+      return 0;
     const weightInGrams = unit === "ounce" ? weight * 31.1035 : weight;
     const result = weightInGrams * pricePerGram;
     return isNaN(result) ? 0 : result;
@@ -124,7 +151,12 @@ export default function ZakatCalculatorScreen() {
                 value={amounts.cash?.toString() || ""}
                 onChangeText={(v) => {
                   const numValue = Number(v) || 0;
-                  dispatch(zakatInput({ name: "cash", value: isNaN(numValue) ? 0 : numValue }));
+                  dispatch(
+                    zakatInput({
+                      name: "cash",
+                      value: isNaN(numValue) ? 0 : numValue,
+                    }),
+                  );
                 }}
               />
             </View>
@@ -141,7 +173,12 @@ export default function ZakatCalculatorScreen() {
                 value={amounts.bank?.toString() || ""}
                 onChangeText={(v) => {
                   const numValue = Number(v) || 0;
-                  dispatch(zakatInput({ name: "bank", value: isNaN(numValue) ? 0 : numValue }));
+                  dispatch(
+                    zakatInput({
+                      name: "bank",
+                      value: isNaN(numValue) ? 0 : numValue,
+                    }),
+                  );
                 }}
               />
             </View>
@@ -169,7 +206,7 @@ export default function ZakatCalculatorScreen() {
                     zakatInput({
                       name: "investmentProfit",
                       value: isNaN(numValue) ? 0 : numValue,
-                    })
+                    }),
                   );
                 }}
               />
@@ -191,7 +228,7 @@ export default function ZakatCalculatorScreen() {
                     zakatInput({
                       name: "shareResale",
                       value: isNaN(numValue) ? 0 : numValue,
-                    })
+                    }),
                   );
                 }}
               />
@@ -213,7 +250,7 @@ export default function ZakatCalculatorScreen() {
                     zakatInput({
                       name: "merchandise",
                       value: isNaN(numValue) ? 0 : numValue,
-                    })
+                    }),
                   );
                 }}
               />
@@ -241,12 +278,12 @@ export default function ZakatCalculatorScreen() {
                   value={amounts.gold?.[0]?.weight?.toString() || ""}
                   placeholder="0"
                   onChangeText={(v) => {
-                    const weight = isNaN(Number(v)) ? 0 : (Number(v) || 0);
+                    const weight = isNaN(Number(v)) ? 0 : Number(v) || 0;
                     const unit = amounts.gold?.[0]?.unit || "gram";
                     const calculatedValue = calculateMetalValue(
                       weight,
                       unit,
-                      goldPriceAud
+                      goldPriceAud,
                     );
                     dispatch(
                       zakatMetalInput({
@@ -256,7 +293,7 @@ export default function ZakatCalculatorScreen() {
                         value: isNaN(calculatedValue) ? 0 : calculatedValue,
                         unit,
                         type: "gold",
-                      })
+                      }),
                     );
                   }}
                 />
@@ -281,11 +318,13 @@ export default function ZakatCalculatorScreen() {
                     <TouchableOpacity
                       style={[styles.dropdownItem, { borderBottomWidth: 1 }]}
                       onPress={() => {
-                        const weight = isNaN(amounts.gold?.[0]?.weight) ? 0 : (amounts.gold?.[0]?.weight || 0);
+                        const weight = isNaN(amounts.gold?.[0]?.weight)
+                          ? 0
+                          : amounts.gold?.[0]?.weight || 0;
                         const calculatedValue = calculateMetalValue(
                           weight,
                           "gram",
-                          goldPriceAud
+                          goldPriceAud,
                         );
                         dispatch(
                           zakatMetalInput({
@@ -295,7 +334,7 @@ export default function ZakatCalculatorScreen() {
                             value: isNaN(calculatedValue) ? 0 : calculatedValue,
                             unit: "gram",
                             type: "gold",
-                          })
+                          }),
                         );
                         setGoldDropdownOpen(false);
                       }}
@@ -313,11 +352,13 @@ export default function ZakatCalculatorScreen() {
                     <TouchableOpacity
                       style={styles.dropdownItem}
                       onPress={() => {
-                        const weight = isNaN(amounts.gold?.[0]?.weight) ? 0 : (amounts.gold?.[0]?.weight || 0);
+                        const weight = isNaN(amounts.gold?.[0]?.weight)
+                          ? 0
+                          : amounts.gold?.[0]?.weight || 0;
                         const calculatedValue = calculateMetalValue(
                           weight,
                           "ounce",
-                          goldPriceAud
+                          goldPriceAud,
                         );
                         dispatch(
                           zakatMetalInput({
@@ -327,7 +368,7 @@ export default function ZakatCalculatorScreen() {
                             value: isNaN(calculatedValue) ? 0 : calculatedValue,
                             unit: "ounce",
                             type: "gold",
-                          })
+                          }),
                         );
                         setGoldDropdownOpen(false);
                       }}
@@ -367,12 +408,12 @@ export default function ZakatCalculatorScreen() {
                   value={amounts.silver?.[0]?.weight?.toString() || ""}
                   placeholder="0"
                   onChangeText={(v) => {
-                    const weight = isNaN(Number(v)) ? 0 : (Number(v) || 0);
+                    const weight = isNaN(Number(v)) ? 0 : Number(v) || 0;
                     const unit = amounts.silver?.[0]?.unit || "gram";
                     const calculatedValue = calculateMetalValue(
                       weight,
                       unit,
-                      silverPriceAud
+                      silverPriceAud,
                     );
                     dispatch(
                       zakatMetalInput({
@@ -382,7 +423,7 @@ export default function ZakatCalculatorScreen() {
                         value: isNaN(calculatedValue) ? 0 : calculatedValue,
                         unit,
                         type: "silver",
-                      })
+                      }),
                     );
                   }}
                 />
@@ -407,11 +448,13 @@ export default function ZakatCalculatorScreen() {
                     <TouchableOpacity
                       style={[styles.dropdownItem, { borderBottomWidth: 1 }]}
                       onPress={() => {
-                        const weight = isNaN(amounts.silver?.[0]?.weight) ? 0 : (amounts.silver?.[0]?.weight || 0);
+                        const weight = isNaN(amounts.silver?.[0]?.weight)
+                          ? 0
+                          : amounts.silver?.[0]?.weight || 0;
                         const calculatedValue = calculateMetalValue(
                           weight,
                           "gram",
-                          silverPriceAud
+                          silverPriceAud,
                         );
                         dispatch(
                           zakatMetalInput({
@@ -421,7 +464,7 @@ export default function ZakatCalculatorScreen() {
                             value: isNaN(calculatedValue) ? 0 : calculatedValue,
                             unit: "gram",
                             type: "silver",
-                          })
+                          }),
                         );
                         setSilverDropdownOpen(false);
                       }}
@@ -439,11 +482,13 @@ export default function ZakatCalculatorScreen() {
                     <TouchableOpacity
                       style={styles.dropdownItem}
                       onPress={() => {
-                        const weight = isNaN(amounts.silver?.[0]?.weight) ? 0 : (amounts.silver?.[0]?.weight || 0);
+                        const weight = isNaN(amounts.silver?.[0]?.weight)
+                          ? 0
+                          : amounts.silver?.[0]?.weight || 0;
                         const calculatedValue = calculateMetalValue(
                           weight,
                           "ounce",
-                          silverPriceAud
+                          silverPriceAud,
                         );
                         dispatch(
                           zakatMetalInput({
@@ -453,7 +498,7 @@ export default function ZakatCalculatorScreen() {
                             value: isNaN(calculatedValue) ? 0 : calculatedValue,
                             unit: "ounce",
                             type: "silver",
-                          })
+                          }),
                         );
                         setSilverDropdownOpen(false);
                       }}
@@ -499,7 +544,12 @@ export default function ZakatCalculatorScreen() {
                 value={amounts.loan?.toString() || ""}
                 onChangeText={(v) => {
                   const numValue = Number(v) || 0;
-                  dispatch(zakatInput({ name: "loan", value: isNaN(numValue) ? 0 : numValue }));
+                  dispatch(
+                    zakatInput({
+                      name: "loan",
+                      value: isNaN(numValue) ? 0 : numValue,
+                    }),
+                  );
                 }}
               />
             </View>
@@ -516,7 +566,12 @@ export default function ZakatCalculatorScreen() {
                 value={amounts.other?.toString() || ""}
                 onChangeText={(v) => {
                   const numValue = Number(v) || 0;
-                  dispatch(zakatInput({ name: "other", value: isNaN(numValue) ? 0 : numValue }));
+                  dispatch(
+                    zakatInput({
+                      name: "other",
+                      value: isNaN(numValue) ? 0 : numValue,
+                    }),
+                  );
                 }}
               />
             </View>
@@ -595,7 +650,9 @@ export default function ZakatCalculatorScreen() {
         {/* Row 1 */}
         <View style={styles.footerRow}>
           <Text style={styles.footerTitle}>Your estimated Zakat Payment</Text>
-          <Text style={styles.footerAmount}>AUD {isNaN(zakat) ? "0.00" : zakat.toFixed(2)}</Text>
+          <Text style={styles.footerAmount}>
+            AUD {isNaN(zakat) ? "0.00" : zakat.toFixed(2)}
+          </Text>
         </View>
 
         {/* Divider */}
@@ -680,7 +737,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: "#fff",
     fontSize: 28,
-    fontWeight: "800",
     fontFamily: "AlbertSans_800ExtraBold",
     marginBottom: 8,
   },
@@ -718,19 +774,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#9CA3AF",
     textAlign: "center",
-    fontWeight: "500",
     fontFamily: "AlbertSans_500Medium",
   },
   tabTextActive: {
     color: "#264B8B",
-    fontWeight: "700",
     fontFamily: "AlbertSans_700Bold",
   },
 
   content: { padding: 20, paddingTop: 24 },
   sectionTitle: {
     fontSize: 24,
-    fontWeight: "800",
     marginBottom: 16,
     color: "#010D26",
     fontFamily: "AlbertSans_800ExtraBold",
@@ -739,7 +792,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#374151",
     marginBottom: 8,
-    fontWeight: "600",
     fontFamily: "AlbertSans_600SemiBold",
   },
   tip: {
@@ -753,7 +805,6 @@ const styles = StyleSheet.create({
   valueDisplay: {
     fontSize: 14,
     color: "#264B8B",
-    fontWeight: "700",
     marginTop: 4,
     marginBottom: 12,
     fontFamily: "AlbertSans_700Bold",
@@ -776,7 +827,6 @@ const styles = StyleSheet.create({
   prefix: {
     fontSize: 15,
     color: "#6B7280",
-    fontWeight: "600",
     marginRight: 6,
     fontFamily: "AlbertSans_600SemiBold",
   },
@@ -823,7 +873,6 @@ const styles = StyleSheet.create({
   dropdownText: {
     fontSize: 14,
     color: "#264B8B",
-    fontWeight: "600",
     fontFamily: "AlbertSans_600SemiBold",
   },
   dropdownMenu: {
@@ -854,7 +903,6 @@ const styles = StyleSheet.create({
   },
   dropdownItemTextActive: {
     color: "#264B8B",
-    fontWeight: "700",
     fontFamily: "AlbertSans_700Bold",
   },
 
@@ -895,7 +943,6 @@ const styles = StyleSheet.create({
 
   footerAmount: {
     fontSize: 20,
-    fontWeight: "800",
     color: "#FFD602",
     fontFamily: "AlbertSans_800ExtraBold",
   },
@@ -915,7 +962,6 @@ const styles = StyleSheet.create({
 
   reviewText: {
     fontSize: 14,
-    fontWeight: "700",
     color: "#FFD602",
     fontFamily: "AlbertSans_700Bold",
   },
@@ -938,7 +984,6 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    fontWeight: "700",
     color: "#6B7280",
     fontFamily: "AlbertSans_700Bold",
   },
@@ -954,7 +999,6 @@ const styles = StyleSheet.create({
   },
   nextButtonText: {
     fontSize: 16,
-    fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },
@@ -970,7 +1014,6 @@ const styles = StyleSheet.create({
   },
   finishButtonText: {
     fontSize: 16,
-    fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },

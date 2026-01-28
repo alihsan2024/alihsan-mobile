@@ -22,7 +22,7 @@ import { Platform } from "react-native";
 import { BasketProvider } from "../context/BasketContext";
 import { Provider } from "react-redux";
 import { store } from "@/store/store";
-import { Alert, View, Text, TextInput } from "react-native";
+import { Alert, View } from "react-native";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -106,7 +106,6 @@ const INTRO_STORAGE_KEY = "@alihsan:intro_completed";
 const INTRO_VERSION_KEY = "@alihsan:intro_version";
 
 export default function RootLayout() {
-  // Load fonts including Guthen
   const [fontsLoaded] = useFonts({
     AlbertSans_100Thin,
     AlbertSans_200ExtraLight,
@@ -126,28 +125,8 @@ export default function RootLayout() {
     AlbertSans_700Bold_Italic,
     AlbertSans_800ExtraBold_Italic,
     AlbertSans_900Black_Italic,
-    "Guthen Bloots": require("../assets/fonts/GuthenBloots.ttf"),
+    GuthenBloots: require("../assets/fonts/GuthenBloots.ttf"), // ✅ fixed name (no spaces)
   });
-
-  // Set Albert Sans as the main font for Text and TextInput components
-  // Matching the Next.js app configuration (weights: 300, 400, 500, 600, 700)
-  React.useEffect(() => {
-    if (fontsLoaded) {
-      // Set default font for Text component - Albert Sans Regular (400) as main font
-      if (!Text.defaultProps) Text.defaultProps = {};
-      Text.defaultProps.style = { 
-        fontFamily: "AlbertSans_400Regular",
-        ...Text.defaultProps.style 
-      };
-
-      // Set default font for TextInput component - Albert Sans Regular (400) as main font
-      if (!TextInput.defaultProps) TextInput.defaultProps = {};
-      TextInput.defaultProps.style = { 
-        fontFamily: "AlbertSans_400Regular",
-        ...TextInput.defaultProps.style 
-      };
-    }
-  }, [fontsLoaded]);
 
   // useNotificationNavigation();
   // useEffect(() => {

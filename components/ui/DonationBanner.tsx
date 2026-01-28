@@ -37,7 +37,6 @@ const styles = StyleSheet.create({
   },
   heading: {
     fontSize: 32,
-    fontWeight: "700",
     color: "#010D26",
     marginBottom: 12,
     lineHeight: 38,

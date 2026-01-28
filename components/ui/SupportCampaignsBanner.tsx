@@ -16,12 +16,27 @@ import Feather from "@expo/vector-icons/Feather";
 const { width: screenWidth } = Dimensions.get("window");
 
 const campaigns = [
-  { label: "Water", name: "Water Campaign", slug: "water-campaign", icon: "💧" },
+  {
+    label: "Water",
+    name: "Water Campaign",
+    slug: "water-campaign",
+    icon: "💧",
+  },
   { label: "Zakat", name: "Zakat", slug: "zakat-al-maal", icon: "💰" },
   { label: "Aqeeqah", name: "Aqeeqah", slug: "aqeeqah", icon: "🎁" },
-  { label: "Interest", name: "Interest", slug: "purify-your-wealth", icon: "📊" },
+  {
+    label: "Interest",
+    name: "Interest",
+    slug: "purify-your-wealth",
+    icon: "📊",
+  },
   { label: "Shelter", name: "Shelter", slug: "shelter-appeal", icon: "🏠" },
-  { label: "Education", name: "Education", slug: "education-support", icon: "📚" },
+  {
+    label: "Education",
+    name: "Education",
+    slug: "education-support",
+    icon: "📚",
+  },
   { label: "Appeals", name: "Appeals", slug: "ramadan-combo-pack", icon: "📢" },
   { label: "Health", name: "Health", slug: "health-and-medical", icon: "🏥" },
 ];
@@ -46,7 +61,9 @@ export default function SupportCampaignsBanner({
 }: SupportCampaignsBannerProps) {
   const [selectedCampaign, setSelectedCampaign] = useState(campaigns[0].slug);
   const [selectedAmount, setSelectedAmount] = useState(amounts[0]);
-  const [selectedFrequency, setSelectedFrequency] = useState(frequencies[0].value);
+  const [selectedFrequency, setSelectedFrequency] = useState(
+    frequencies[0].value,
+  );
 
   const handleCampaignPress = (campaign: any) => {
     setSelectedCampaign(campaign.slug);
@@ -70,7 +87,11 @@ export default function SupportCampaignsBanner({
         />
         {/* Blue Gradient Overlay */}
         <LinearGradient
-          colors={["rgba(36, 107, 225, 1)", "rgba(36, 107, 225, 0.5)", "rgba(36, 107, 225, 0.1)"]}
+          colors={[
+            "rgba(36, 107, 225, 1)",
+            "rgba(36, 107, 225, 0.5)",
+            "rgba(36, 107, 225, 0.1)",
+          ]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[styles.gradient, { paddingTop: (topInset || 0) + 24 }]}
@@ -96,7 +117,9 @@ export default function SupportCampaignsBanner({
             <View style={styles.leftContent}>
               {/* Hero Text */}
               <View style={styles.heroTextContainer}>
-                <Text style={styles.guthenText}>Making a Difference Together</Text>
+                <Text style={styles.guthenText}>
+                  Making a Difference Together
+                </Text>
                 <Text style={styles.mainHeading}>Support Our Campaigns</Text>
               </View>
 
@@ -141,14 +164,16 @@ export default function SupportCampaignsBanner({
                     key={freq.value}
                     style={[
                       styles.frequencyTab,
-                      selectedFrequency === freq.value && styles.frequencyTabActive,
+                      selectedFrequency === freq.value &&
+                        styles.frequencyTabActive,
                     ]}
                     onPress={() => setSelectedFrequency(freq.value)}
                   >
                     <Text
                       style={[
                         styles.frequencyTabText,
-                        selectedFrequency === freq.value && styles.frequencyTabTextActive,
+                        selectedFrequency === freq.value &&
+                          styles.frequencyTabTextActive,
                       ]}
                     >
                       {freq.label}
@@ -247,7 +272,6 @@ const styles = StyleSheet.create({
   },
   mainHeading: {
     fontSize: 36,
-    fontWeight: "800",
     color: "#fff",
     fontFamily: "AlbertSans_800ExtraBold",
     textAlign: "left",
@@ -275,7 +299,6 @@ const styles = StyleSheet.create({
   },
   campaignPillText: {
     fontSize: 12,
-    fontWeight: "600",
     color: "#fff",
     fontFamily: "AlbertSans_600SemiBold",
   },
@@ -310,7 +333,6 @@ const styles = StyleSheet.create({
   },
   frequencyTabText: {
     fontSize: 12,
-    fontWeight: "600",
     color: "#010D26B2",
     fontFamily: "AlbertSans_600SemiBold",
   },
@@ -322,7 +344,6 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: 14,
-    fontWeight: "700",
     color: "#010D26",
     marginBottom: 12,
     fontFamily: "AlbertSans_700Bold",
@@ -345,7 +366,6 @@ const styles = StyleSheet.create({
   },
   amountText: {
     fontSize: 14,
-    fontWeight: "600",
     color: "#010D26",
     fontFamily: "AlbertSans_600SemiBold",
   },
@@ -363,7 +383,6 @@ const styles = StyleSheet.create({
   },
   donateButtonText: {
     fontSize: 14,
-    fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },
@@ -388,7 +407,6 @@ const styles = StyleSheet.create({
     flex: 1,
     color: "#fff",
     fontSize: 14,
-    fontWeight: "500",
     fontFamily: "AlbertSans_500Medium",
   },
   notificationButton: {
