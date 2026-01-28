@@ -24,7 +24,7 @@ export default function StepIndicator({ step, onStepPress }: Props) {
               <View style={{ alignItems: "center", position: "relative" }}>
                 <TouchableOpacity
                   activeOpacity={0.7}
-                  onPress={() => onStepPress(stepNumber)}
+                  // onPress={() => onStepPress(stepNumber)}
                   style={styles.step}
                 >
                   <View
