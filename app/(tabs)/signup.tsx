@@ -17,6 +17,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LoadingScreen from "@/components/LoadingScreen";
 import { register } from "@/utils/api";
 
+const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 88 : 68;
+
 export default function SignupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -254,6 +256,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 16,
     paddingVertical: 20,
+    paddingBottom: TAB_BAR_HEIGHT + 20,
   },
   headerSection: {
     position: "absolute",

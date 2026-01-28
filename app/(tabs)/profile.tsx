@@ -126,20 +126,13 @@ export default function ProfileScreen() {
 
   if (!isAuthenticated) {
     return (
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={[
-          styles.notLoggedInScrollContent,
-          { paddingTop: insets.top + 20 },
+      <View
+        style={[
+          styles.container,
+          { paddingTop: insets.top, paddingBottom: insets.bottom },
         ]}
-        showsVerticalScrollIndicator={false}
       >
         <View style={styles.notLoggedInContainer}>
-          {/* Header Section */}
-          <View style={styles.notLoggedInHeader}>
-            <Text style={styles.notLoggedInTitle}>Profile</Text>
-          </View>
-
           {/* Main Content Card */}
           <View style={styles.notLoggedInCard}>
             {/* Decorative Top Section with Gradient */}
@@ -157,7 +150,7 @@ export default function ProfileScreen() {
                     end={{ x: 1, y: 1 }}
                     style={styles.iconGradient}
                   >
-                    <Ionicons name="person" size={48} color="#fff" />
+                    <Ionicons name="person" size={36} color="#fff" />
                   </LinearGradient>
                 </View>
               </View>
@@ -171,7 +164,7 @@ export default function ProfileScreen() {
 
             <View style={styles.cardContent}>
               <Text style={styles.notLoggedInDescription}>
-                Sign in to access your profile, track your donations, and make a lasting impact in the lives of those in need.
+                Sign in to access your profile, track your donations, and make a lasting impact.
               </Text>
 
               {/* Action Buttons */}
@@ -181,7 +174,7 @@ export default function ProfileScreen() {
                   onPress={() => router.push("/login")}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="log-in-outline" size={18} color="#fff" />
+                  <Ionicons name="log-in-outline" size={16} color="#fff" />
                   <Text style={styles.loginButtonText}>Sign In</Text>
                 </TouchableOpacity>
 
@@ -190,7 +183,7 @@ export default function ProfileScreen() {
                   onPress={() => router.push("/signup")}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="person-add-outline" size={18} color="#010D26" />
+                  <Ionicons name="person-add-outline" size={16} color="#010D26" />
                   <Text style={styles.signUpButtonText}>Create Account</Text>
                 </TouchableOpacity>
               </View>
@@ -202,47 +195,39 @@ export default function ProfileScreen() {
                 <View style={styles.dividerLine} />
               </View>
 
-              {/* Benefits Section */}
+              {/* Benefits Section - Compact Grid */}
               <View style={styles.benefitsSection}>
-                <View style={styles.benefitsList}>
+                <View style={styles.benefitsGrid}>
                   <View style={styles.benefitItem}>
                     <View style={styles.benefitIconContainer}>
-                      <Ionicons name="receipt-outline" size={20} color="#264B8B" />
+                      <Ionicons name="receipt-outline" size={16} color="#264B8B" />
                     </View>
-                    <Text style={styles.benefitText}>
-                      Track your donation history
-                    </Text>
+                    <Text style={styles.benefitText}>Track donations</Text>
                   </View>
                   <View style={styles.benefitItem}>
                     <View style={styles.benefitIconContainer}>
-                      <Ionicons name="repeat-outline" size={20} color="#264B8B" />
+                      <Ionicons name="repeat-outline" size={16} color="#264B8B" />
                     </View>
-                    <Text style={styles.benefitText}>
-                      Manage recurring donations
-                    </Text>
+                    <Text style={styles.benefitText}>Recurring gifts</Text>
                   </View>
                   <View style={styles.benefitItem}>
                     <View style={styles.benefitIconContainer}>
-                      <Ionicons name="document-text-outline" size={20} color="#264B8B" />
+                      <Ionicons name="document-text-outline" size={16} color="#264B8B" />
                     </View>
-                    <Text style={styles.benefitText}>
-                      View project updates
-                    </Text>
+                    <Text style={styles.benefitText}>Project updates</Text>
                   </View>
                   <View style={styles.benefitItem}>
                     <View style={styles.benefitIconContainer}>
-                      <Ionicons name="settings-outline" size={20} color="#264B8B" />
+                      <Ionicons name="settings-outline" size={16} color="#264B8B" />
                     </View>
-                    <Text style={styles.benefitText}>
-                      Update your profile information
-                    </Text>
+                    <Text style={styles.benefitText}>Manage profile</Text>
                   </View>
                 </View>
               </View>
             </View>
           </View>
         </View>
-      </ScrollView>
+      </View>
     );
   }
 
@@ -469,20 +454,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 
-  notLoggedInScrollContent: {
-    flexGrow: 1,
-    paddingBottom: 40,
-  },
   notLoggedInContainer: {
     flex: 1,
-    alignItems: "center",
+    justifyContent: "center",
   },
   notLoggedInHeader: {
     width: "100%",
-    marginBottom: 24,
+    marginBottom: 16,
   },
   notLoggedInTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "800",
     color: "#010D26",
     fontFamily: "AlbertSans_800ExtraBold",
@@ -490,37 +471,37 @@ const styles = StyleSheet.create({
   notLoggedInCard: {
     width: "100%",
     backgroundColor: "#fff",
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   cardTopSection: {
-    paddingTop: 32,
-    paddingBottom: 24,
-    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
     alignItems: "center",
   },
   cardContent: {
-    padding: 24,
+    padding: 16,
   },
   notLoggedInIconContainer: {
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 12,
   },
   notLoggedInIconCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     overflow: "hidden",
     shadowColor: "#264B8B",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
   },
   iconGradient: {
     width: "100%",
@@ -529,77 +510,67 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   guthenWelcomeText: {
-    fontSize: 28,
+    fontSize: 22,
     fontFamily: "Guthen Bloots",
     color: "#FFD602",
-    marginBottom: 8,
+    marginBottom: 4,
     textAlign: "center",
   },
   notLoggedInHeading: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: "800",
     color: "#010D26",
     textAlign: "center",
     fontFamily: "AlbertSans_800ExtraBold",
   },
   notLoggedInDescription: {
-    fontSize: 16,
+    fontSize: 13,
     color: "#6B7280",
     textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 24,
+    lineHeight: 18,
+    marginBottom: 16,
     fontFamily: "AlbertSans_400Regular",
   },
   notLoggedInActions: {
     width: "100%",
-    gap: 12,
-    marginBottom: 24,
+    gap: 10,
+    marginBottom: 16,
   },
   loginButton: {
     backgroundColor: "#264B8B",
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    shadowColor: "#264B8B",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    gap: 6,
   },
   loginButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "700",
     fontFamily: "AlbertSans_700Bold",
   },
   signUpButton: {
     backgroundColor: "#FFD602",
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    shadowColor: "#FFD602",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    gap: 6,
   },
   signUpButtonText: {
     color: "#010D26",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "700",
     fontFamily: "AlbertSans_700Bold",
   },
   divider: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 24,
-    gap: 12,
+    marginVertical: 14,
+    gap: 10,
   },
   dividerLine: {
     flex: 1,
@@ -607,7 +578,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E5E7EB",
   },
   dividerText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
     color: "#9CA3AF",
     fontFamily: "AlbertSans_600SemiBold",
@@ -615,29 +586,33 @@ const styles = StyleSheet.create({
   benefitsSection: {
     width: "100%",
   },
-  benefitsList: {
-    gap: 16,
+  benefitsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
   },
   benefitItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
-    paddingVertical: 4,
+    gap: 8,
+    width: "48%",
+    paddingVertical: 2,
   },
   benefitIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "#EEF4FF",
     justifyContent: "center",
     alignItems: "center",
+    flexShrink: 0,
   },
   benefitText: {
-    fontSize: 15,
+    fontSize: 12,
     color: "#374151",
-    flex: 1,
     fontFamily: "AlbertSans_500Medium",
-    lineHeight: 22,
+    lineHeight: 16,
+    flex: 1,
   },
 
   header: {

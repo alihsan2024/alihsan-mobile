@@ -26,14 +26,21 @@ export default function RemoveDonationModal({
     >
       <View style={styles.overlay}>
         <View style={styles.card}>
-          <Text style={styles.title}>{title}</Text>
+          <View style={styles.contentContainer}>
+            <Text style={styles.title} numberOfLines={2}>
+              {title}
+            </Text>
 
-          <Text style={styles.description}>{description}</Text>
+            <Text style={styles.description} numberOfLines={4}>
+              {description}
+            </Text>
+          </View>
 
           <View style={styles.actions}>
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={onCancel}
+              activeOpacity={0.8}
             >
               <Text style={styles.cancelText}>No, Keep it</Text>
             </TouchableOpacity>
@@ -41,11 +48,12 @@ export default function RemoveDonationModal({
             <TouchableOpacity
               style={[styles.button, styles.removeButton]}
               onPress={onConfirm}
+              activeOpacity={0.8}
             >
-              <Text style={styles.removeText}>
-                Yes, Remove{" "}
+              <View style={styles.removeButtonContent}>
+                <Text style={styles.removeText}>Yes, Remove</Text>
                 <Feather name="chevron-right" size={16} color="#FFFFFF" />
-              </Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -65,9 +73,16 @@ const styles = StyleSheet.create({
 
   card: {
     width: "100%",
+    maxWidth: 400,
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
+    minHeight: 180,
+  },
+
+  contentContainer: {
+    width: "100%",
+    marginBottom: 20,
   },
 
   title: {
@@ -76,14 +91,15 @@ const styles = StyleSheet.create({
     color: "#111827",
     textAlign: "center",
     marginBottom: 8,
+    width: "100%",
   },
 
   description: {
     fontSize: 13,
     color: "#6B7280",
     textAlign: "center",
-    marginBottom: 20,
     lineHeight: 18,
+    width: "100%",
   },
 
   actions: {
@@ -96,6 +112,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
   },
 
   cancelButton: {
@@ -108,15 +126,24 @@ const styles = StyleSheet.create({
     backgroundColor: "#D14343",
   },
 
+  removeButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+
   cancelText: {
     fontSize: 14,
     fontWeight: "600",
     color: "#111827",
+    textAlign: "center",
   },
 
   removeText: {
     fontSize: 14,
     fontWeight: "600",
     color: "#FFFFFF",
+    textAlign: "center",
   },
 });

@@ -6,90 +6,72 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
+  Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useSelector } from "react-redux";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAppDispatch } from "@/hooks/useAppDispatch";
+import { loginUser } from "@/store/reduxSlice/authenticationSlice";
 import LoadingScreen from "@/components/LoadingScreen";
-import { register } from "@/utils/api";
+import Google from "@/assets/google.svg";
 
-export default function SignupScreen() {
+const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 88 : 68;
+
+export default function LoginScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
+  const authState = useSelector((state: any) => state.authentication);
 
-  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const validateForm = () => {
-    if (!fullName.trim() || !email.trim() || !password.trim()) {
-      setError("All fields are required");
-      return false;
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      setError("Please fill in all fields");
+      return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError("Please enter a valid email address");
-      return false;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return false;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSignup = async () => {
-    if (!validateForm()) return;
-
-    setLoading(true);
     setError("");
+    setLoading(true);
 
     try {
-      const nameParts = fullName.trim().split(" ");
-      const firstName = nameParts[0];
-      const lastName = nameParts.slice(1).join(" ") || firstName;
-
-      await register({
-        email,
-        password,
-        firstName,
-        lastName,
-        timezoneOffset: new Date().getTimezoneOffset(),
-      });
-
-      Alert.alert(
-        "Registration Successful",
-        "Please check your email for verification.",
-        [{ text: "OK", onPress: () => router.replace("/login") }]
+      const resultAction = await dispatch(
+        loginUser({ body: { email, password }, keepSession: true })
       );
+
+      if (loginUser.fulfilled.match(resultAction)) {
+        router.replace("/");
+      } else {
+        const errMsg =
+          typeof resultAction.error === "string"
+            ? resultAction.error
+            : resultAction.error?.message || "Login failed. Please try again.";
+
+        setError(errMsg);
+        Alert.alert("Login Failed", errMsg);
+      }
     } catch (err: any) {
-      const msg = err.message || "Registration failed. Please try again.";
-      setError(msg);
-      Alert.alert("Registration Failed", msg);
+      setError(err.message || "Login failed. Please try again.");
+      Alert.alert(
+        "Login Failed",
+        err.message || "Login failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   if (loading) {
-    return <LoadingScreen message="Creating account..." />;
+    return <LoadingScreen message="Logging in..." />;
   }
 
   return (
@@ -124,29 +106,28 @@ export default function SignupScreen() {
               style={styles.cardTopSection}
             >
               <Text style={styles.guthenText}>Welcome</Text>
-              <Text style={styles.title}>Join Our Community</Text>
+              <Text style={styles.title}>Welcome Back</Text>
               <Text style={styles.subtitle}>
-                Start making a documented difference today.
+                Enter details to continue your kindness journey.
               </Text>
             </LinearGradient>
 
             <View style={styles.cardContent}>
-              {/* Full Name Input */}
-              <Text style={styles.label}>Full Name</Text>
-              <View style={[styles.inputWrapper, styles.inputNormal]}>
-                <Ionicons name="person-outline" size={18} color="#6B7280" />
-                <TextInput
-                  placeholder="Enter full name"
-                  placeholderTextColor="#9CA3AF"
-                  style={styles.input}
-                  value={fullName}
-                  onChangeText={setFullName}
-                  autoCapitalize="words"
-                />
+              {/* Google Button */}
+              <TouchableOpacity style={styles.googleBtn} activeOpacity={0.8}>
+                <Google width={18} height={18} />
+                <Text style={styles.googleText}>Continue with Google</Text>
+              </TouchableOpacity>
+
+              {/* Divider */}
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>Or</Text>
+                <View style={styles.dividerLine} />
               </View>
 
               {/* Email Input */}
-              <Text style={styles.label}>Email Address</Text>
+              <Text style={styles.label}>Email</Text>
               <View
                 style={[
                   styles.inputWrapper,
@@ -162,8 +143,11 @@ export default function SignupScreen() {
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  autoComplete="email"
                 />
               </View>
+
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
               {/* Password Input */}
               <Text style={styles.label}>Password</Text>
@@ -176,6 +160,8 @@ export default function SignupScreen() {
                   style={styles.input}
                   value={password}
                   onChangeText={setPassword}
+                  autoCapitalize="none"
+                  autoComplete="password"
                 />
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                   <Ionicons
@@ -186,54 +172,27 @@ export default function SignupScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Confirm Password Input */}
-              <Text style={styles.label}>Confirm Password</Text>
-              <View style={[styles.inputWrapper, styles.inputNormal]}>
-                <Ionicons name="lock-closed-outline" size={18} color="#6B7280" />
-                <TextInput
-                  placeholder="Confirm password"
-                  placeholderTextColor="#9CA3AF"
-                  secureTextEntry={!showConfirmPassword}
-                  style={styles.input}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  <Ionicons
-                    name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
-                    size={18}
-                    color="#6B7280"
-                  />
-                </TouchableOpacity>
-              </View>
-
-              {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-              {/* Create Account Button */}
+              {/* Login Button */}
               <TouchableOpacity
-                style={styles.signupButton}
-                onPress={handleSignup}
+                style={styles.loginButton}
+                onPress={handleLogin}
                 disabled={loading}
                 activeOpacity={0.8}
               >
-                <Text style={styles.signupButtonText}>Create Account</Text>
+                <Text style={styles.loginButtonText}>Log In</Text>
                 <Ionicons name="chevron-forward" size={18} color="#010D26" />
               </TouchableOpacity>
 
-              {/* Terms Text */}
-              <Text style={styles.terms}>
-                By signing up, you agree to our{" "}
-                <Text style={styles.link}>Terms of Service</Text> and{" "}
-                <Text style={styles.link}>Privacy Policy</Text>.
-              </Text>
+              {/* Forgot Password */}
+              <TouchableOpacity style={styles.forgotButton}>
+                <Text style={styles.forgotText}>Forgot Password?</Text>
+              </TouchableOpacity>
 
-              {/* Login Link */}
-              <View style={styles.loginLink}>
-                <Text style={styles.loginText}>Already have an account? </Text>
-                <TouchableOpacity onPress={() => router.push("/login")}>
-                  <Text style={styles.loginLinkText}>Log In</Text>
+              {/* Sign Up Link */}
+              <View style={styles.signupLink}>
+                <Text style={styles.signupText}>Don't have an account? </Text>
+                <TouchableOpacity onPress={() => router.push("/signup")}>
+                  <Text style={styles.signupLinkText}>Sign Up</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -254,6 +213,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 16,
     paddingVertical: 20,
+    paddingBottom: TAB_BAR_HEIGHT + 20,
   },
   headerSection: {
     position: "absolute",
@@ -312,6 +272,39 @@ const styles = StyleSheet.create({
   cardContent: {
     padding: 20,
   },
+  googleBtn: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 20,
+    backgroundColor: "#fff",
+  },
+  googleText: {
+    fontSize: 14,
+    color: "#010D26",
+    fontFamily: "AlbertSans_600SemiBold",
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#E5E7EB",
+  },
+  dividerText: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    fontFamily: "AlbertSans_500Medium",
+  },
   label: {
     fontSize: 13,
     color: "#010D26",
@@ -347,7 +340,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontFamily: "AlbertSans_400Regular",
   },
-  signupButton: {
+  loginButton: {
     backgroundColor: "#FFD602",
     borderRadius: 12,
     paddingVertical: 14,
@@ -358,35 +351,32 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 12,
   },
-  signupButtonText: {
+  loginButtonText: {
     fontSize: 15,
     fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },
-  terms: {
-    fontSize: 11,
-    color: "#6B7280",
-    textAlign: "center",
+  forgotButton: {
+    alignItems: "center",
     marginBottom: 16,
-    lineHeight: 16,
-    fontFamily: "AlbertSans_400Regular",
   },
-  link: {
+  forgotText: {
+    fontSize: 13,
     color: "#264B8B",
     fontFamily: "AlbertSans_500Medium",
   },
-  loginLink: {
+  signupLink: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
   },
-  loginText: {
+  signupText: {
     fontSize: 13,
     color: "#6B7280",
     fontFamily: "AlbertSans_400Regular",
   },
-  loginLinkText: {
+  signupLinkText: {
     fontSize: 13,
     color: "#264B8B",
     fontWeight: "600",

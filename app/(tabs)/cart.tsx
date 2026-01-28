@@ -314,7 +314,7 @@ export default function BasketScreen() {
                           <View style={styles.recurringBadge}>
                             <Ionicons
                               name="repeat"
-                              size={12}
+                              size={9}
                               color="#264B8B"
                             />
                             <Text style={styles.recurringText}>
@@ -353,7 +353,7 @@ export default function BasketScreen() {
                     >
                       <Ionicons
                         name="trash-outline"
-                        size={18}
+                        size={16}
                         color="#DC2626"
                       />
                     </TouchableOpacity>
@@ -548,8 +548,8 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 10,
+    padding: 10,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
@@ -558,15 +558,17 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   itemImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
+    width: 52,
+    height: 52,
+    borderRadius: 8,
     backgroundColor: "#F3F4F6",
+    flexShrink: 0,
+    overflow: "hidden",
   },
   itemContent: {
     flex: 1,
@@ -574,60 +576,71 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "500",
     color: "#010D26",
     marginBottom: 4,
-    fontFamily: "AlbertSans_700Bold",
+    fontFamily: "AlbertSans_500Medium",
+    lineHeight: 18,
+    letterSpacing: 0,
   },
   itemMetaRow: {
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: 6,
+    gap: 5,
     marginBottom: 4,
   },
   recurringBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#E3F2FD",
-    paddingHorizontal: 6,
-    paddingVertical: 3,
+    backgroundColor: "#EEF4FF",
+    paddingHorizontal: 5,
+    paddingVertical: 2,
     borderRadius: 4,
     gap: 3,
   },
   recurringText: {
-    fontSize: 10,
-    fontWeight: "600",
+    fontSize: 9,
+    fontWeight: "700",
     color: "#264B8B",
-    fontFamily: "AlbertSans_600SemiBold",
+    fontFamily: "AlbertSans_700Bold",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
   },
   donationItem: {
     fontSize: 11,
     color: "#6B7280",
-    fontFamily: "AlbertSans_400Regular",
+    fontFamily: "AlbertSans_500Medium",
+    lineHeight: 14,
   },
   itemPriceRow: {
     flexDirection: "row",
     alignItems: "baseline",
-    gap: 6,
+    gap: 5,
+    marginTop: 2,
   },
   itemPrice: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "800",
     color: "#010D26",
-    fontFamily: "AlbertSans_700Bold",
+    fontFamily: "AlbertSans_800ExtraBold",
+    letterSpacing: -0.3,
   },
   itemUnitPrice: {
     fontSize: 11,
-    color: "#6B7280",
+    color: "#9CA3AF",
     fontFamily: "AlbertSans_400Regular",
+    lineHeight: 13,
   },
   deleteButton: {
-    padding: 8,
-    borderRadius: 8,
+    padding: 7,
+    borderRadius: 7,
     backgroundColor: "#FEF2F2",
     justifyContent: "center",
     alignItems: "center",
+    minWidth: 34,
+    minHeight: 34,
+    alignSelf: "center",
   },
   summaryCard: {
     borderRadius: 12,
