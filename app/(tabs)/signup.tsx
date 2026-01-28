@@ -20,7 +20,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 import { register } from "@/utils/api";
 
 const COVER_IMAGE_URL =
-  "https://www.alihsan.org.au/_next/image?url=https%3A%2F%2Falihsan.s3.ap-southeast-2.amazonaws.com%2Fupdated-photos%2F1753924269927-alihsan-1708467468866-alihsan-coverImage.webp&w=1920&q=75";
+  "https://alihsan.s3.ap-southeast-2.amazonaws.com/gaza/1766535509636-alihsan-2025_11_17_10_40_IMG_4900%20Large.jpeg";
 
 const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 88 : 68;
 

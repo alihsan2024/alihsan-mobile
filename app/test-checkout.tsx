@@ -94,6 +94,7 @@ function TestCheckoutContent() {
           checkoutPayload = {
             paymentGateway: "stripe",
             isAnonymous: false,
+            isMobile: true, // Indicate this is from mobile app
           };
         } else {
           // For guest users, need to send basket items and user details
@@ -139,6 +140,7 @@ function TestCheckoutContent() {
             email,
             paymentGateway: "stripe",
             basketItems: mappedBasketItems,
+            isMobile: true, // Indicate this is from mobile app
           };
         }
 

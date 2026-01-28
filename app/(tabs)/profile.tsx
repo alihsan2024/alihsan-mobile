@@ -156,10 +156,12 @@ export default function ProfileScreen() {
       <View style={styles.container}>
         {/* Header Banner - Same as Zakat Calculator */}
         <View style={styles.headerWrapper}>
-          <Image
-            source={require("@/assets/zakat-bg.png")}
+          <ExpoImage
+            source={{
+              uri: "https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/1708467963799-alihsan-coverImage.png",
+            }}
             style={StyleSheet.absoluteFill}
-            resizeMode="cover"
+            contentFit="cover"
           />
 
           <LinearGradient

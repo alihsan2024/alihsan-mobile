@@ -23,7 +23,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 import Google from "@/assets/google.svg";
 
 const COVER_IMAGE_URL =
-  "https://www.alihsan.org.au/_next/image?url=https%3A%2F%2Falihsan.s3.ap-southeast-2.amazonaws.com%2Fupdated-photos%2F1753924269927-alihsan-1708467468866-alihsan-coverImage.webp&w=1920&q=75";
+  "https://alihsan.s3.ap-southeast-2.amazonaws.com/gaza/1766468664003-alihsan-IMG_3894%20-%20Blog%201.JPG";
 
 const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 88 : 68;
 
