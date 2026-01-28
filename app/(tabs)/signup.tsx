@@ -9,13 +9,18 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image as ExpoImage } from "expo-image";
 import LoadingScreen from "@/components/LoadingScreen";
 import { register } from "@/utils/api";
+
+const COVER_IMAGE_URL =
+  "https://www.alihsan.org.au/_next/image?url=https%3A%2F%2Falihsan.s3.ap-southeast-2.amazonaws.com%2Fupdated-photos%2F1753924269927-alihsan-1708467468866-alihsan-coverImage.webp&w=1920&q=75";
 
 const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 88 : 68;
 
@@ -95,42 +100,48 @@ export default function SignupScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
+      {/* HEADER BANNER */}
+      <View style={[styles.headerWrapper, { paddingTop: insets.top }]}>
+        <ExpoImage
+          source={{ uri: COVER_IMAGE_URL }}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+        />
+
+        <LinearGradient
+          colors={["transparent", "rgba(38,75,139,0.6)", "rgba(38,75,139,0.9)"]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+
+        <View style={styles.headerContent}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="chevron-back" size={20} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.guthenText}>Welcome</Text>
+          <Text style={styles.headerTitle}>Join Our Community</Text>
+          <Text style={styles.headerSubtitle}>
+            Start making a documented difference today.
+          </Text>
+        </View>
+      </View>
+
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header Section */}
-          <View style={styles.headerSection}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <Ionicons name="chevron-back" size={20} color="#010D26" />
-            </TouchableOpacity>
-          </View>
-
           {/* Main Card */}
           <View style={styles.card}>
-            {/* Top Gradient Section */}
-            <LinearGradient
-              colors={["#EEF4FF", "#FFFFFF"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.cardTopSection}
-            >
-              <Text style={styles.guthenText}>Welcome</Text>
-              <Text style={styles.title}>Join Our Community</Text>
-              <Text style={styles.subtitle}>
-                Start making a documented difference today.
-              </Text>
-            </LinearGradient>
 
             <View style={styles.cardContent}>
               {/* Full Name Input */}
@@ -251,26 +262,54 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    paddingBottom: TAB_BAR_HEIGHT + 20,
+  // Header Banner (same style as Zakat Calculator)
+  headerWrapper: {
+    height: 240,
+    width: "100%",
+    position: "relative",
+    justifyContent: "flex-end",
+    overflow: "hidden",
   },
-  headerSection: {
+  headerContent: {
     position: "absolute",
-    top: 12,
-    left: 16,
-    zIndex: 10,
+    bottom: 24,
+    left: 20,
+    right: 20,
+    zIndex: 1,
   },
   backButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: 16,
+  },
+  guthenText: {
+    fontSize: 24,
+    fontFamily: "Guthen Bloots",
+    color: "#FFD602",
+    marginBottom: 4,
+  },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 28,
+    fontWeight: "800",
+    fontFamily: "AlbertSans_800ExtraBold",
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    color: "#E6ECFF",
+    fontSize: 15,
+    lineHeight: 22,
+    fontFamily: "AlbertSans_400Regular",
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    paddingBottom: TAB_BAR_HEIGHT + 20,
   },
   card: {
     backgroundColor: "#fff",
@@ -284,33 +323,6 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 400,
     alignSelf: "center",
-  },
-  cardTopSection: {
-    paddingTop: 24,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    alignItems: "center",
-  },
-  guthenText: {
-    fontSize: 22,
-    fontFamily: "Guthen Bloots",
-    color: "#FFD602",
-    marginBottom: 4,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#010D26",
-    fontFamily: "AlbertSans_800ExtraBold",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 13,
-    color: "#6B7280",
-    fontFamily: "AlbertSans_400Regular",
-    textAlign: "center",
-    lineHeight: 18,
   },
   cardContent: {
     padding: 20,

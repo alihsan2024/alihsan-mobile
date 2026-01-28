@@ -1,15 +1,26 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { Entypo, Ionicons } from "@expo/vector-icons";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Image,
+} from "react-native";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image as ExpoImage } from "expo-image";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { formatPrice } from "@/utils/helper";
-import HeroBackground from "@/components/ui/GradientImage";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const COVER_IMAGE_URL =
+  "https://www.alihsan.org.au/_next/image?url=https%3A%2F%2Falihsan.s3.ap-southeast-2.amazonaws.com%2Fupdated-photos%2F1753924269927-alihsan-1708467468866-alihsan-coverImage.webp&w=1920&q=75";
 
 export default function ThankYouScreen() {
   const [summary, setSummary] = useState<any>(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     AsyncStorage.getItem("checkoutSummary").then((data) => {
@@ -17,218 +28,292 @@ export default function ThankYouScreen() {
     });
   }, []);
 
-  if (!summary) return null;
+  if (!summary) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
 
   const { subtotal, adminFee, total } = summary;
 
   return (
     <View style={styles.container}>
-      <HeroBackground
-        source={require("../assets/header-image.png")}
-        containerStyle={{ height: 220 }}
-        gradientColors={["rgba(36,107,225,0.55)", "rgba(36,107,225,0.0)"]}
-        gradientLocations={[0, 1]}
-      >
-        <View style={{ marginBottom: 20 }}>
-          <Text style={styles.headerTitle}>Alhamdulillah</Text>
-          <Text style={styles.headerSubtitle}>Transaction Successful!</Text>
-        </View>
-      </HeroBackground>
-      {/* ===== CONTENT ===== */}
-      <View style={styles.content}>
-        <Text style={styles.title}>
-          Thanks for your donation! It means a lot.
-        </Text>
+      {/* HEADER */}
+      <View style={styles.headerWrapper}>
+        <ExpoImage
+          source={{ uri: COVER_IMAGE_URL }}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+        />
 
-        <Text style={styles.description}>
-          Our generosity is now being put into action. Thank you for making a
-          difference.
-        </Text>
+        <LinearGradient
+          colors={["transparent", "rgba(38,75,139,0.6)", "rgba(38,75,139,0.9)"]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
 
-        {/* ===== PRICE DETAILS ===== */}
-        <View style={styles.priceBox}>
-          <View style={styles.horizontalLine} />
-          <PriceRow label="Subtotal" value={`$${formatPrice(subtotal)}`} />
-          <PriceRow label="Admin Fee" value={`$${formatPrice(adminFee)}`} />
-          <View style={styles.horizontalLine} />
-          <PriceRow label="Total" value={`$${formatPrice(total)}`} bold />
-          <View style={styles.horizontalLine} />
-        </View>
-
-        {/* ===== SHARE ===== */}
-        <View>
-          <Text style={styles.shareTitle}>Share</Text>
-
-          <View style={styles.shareRow}>
-            <ShareItem icon="logo-instagram" label="Instagram" />
-            <ShareItem icon="logo-whatsapp" label="WhatsApp" />
-            <ShareItem icon="logo-facebook" label="Facebook" />
-            <ShareItem icon="entypo-link" label="Link" />
-
-            <ShareItem icon="ellipsis-horizontal" label="More" />
-          </View>
+        <View style={styles.headerContent}>
+          <Text style={styles.guthenText}>Alhamdulillah</Text>
+          <Text style={styles.headerTitle}>Thank You</Text>
+          <Text style={styles.headerSubtitle}>
+            Your generosity is making a real difference. We are grateful for your support and commitment to helping those in need.
+          </Text>
         </View>
       </View>
 
-      {/* ===== BOTTOM BUTTON ===== */}
-      <View style={styles.footer}>
+      {/* CONTENT */}
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.content}>
+          {/* Success Message */}
+          <View style={styles.successCard}>
+            <View style={styles.successIconContainer}>
+              <Ionicons name="checkmark-circle" size={48} color="#10B981" />
+            </View>
+            <Text style={styles.successTitle}>Transaction Successful!</Text>
+            <Text style={styles.successDescription}>
+              Your donation has been processed successfully. Thank you for your generosity and support.
+            </Text>
+          </View>
+
+          {/* Price Details */}
+          <View style={styles.priceCard}>
+            <Text style={styles.priceCardTitle}>Payment Summary</Text>
+            <View style={styles.priceDivider} />
+            
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Subtotal</Text>
+              <Text style={styles.priceValue}>${formatPrice(subtotal)}</Text>
+            </View>
+            
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Admin Fee</Text>
+              <Text style={styles.priceValue}>${formatPrice(adminFee)}</Text>
+            </View>
+            
+            <View style={styles.priceDivider} />
+            
+            <View style={styles.priceRow}>
+              <Text style={[styles.priceLabel, styles.priceTotalLabel]}>Total</Text>
+              <Text style={[styles.priceValue, styles.priceTotalValue]}>
+                ${formatPrice(total)}
+              </Text>
+            </View>
+          </View>
+
+          {/* Share Section */}
+          <View style={styles.shareSection}>
+            <Text style={styles.shareTitle}>Share Your Impact</Text>
+            <Text style={styles.shareSubtitle}>
+              Help spread the word and inspire others to make a difference
+            </Text>
+
+            <View style={styles.shareRow}>
+              <ShareItem icon="logo-instagram" label="Instagram" />
+              <ShareItem icon="logo-whatsapp" label="WhatsApp" />
+              <ShareItem icon="logo-facebook" label="Facebook" />
+              <ShareItem icon="link" label="Link" />
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* RETURN HOME SECTION */}
+      <View style={styles.returnHomeSection}>
         <TouchableOpacity
-          style={styles.footerButton}
-          onPress={() => router.push("/")}
-          activeOpacity={0.85}
+          style={styles.returnHomeButton}
+          onPress={() => router.push("/(tabs)/")}
+          activeOpacity={0.8}
         >
-          <Text style={styles.footerButtonText}>Back to Home</Text>
+          <Text style={styles.returnHomeButtonText}>Return to Home</Text>
+          <Ionicons name="home-outline" size={20} color="#264B8B" />
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-/* ===== PRICE ROW ===== */
-const PriceRow = ({
-  label,
-  value,
-  bold,
-}: {
-  label: string;
-  value: string;
-  bold?: boolean;
-}) => (
-  <View style={styles.priceRow}>
-    <Text style={[styles.priceText, bold && styles.bold]}>{label}</Text>
-    <Text style={[styles.priceText, bold && styles.bold]}>{value}</Text>
-  </View>
-);
-
-const ShareItem = ({ icon, label }: { icon: any; label: string }) => (
-  <TouchableOpacity style={styles.shareItem}>
+const ShareItem = ({ icon, label }: { icon: string; label: string }) => (
+  <TouchableOpacity style={styles.shareItem} activeOpacity={0.7}>
     <View style={styles.shareIconCircle}>
-      {icon === "entypo-link" ? (
-        <Entypo name="link" size={24} color="#4C63F0" />
-      ) : (
-        <Ionicons name={icon} size={24} color="#4C63F0" />
-      )}
+      <Ionicons name={icon as any} size={24} color="#264B8B" />
     </View>
     <Text style={styles.shareLabel}>{label}</Text>
   </TouchableOpacity>
 );
 
-/* ===== STYLES ===== */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFF",
+    backgroundColor: "#fff",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
   },
 
-  /* HEADER */
-  header: {
-    height: 220,
-    justifyContent: "flex-end",
+  // Header (same style as Zakat Calculator)
+  headerWrapper: {
+    height: 240,
+    width: "100%",
     position: "relative",
+    justifyContent: "flex-end",
+    overflow: "hidden",
   },
-  overlay: {
-    backgroundColor: "rgba(38,75,139,0.65)",
-    padding: 20,
+  headerContent: {
+    position: "absolute",
+    bottom: 24,
+    left: 20,
+    right: 20,
+    zIndex: 1,
+  },
+  guthenText: {
+    fontSize: 24,
+    fontFamily: "Guthen Bloots",
+    color: "#FFD602",
+    marginBottom: 4,
   },
   headerTitle: {
-    color: "#FFF",
-    fontSize: 22,
-    fontWeight: "700",
+    color: "#fff",
+    fontSize: 28,
+    fontWeight: "800",
+    fontFamily: "AlbertSans_800ExtraBold",
+    marginBottom: 8,
   },
   headerSubtitle: {
-    color: "#E8EEFF",
-    fontSize: 14,
-    marginTop: 4,
+    color: "#E6ECFF",
+    fontSize: 15,
+    lineHeight: 22,
+    fontFamily: "AlbertSans_400Regular",
   },
-  textOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 20,
-  },
-  horizontalLine: {
-    height: 1,
-    backgroundColor: "#E0E0E0",
-    marginBottom: 8,
-    marginTop: 8,
-    width: "100%",
-  },
-  /* CONTENT */
-  content: {
-    padding: 20,
+
+  // Scroll View
+  scrollView: {
     flex: 1,
   },
-  background: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-  },
-  headerBgColor: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#246BE1", // your requested color
+  scrollContent: {
+    paddingBottom: 20,
   },
 
-  leftFade: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%", // only fade left half
-    height: "100%",
+  // Content
+  content: {
+    padding: 20,
+    paddingTop: 24,
+    gap: 20,
   },
-  title: {
-    fontSize: 16,
-    fontWeight: "600",
+
+  // Success Card
+  successCard: {
+    backgroundColor: "#F0FDF4",
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#D1FAE5",
+  },
+  successIconContainer: {
+    marginBottom: 12,
+  },
+  successTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#065F46",
     marginBottom: 8,
+    fontFamily: "AlbertSans_700Bold",
+    textAlign: "center",
   },
-  description: {
+  successDescription: {
     fontSize: 14,
-    color: "#666",
-    marginBottom: 20,
+    color: "#047857",
+    textAlign: "center",
+    lineHeight: 20,
+    fontFamily: "AlbertSans_400Regular",
   },
 
-  /* PRICE */
-  priceBox: {
-    paddingVertical: 12,
-    marginBottom: 4,
+  // Price Card
+  priceCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  priceCardTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#010D26",
+    marginBottom: 12,
+    fontFamily: "AlbertSans_700Bold",
+  },
+  priceDivider: {
+    height: 1,
+    backgroundColor: "#E5E7EB",
+    marginVertical: 12,
   },
   priceRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
+    alignItems: "center",
+    marginBottom: 12,
   },
-  priceText: {
-    fontSize: 14,
-    color: "#333",
+  priceLabel: {
+    fontSize: 15,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_500Medium",
   },
-  bold: {
-    fontWeight: "700",
+  priceValue: {
+    fontSize: 15,
+    color: "#010D26",
+    fontWeight: "600",
+    fontFamily: "AlbertSans_600SemiBold",
   },
-
-  /* SHARE */
-  shareTitle: {
+  priceTotalLabel: {
     fontSize: 18,
+    color: "#010D26",
     fontWeight: "700",
-    marginBottom: 16,
-    color: "#0A0F2C",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  priceTotalValue: {
+    fontSize: 18,
+    color: "#264B8B",
+    fontWeight: "800",
+    fontFamily: "AlbertSans_800ExtraBold",
   },
 
+  // Share Section
+  shareSection: {
+    marginTop: 8,
+  },
+  shareTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#010D26",
+    marginBottom: 8,
+    fontFamily: "AlbertSans_700Bold",
+  },
+  shareSubtitle: {
+    fontSize: 14,
+    color: "#6B7280",
+    marginBottom: 20,
+    lineHeight: 20,
+    fontFamily: "AlbertSans_400Regular",
+  },
   shareRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: 12,
   },
-
   shareItem: {
+    flex: 1,
     alignItems: "center",
-    width: 64,
   },
-
   shareIconCircle: {
     width: 56,
     height: 56,
@@ -238,32 +323,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-
   shareLabel: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#0A0F2C",
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#374151",
     textAlign: "center",
+    fontFamily: "AlbertSans_600SemiBold",
   },
 
-  /* FOOTER */
-  footer: {
-    backgroundColor: "#246BE1",
-    paddingHorizontal: 16,
-    paddingVertical: 20,
+  // Return Home Section
+  returnHomeSection: {
+    padding: 20,
+    paddingBottom: 32,
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
   },
-
-  footerButton: {
-    backgroundColor: "#FFFFFF",
-    paddingVertical: 10,
-    borderRadius: 8,
+  returnHomeButton: {
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+    paddingVertical: 16,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
-
-  footerButtonText: {
-    color: "#244180",
+  returnHomeButtonText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
+    color: "#264B8B",
+    fontFamily: "AlbertSans_700Bold",
   },
 });
