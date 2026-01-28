@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
+  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -23,11 +24,13 @@ import { getTopDonation } from "@/store/reduxSlice/quickDonationSlice";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { DimensionValue } from "react-native";
 import HeroBackground from "@/components/ui/GradientImage";
+import RenderHTML from "react-native-render-html";
 
 export default function GazaDonationScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const [problemOpen, setProblemOpen] = useState(true);
+  const [impactOpen, setImpactOpen] = useState(true);
 
   const [campaign, setCampaign] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -64,7 +67,16 @@ export default function GazaDonationScreen() {
     const load = async () => {
       try {
         const data = await getCampaignDetails(slug);
-        setCampaign(data?.campaign || data);
+        const campaignData = data?.campaign || data;
+        console.log("Campaign data loaded:", {
+          id: campaignData?.id,
+          name: campaignData?.name,
+          amountDonated: campaignData?.amountDonated,
+          amount_donated: campaignData?.amount_donated,
+          fundraiserGoal: campaignData?.fundraiserGoal,
+          mobileGoalAmount: campaignData?.mobileGoalAmount,
+        });
+        setCampaign(campaignData);
       } catch (e) {
         Alert.alert("Error", "Failed to load campaign");
       } finally {
@@ -88,13 +100,33 @@ export default function GazaDonationScreen() {
     (item: any) => item.campaignId === campaign?.id
   );
 
-  const raised = Number(campaign?.raisedAmount || 0);
-  const goal = Number(campaign?.goalAmount || 0);
+  // Handle both camelCase and snake_case, and ensure proper number conversion
+  const raised = Number(
+    campaign?.amountDonated ?? 
+    campaign?.amount_donated ?? 
+    0
+  );
+  const goal = Number(
+    campaign?.mobileGoalAmount ??
+      campaign?.mobile_goal_amount ??
+      campaign?.goalAmount ??
+      campaign?.fundraiserGoal ??
+      campaign?.fundraiser_goal ??
+      0
+  );
+
+  console.log("Campaign amounts:", { raised, goal, amountDonated: campaign?.amountDonated, amount_donated: campaign?.amount_donated });
 
   const progressPercent = useMemo<DimensionValue>(() => {
     if (!goal) return "0%";
     return `${Math.min((raised / goal) * 100, 100)}%`;
   }, [raised, goal]);
+
+  const handleAmountChange = (text: string) => {
+    // Remove any non-numeric characters
+    const numericValue = text.replace(/[^0-9]/g, "");
+    setAmount(numericValue);
+  };
 
   const handleDonate = async () => {
     const donationAmount = Number(amount);
@@ -150,50 +182,68 @@ export default function GazaDonationScreen() {
         containerStyle={{ height: 320 }}
       >
         <View style={styles.heroText}>
-          {campaign.campaignBriefTitle ? (
-            <>
-              {(() => {
-                const words = campaign.campaignBriefTitle.split(" ");
-                const firstWord = words[0];
-                const restOfTitle = words.slice(1).join(" ");
-                return (
-                  <>
-                    <Text style={styles.heroTitle}>{firstWord}</Text>
-                    {restOfTitle && (
-                      <Text style={styles.heroSubtitle}>{restOfTitle}</Text>
-                    )}
-                  </>
-                );
-              })()}
-            </>
-          ) : (
-            <>
-              <Text style={styles.heroTitle}>Gaza</Text>
-              <Text style={styles.heroSubtitle}>is being Starved</Text>
-            </>
-          )}
+          {(() => {
+            // Use brief title if present, otherwise fall back to main mobile title/name
+            const rawTitle =
+              campaign.campaignBriefTitle ||
+              campaign.mobileTitle ||
+              campaign.name ||
+              "";
 
-          <Text style={styles.heroMeta}>
-            <Text style={styles.heroMetaBold}>
-              {campaign.impactFigure
-                ? campaign.impactFigure.toLocaleString()
-                : campaign.totalDonors || 254_786}
-            </Text>{" "}
-            Lives Changed
-          </Text>
+            const words = rawTitle.split(" ");
+            const firstWord = words[0];
+            const restOfTitle = words.slice(1).join(" ");
+
+            return (
+              <>
+                <Text style={styles.heroTitle}>{firstWord}</Text>
+                {restOfTitle && (
+                  <Text style={styles.heroSubtitle}>{restOfTitle}</Text>
+                )}
+              </>
+            );
+          })()}
+
+          {campaign.impactFigure && campaign.impactFigure > 0 && (
+            <Text style={styles.heroMeta}>
+              <Text style={styles.heroMetaBold}>
+                {campaign.impactFigure.toLocaleString()}
+              </Text>{" "}
+              {campaign.problemDesc
+                ? campaign.problemDesc
+                    .replace(/<[^>]*>/g, "")
+                    .split(".")[0] // use first sentence to keep it short
+                : "Lives Changed"}
+            </Text>
+          )}
         </View>
       </HeroBackground>
 
       {/* ===== CONTENT ===== */}
       <View style={styles.content}>
-        <Text style={{ fontSize: 24, fontWeight: "700", marginBottom: 8 }}>
-          {campaign.name}
+        <Text style={styles.campaignTitle}>
+          {campaign.mobileTitle || campaign.name}
         </Text>
+        {campaign.mobileSubtitle ? (
+          <Text
+            style={{
+              fontSize: 14,
+              color: "#6B7280",
+              marginBottom: 8,
+            }}
+          >
+            {campaign.mobileSubtitle}
+          </Text>
+        ) : null}
         <Text style={styles.raisedAmount}>${raised.toLocaleString()}</Text>
         <Text style={styles.goalText}>of ${goal.toLocaleString()} goal</Text>
 
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: progressPercent }]} />
+        </View>
+
+        <View style={styles.dividerWrapper}>
+          <View style={styles.divider} />
         </View>
 
         {/* ===== PROBLEM ===== */}
@@ -211,67 +261,88 @@ export default function GazaDonationScreen() {
         </TouchableOpacity>
 
         {problemOpen && (
-          <Text style={styles.bodyText}>
-            {campaign.problemDesc
-              ? campaign.problemDesc
-                  .replace(/<[^>]*>/g, "")
-                  .replace(
-                    /&nbsp;|&amp;|&quot;|&lt;|&gt;/gi,
-                    function (entity: string) {
-                      switch (entity) {
-                        case "&nbsp;":
-                          return " ";
-                        case "&amp;":
-                          return "&";
-                        case "&quot;":
-                          return '"';
-                        case "&lt;":
-                          return "<";
-                        case "&gt;":
-                          return ">";
-                        default:
-                          return "";
-                      }
+          campaign.mobileDescription ? (
+            <RenderHTML
+              contentWidth={Dimensions.get("window").width - 32}
+              source={{ html: campaign.mobileDescription }}
+              tagsStyles={{
+                p: styles.bodyText,
+                h3: {
+                  ...styles.bodyText,
+                  fontSize: 20,
+                  fontWeight: "700",
+                  textAlign: "center",
+                  marginTop: 12,
+                },
+                h5: {
+                  ...styles.bodyText,
+                  fontSize: 16,
+                  fontWeight: "700",
+                  marginTop: 12,
+                },
+              }}
+              classesStyles={{
+                "ql-align-center": { textAlign: "center" },
+              }}
+            />
+          ) : (
+            <Text style={styles.bodyText}>
+              {(
+                campaign.problemDesc ||
+                campaign.description ||
+                ""
+              )
+                .replace(/<[^>]*>/g, "")
+                .replace(
+                  /&nbsp;|&amp;|&quot;|&lt;|&gt;/gi,
+                  function (entity: string) {
+                    switch (entity) {
+                      case "&nbsp;":
+                        return " ";
+                      case "&amp;":
+                        return "&";
+                      case "&quot;":
+                        return '"';
+                      case "&lt;":
+                        return "<";
+                      case "&gt;":
+                        return ">";
+                      default:
+                        return "";
                     }
-                  )
-              : campaign.description
-                  ?.replace(/<[^>]*>/g, "")
-                  .replace(
-                    /&nbsp;|&amp;|&quot;|&lt;|&gt;/gi,
-                    function (entity: string) {
-                      switch (entity) {
-                        case "&nbsp;":
-                          return " ";
-                        case "&amp;":
-                          return "&";
-                        case "&quot;":
-                          return '"';
-                        case "&lt;":
-                          return "<";
-                        case "&gt;":
-                          return ">";
-                        default:
-                          return "";
-                      }
-                    }
-                  )}
-          </Text>
+                  }
+                )}
+            </Text>
+          )
         )}
 
-        {/* ===== IMPACT ===== */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Your Impact</Text>
-          <Ionicons name="chevron-down" size={18} color="#333" />
+        <View style={styles.dividerWrapper}>
+          <View style={styles.divider} />
         </View>
 
-        <View
-          style={{
-            backgroundColor: "#F2F6FF",
-            padding: 16,
-            borderRadius: 8,
-            marginVertical: 16,
-          }}
+        {/* ===== IMPACT ===== */}
+        <TouchableOpacity
+          style={styles.sectionHeader}
+          activeOpacity={0.7}
+          onPress={() => setImpactOpen((prev) => !prev)}
         >
+          <Text style={styles.sectionTitle}>Your Impact</Text>
+          <Ionicons
+            name={impactOpen ? "chevron-up" : "chevron-down"}
+            size={18}
+            color="#333"
+          />
+        </TouchableOpacity>
+
+        {impactOpen && (
+          <View
+            style={{
+              backgroundColor: "#F2F6FF",
+              padding: 16,
+              borderRadius: 8,
+              marginVertical: 16,
+            }}
+          >
           <Text style={styles.chooseText}>Choose an amount to give</Text>
 
           <View style={styles.amountRow}>
@@ -286,10 +357,11 @@ export default function GazaDonationScreen() {
           </View>
 
           <View style={styles.customAmount}>
+            <Text style={styles.currencyPrefix}>$</Text>
             <TextInput
               style={[styles.customInput, { flex: 1, marginRight: 12 }]}
               value={amount}
-              onChangeText={setAmount}
+              onChangeText={handleAmountChange}
               keyboardType="numeric"
               placeholder="Custom Amount"
               placeholderTextColor="#aaa"
@@ -321,6 +393,11 @@ export default function GazaDonationScreen() {
             <View style={styles.checkbox} />
             <Text style={styles.monthlyText}>Make my donation monthly</Text>
           </View>
+        </View>
+        )}
+
+        <View style={styles.dividerWrapper}>
+          <View style={styles.divider} />
         </View>
 
         <Text style={styles.donationTitle}>Donation</Text>
@@ -368,11 +445,11 @@ const AmountButton = ({
   active?: boolean;
   onPress: () => void;
 }) => (
-  <TouchableOpacity onPress={onPress} style={{ flex: 1, marginHorizontal: 2 }}>
+  <TouchableOpacity onPress={onPress} style={{ flex: 1, marginHorizontal: 1 }}>
     <LinearGradient
       colors={active ? ["#246BE1", "#064DC3"] : ["#f4f4f4", "#eaeaea"]}
       start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+      end={{ x: 0, y: 1 }}
       style={[
         styles.amountButton,
         { paddingVertical: 12, borderRadius: 10, alignItems: "center" },
@@ -412,8 +489,8 @@ const styles = StyleSheet.create({
   heroText: { paddingBottom: 22 },
   heroTitle: {
     fontSize: 40,
-    fontWeight: "800",
-    color: "#fff",
+    fontFamily: "Guthen Bloots",
+    color: "#FFD602",
   },
   heroSubtitle: {
     fontSize: 26,
@@ -430,16 +507,35 @@ const styles = StyleSheet.create({
   heroMetaBold: { fontWeight: "700", color: "#f4c430" },
 
   /* CONTENT */
-  content: { padding: 16 },
+  content: { padding: 16, position: "relative" },
+  campaignTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#010D26",
+    marginBottom: 8,
+    fontFamily: "AlbertSans_700Bold",
+  },
   raisedAmount: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: "800",
-    color: "#111",
+    color: "#246BE1",
+    fontFamily: "AlbertSans_800ExtraBold",
+    marginBottom: 4,
   },
   goalText: {
     fontSize: 13,
     color: "#777",
     marginTop: 2,
+  },
+  dividerWrapper: {
+    marginVertical: 20,
+    marginLeft: -16,
+    marginRight: -16,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#E5E7EB",
+    width: "100%",
   },
 
   progressTrack: {
@@ -455,7 +551,6 @@ const styles = StyleSheet.create({
   },
 
   sectionHeader: {
-    marginTop: 20,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -483,7 +578,7 @@ const styles = StyleSheet.create({
   amountRow: {
     flexDirection: "row",
     marginTop: 12,
-    gap: 8,
+    gap: 4,
   },
   amountButton: {
     flex: 1,
@@ -513,6 +608,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   customLabel: { color: "#999" },
+  currencyPrefix: {
+    fontSize: 16,
+    color: "#333",
+    fontWeight: "600",
+    marginRight: 8,
+    alignSelf: "center",
+  },
   customInput: { fontWeight: "600" },
   currency: {
     fontSize: 16,

@@ -89,22 +89,44 @@ const DetailsStep = ({ values, onChange, onValidChange }: Props) => {
       const firstName = parts[0] ?? "";
       const lastName = parts.slice(1).join(" ") || firstName;
 
+      const checkoutDetails = {
+        firstName,
+        lastName,
+        email: formik.values.email,
+        phone: formik.values.phone,
+        address: "N/A",
+        city: "N/A",
+        state: "N/A",
+        zip: "00000",
+        country: "PK",
+        basketItems: [],
+        status: true,
+      };
+
+      console.log("=== STEP 1: STORING DETAILS ===");
+      console.log("Form values:", {
+        fullName: formik.values.fullName,
+        email: formik.values.email,
+        phone: formik.values.phone,
+      });
+      console.log("Parsed details:", {
+        firstName,
+        lastName,
+        email: checkoutDetails.email,
+        phone: checkoutDetails.phone,
+      });
+      console.log("Full checkoutDetails object:", checkoutDetails);
+
       await AsyncStorage.setItem(
         "checkoutDetails",
-        JSON.stringify({
-          firstName,
-          lastName,
-          email: formik.values.email,
-          phone: formik.values.phone,
-          address: "N/A",
-          city: "N/A",
-          state: "N/A",
-          zip: "00000",
-          country: "PK",
-          basketItems: [],
-          status: true,
-        })
+        JSON.stringify(checkoutDetails)
       );
+
+      // Verify it was stored
+      const stored = await AsyncStorage.getItem("checkoutDetails");
+      const parsed = stored ? JSON.parse(stored) : null;
+      console.log("Verification - Retrieved from AsyncStorage:", parsed);
+      console.log("=== END STEP 1 STORAGE ===");
     };
 
     persist();

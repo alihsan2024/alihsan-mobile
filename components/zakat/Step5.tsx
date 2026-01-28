@@ -14,6 +14,7 @@ import ZakatCalculatorHeader from "@/components/Zakat/ZakatCalculatorHeader";
 import Stepper from "@/components/ui/Stepper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { zakatStep, zakatResetInput } from "@/store/reduxSlice/zakatSlice";
+import { getAnyZakatCampaign } from "@/utils/api";
 
 interface Step5Props {
   zakatTotal: number;
@@ -26,6 +27,18 @@ export default function Step5({ zakatTotal }: Step5Props) {
   );
   const [loading, setLoading] = useState(false);
   const [campaign, setCampaign] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchZakatCampaign = async () => {
+      try {
+        const zakatCampaign = await getAnyZakatCampaign();
+        setCampaign(zakatCampaign);
+      } catch (error) {
+        console.error("Error fetching zakat campaign:", error);
+      }
+    };
+    fetchZakatCampaign();
+  }, []);
 
   const total = (arrayData: { value: number }[]) =>
     arrayData.reduce((sum, item) => sum + (item.value || 0), 0);
@@ -50,15 +63,23 @@ export default function Step5({ zakatTotal }: Step5Props) {
     usdToUnit(nisab) < wealth ? wealth / 40 : 0;
 
   const handleDonation = async () => {
+    if (!campaign) {
+      Alert.alert(
+        "Error",
+        "Unable to load Zakat campaign. Please try again."
+      );
+      return;
+    }
+
     setLoading(true);
     try {
       const checkoutData = await AsyncStorage.getItem("checkout");
       const checkout = checkoutData ? JSON.parse(checkoutData) : [];
 
       const newItem = {
-        campaignId: campaign?.id || "default",
-        name: campaign?.name || "Zakat Payment",
-        coverImage: campaign?.coverImage || "",
+        campaignId: campaign.id,
+        name: campaign.name || "Zakat Al Maal",
+        coverImage: campaign.coverImage || "",
         amount:
           zakatTotal > 0
             ? zakatTotal

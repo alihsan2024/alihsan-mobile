@@ -18,6 +18,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { addBasketItem } from "@/store/reduxSlice/basketSlice";
 import { useGetBasketQuery } from "@/store/reduxSlice/api/basketApi";
+import HeroBackground from "@/components/ui/GradientImage";
 
 const sponsorshipOptions = [
   { id: "120", label: "Monthly", amount: 120, period: "30 days" },
@@ -275,54 +276,63 @@ const OrphanProfileScreen = () => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.heroSection}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Text style={styles.backButtonText}>Back to all children</Text>
-        </TouchableOpacity>
-        <View style={styles.heroContent}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.heroTitle}>
-              {formatOrphanName(orphan.name)}
-            </Text>
-            <View style={styles.heroBadges}>
-              <Text style={styles.heroBadge}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 32 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* HERO */}
+      <HeroBackground
+        source={{ uri: orphan.coverImage }}
+        containerStyle={{ height: 260 }}
+        showBack
+      >
+        <View style={styles.headerContent}>
+          <Text style={styles.guthenText}>Child Sponsorship</Text>
+          <Text style={styles.headerTitle}>
+            {formatOrphanName(orphan.name)}
+          </Text>
+          <View style={styles.headerMetaRow}>
+            {orphan.dateOfBirth && (
+              <Text style={styles.headerMetaText}>
                 Age {calculateAge(orphan.dateOfBirth)}
               </Text>
-              {orphan.status === "available" && (
-                <Text style={[styles.heroBadge, styles.heroBadgeAvailable]}>
-                  Available
-                </Text>
-              )}
-            </View>
-            <Text style={styles.heroBio}>{orphan.bio}</Text>
-            {orphan.status === "available" && (
-              <TouchableOpacity
-                style={styles.sponsorNowButton}
-                onPress={() => setActiveTab("sponsorship")}
-              >
-                <Text style={styles.sponsorNowButtonText}>
-                  Sponsor {formatOrphanName(orphan.name)}
-                </Text>
-              </TouchableOpacity>
+            )}
+            {orphan.gender && (
+              <Text style={styles.headerMetaText}>
+                {orphan.gender === "male" ? "Boy" : "Girl"}
+              </Text>
+            )}
+            {orphan.location && (
+              <Text style={styles.headerMetaText}>{orphan.location}</Text>
             )}
           </View>
-          <Image
-            source={{ uri: orphan.coverImage }}
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
+          {orphan.status === "available" && (
+            <View style={styles.headerBadge}>
+              <Text style={styles.headerBadgeText}>Available for sponsorship</Text>
+            </View>
+          )}
         </View>
-      </View>
+      </HeroBackground>
 
       {/* Stats Banner */}
-      <View style={styles.statsBanner}>
-        <Text style={styles.statsValue}>$120/month</Text>
-        <Text style={styles.statsValue}>4x community impact</Text>
-        <Text style={styles.statsValue}>15+ years experience</Text>
+      <View style={styles.sectionWrapper}>
+        <View style={styles.statsBanner}>
+          <View style={styles.statsItem}>
+            <Text style={styles.statsValue}>$120</Text>
+            <Text style={styles.statsLabel}>per month</Text>
+          </View>
+          <View style={styles.statsDivider} />
+          <View style={styles.statsItem}>
+            <Text style={styles.statsValue}>1 child</Text>
+            <Text style={styles.statsLabel}>sponsored by you</Text>
+          </View>
+          <View style={styles.statsDivider} />
+          <View style={styles.statsItem}>
+            <Text style={styles.statsValue}>Ongoing</Text>
+            <Text style={styles.statsLabel}>support & care</Text>
+          </View>
+        </View>
       </View>
 
       {/* Tabs */}
@@ -398,73 +408,123 @@ const OrphanProfileScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F7FAFC" },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 32,
   },
-  heroSection: {
-    backgroundColor: "#E6F0FA",
-    padding: 16,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+  headerContent: {
+    position: "absolute",
+    bottom: 24,
+    left: 20,
+    right: 20,
+    zIndex: 1,
   },
-  backButton: { marginBottom: 8, alignSelf: "flex-start", padding: 8 },
-  backButtonText: { color: "#2D7DD2", fontWeight: "bold", fontSize: 14 },
-  heroContent: { flexDirection: "row", alignItems: "center" },
-  heroTitle: {
-    color: "#2D7DD2",
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 8,
+  guthenText: {
+    fontSize: 22,
+    fontFamily: "Guthen Bloots",
+    color: "#FFD602",
+    marginBottom: 4,
   },
-  heroBadges: { flexDirection: "row", gap: 8, marginBottom: 8 },
-  heroBadge: {
-    backgroundColor: "#fff",
-    color: "#2D7DD2",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginRight: 8,
+  headerTitle: {
+    color: "#FFFFFF",
+    fontSize: 26,
+    fontWeight: "800",
+    marginBottom: 6,
+    fontFamily: "AlbertSans_800ExtraBold",
   },
-  heroBadgeAvailable: { backgroundColor: "#38B000", color: "#fff" },
-  heroBio: { color: "#2D7DD2", marginBottom: 8 },
-  heroImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 16,
-    marginLeft: 16,
-    backgroundColor: "#E6F0FA",
+  headerMetaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 10,
+  },
+  headerMetaText: {
+    color: "#E6ECFF",
+    fontSize: 13,
+    fontFamily: "AlbertSans_500Medium",
+  },
+  headerBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(255,255,255,0.95)",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  headerBadgeText: {
+    color: "#065F46",
+    fontSize: 12,
+    fontWeight: "600",
+    fontFamily: "AlbertSans_600SemiBold",
+  },
+  sectionWrapper: {
+    paddingHorizontal: 20,
+    marginTop: 20,
   },
   statsBanner: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderColor: "#B3C7E6",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
-  statsValue: { color: "#2D7DD2", fontWeight: "bold", fontSize: 16 },
+  statsItem: { alignItems: "flex-start", flex: 1 },
+  statsValue: {
+    color: "#010D26",
+    fontWeight: "800",
+    fontSize: 16,
+  },
+  statsLabel: { color: "#6B7280", fontSize: 12, marginTop: 2 },
+  statsDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: "#E5E7EB",
+    marginHorizontal: 8,
+  },
   tabsRow: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    borderColor: "#B3C7E6",
     marginTop: 16,
+    marginHorizontal: 20,
+    borderRadius: 999,
+    backgroundColor: "#F3F4F6",
+    padding: 4,
   },
-  tabButton: { flex: 1, paddingVertical: 12, alignItems: "center" },
-  tabButtonActive: { borderBottomWidth: 2, borderColor: "#2D7DD2" },
-  tabButtonText: { color: "#2D7DD2", fontWeight: "bold" },
-  tabButtonTextActive: { color: "#2D7DD2", fontWeight: "bold" },
-  tabContent: { padding: 16 },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 999,
+  },
+  tabButtonActive: {
+    backgroundColor: "#FFFFFF",
+  },
+  tabButtonText: {
+    color: "#6B7280",
+    fontWeight: "500",
+    fontSize: 13,
+  },
+  tabButtonTextActive: {
+    color: "#010D26",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  tabContent: { paddingHorizontal: 20, paddingTop: 20 },
   sectionTitle: {
-    color: "#2D7DD2",
-    fontSize: 20,
-    fontWeight: "bold",
+    color: "#010D26",
+    fontSize: 18,
+    fontWeight: "700",
     marginBottom: 8,
   },
-  sectionText: { color: "#2D7DD2", marginBottom: 8 },
+  sectionText: { color: "#4B5563", marginBottom: 8, fontSize: 14 },
   infoCard: {
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -472,8 +532,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     elevation: 1,
   },
-  infoTitle: { color: "#2D7DD2", fontWeight: "bold", marginBottom: 4 },
-  infoText: { color: "#2D7DD2", fontSize: 14, marginBottom: 2 },
+  infoTitle: { color: "#010D26", fontWeight: "700", marginBottom: 4 },
+  infoText: { color: "#4B5563", fontSize: 13, marginBottom: 2 },
   sponsorshipOptions: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -485,45 +545,48 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#2D7DD2",
-    backgroundColor: "#F7FAFC",
+    borderColor: "#D1D5DB",
+    backgroundColor: "#F9FAFB",
   },
-  sponsorshipButtonActive: { backgroundColor: "#2D7DD2" },
+  sponsorshipButtonActive: {
+    backgroundColor: "#246BE1",
+    borderColor: "#246BE1",
+  },
   sponsorshipLabel: {
-    color: "#2D7DD2",
-    fontWeight: "bold",
+    color: "#4B5563",
+    fontWeight: "500",
   },
   sponsorshipLabelActive: {
-    color: "#fff",
-    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   sponsorshipAmount: {
-    color: "#2D7DD2",
+    color: "#010D26",
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "700",
   },
   sponsorshipAmountActive: {
-    color: "#fff",
+    color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "700",
   },
   sponsorshipPeriod: {
-    color: "#2D7DD2",
+    color: "#6B7280",
     fontSize: 12,
   },
   sponsorshipPeriodActive: {
-    color: "#fff",
+    color: "#E5E7EB",
     fontSize: 12,
   },
   sponsorNowButton: {
-    backgroundColor: "#2D7DD2",
+    backgroundColor: "#246BE1",
     padding: 12,
     borderRadius: 8,
     marginTop: 12,
   },
   sponsorNowButtonText: {
     color: "#fff",
-    fontWeight: "bold",
+    fontWeight: "700",
     textAlign: "center",
   },
   errorTitle: { color: "#D7263D", fontSize: 22, fontWeight: "bold" },

@@ -32,7 +32,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Configure API URLs for different environments
 // IMPORTANT: Replace YOUR_LAN_IP below with your computer's actual LAN IP address
 const API_URLS = {
-  development: "http://192.168.1.114:4001", // e.g., http://192.168.1.100:4000
+  development: "http://192.168.20.16:4001", // e.g., http://192.168.1.100:4000
   production: "https://deenstream.live",
   // production: "https://api.alihsan.org.au",
 };
@@ -113,6 +113,14 @@ export interface Campaign {
   slug: string;
   checkoutType: string;
   status?: string;
+  // Mobile-specific fields (from campaigns table)
+  mobileTitle?: string;
+  mobileSubtitle?: string;
+  mobileGoalAmount?: number;
+  mobileDescription?: string;
+  campaignBriefTitle?: string;
+  impactFigure?: number;
+  problemDesc?: string;
 }
 
 // Response structure from backend
@@ -147,15 +155,15 @@ export const fetchCampaigns = async (
   }
 };
 // Fetch all featured campaigns
-export const fetchFeaturedCampaigns = async (): Promise<any> => {
+export const fetchFeaturedCampaigns = async (): Promise<Campaign[]> => {
   try {
     const response = await api.get("/project/featured-campaigns");
     const data = response.data;
 
-    // Return the full data object as requested
-    return data;
+    // Return campaigns array from payload
+    return data?.payload?.campaigns || [];
   } catch (error) {
-    console.error("Error fetching campaigns:", error);
+    console.error("Error fetching featured campaigns:", error);
     throw error;
   }
 };

@@ -236,44 +236,16 @@ export const logoutUser = createAsyncThunk(
   "auth/logout",
   async (_, thunkAPI) => {
     try {
-      // 1️⃣ Clear auth storage
+      // Clear auth storage
       await AsyncStorage.removeItem("loggedIn");
       api.defaults.headers.common.Authorization = "";
 
-      // 2️⃣ Device re-registration as guest
-      try {
-        const { requestUserPermission } = await import("@/utils/notifications");
-        const { getOrCreateGuestId, setLastRegisteredDeviceInfo } =
-          await import("@/utils/deviceRegistration");
-        const { Platform } = await import("react-native");
-        const { registerDeviceToken } = await import("@/utils/api");
-
-        const token = await requestUserPermission();
-
-        if (token) {
-          const guest_id = await getOrCreateGuestId();
-          const platform = Platform.OS;
-
-          // 🚨 IMPORTANT: user_id is NOT passed
-          await registerDeviceToken({
-            token,
-            user_id: null,
-            guest_id,
-            platform,
-          });
-
-          await setLastRegisteredDeviceInfo({
-            token,
-            guest_id,
-            platform,
-          });
-        }
-      } catch (e) {
-        console.log("[DeviceReg] Guest registration after logout failed", e);
-      }
-
+      // Note: Device re-registration as guest is skipped to avoid native module issues
+      // The device will be automatically registered when the app restarts or user logs in again
+      
       return true;
     } catch (e) {
+      console.error("[Logout] Failed to clear auth storage", e);
       return thunkAPI.rejectWithValue("Logout failed");
     }
   }
@@ -389,4 +361,4 @@ export const authenticationSlice = createSlice({
 });
 
 export default authenticationSlice.reducer;
-export const logout = authenticationSlice.actions.logout;
+export const { logout } = authenticationSlice.actions;

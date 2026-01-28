@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -18,7 +18,8 @@ import {
   fetchProfileData,
   setProfileDetails,
 } from "@/store/reduxSlice/profileStatisticsSlice";
-import { getProfile } from "@/store/reduxSlice/authenticationSlice";
+import { getProfile, logoutUser } from "@/store/reduxSlice/authenticationSlice";
+import LogoutConfirmationModal from "@/components/ui/Modals/LogoutConfirmationModal";
 
 // Format currency
 const formatCurrency = (amount: number): string => {
@@ -78,6 +79,7 @@ export default function ProfileScreen() {
 
   const isAuthenticated = !!user || !!authUser;
   const currentUser = user || authUser;
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Fetch profile data on mount and when user changes
   useEffect(() => {
@@ -122,6 +124,30 @@ export default function ProfileScreen() {
     const name = getUserDisplayName();
     const currentYear = new Date().getFullYear();
     return `Assalamualaikum ${name},`;
+  };
+
+  // Handle sign out button press - show confirmation modal
+  const handleSignOutPress = () => {
+    setShowLogoutModal(true);
+  };
+
+  // Handle confirmed sign out
+  const handleConfirmSignOut = async () => {
+    setShowLogoutModal(false);
+    try {
+      const result = await dispatch(logoutUser());
+      if (logoutUser.fulfilled.match(result)) {
+        router.replace("/(tabs)/");
+      } else {
+        console.error("Logout failed:", result.error);
+        // Still navigate even if logout has issues
+        router.replace("/(tabs)/");
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Navigate anyway to ensure user can continue
+      router.replace("/(tabs)/");
+    }
   };
 
   if (!isAuthenticated) {
@@ -245,7 +271,13 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-back" size={22} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity
+          style={styles.signOutButton}
+          onPress={handleSignOutPress}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+        </TouchableOpacity>
       </View>
 
       {/* Profile */}
@@ -443,6 +475,13 @@ export default function ProfileScreen() {
           )}
         </View>
       </View>
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmationModal
+        visible={showLogoutModal}
+        onCancel={() => setShowLogoutModal(false)}
+        onConfirm={handleConfirmSignOut}
+      />
     </ScrollView>
   );
 }
@@ -618,7 +657,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
+    paddingVertical: 12,
+    marginTop: 4,
   },
   backBtn: {
     width: 40,
@@ -634,6 +674,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#111",
+  },
+  signOutButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FEE2E2",
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   profileRow: {

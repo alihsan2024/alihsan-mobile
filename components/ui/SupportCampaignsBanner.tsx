@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Image as ExpoImage } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
+import { router } from "expo-router";
+import { fetchCampaigns } from "@/utils/api";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -47,10 +49,48 @@ export default function SupportCampaignsBanner({
   const [selectedCampaign, setSelectedCampaign] = useState(campaigns[0].slug);
   const [selectedAmount, setSelectedAmount] = useState(amounts[0]);
   const [selectedFrequency, setSelectedFrequency] = useState(frequencies[0].value);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [allCampaigns, setAllCampaigns] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  // Fetch all campaigns on mount
+  useEffect(() => {
+    const loadCampaigns = async () => {
+      try {
+        const campaignsData = await fetchCampaigns();
+        setAllCampaigns(campaignsData || []);
+      } catch (error) {
+        console.error("Error loading campaigns:", error);
+      }
+    };
+    loadCampaigns();
+  }, []);
+
+  // Filter campaigns based on search query
+  useEffect(() => {
+    if (searchQuery.trim().length >= 2) {
+      const filtered = allCampaigns.filter((campaign) =>
+        campaign.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        campaign.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setSearchResults(filtered.slice(0, 5)); // Limit to 5 results
+      setShowDropdown(true);
+    } else {
+      setSearchResults([]);
+      setShowDropdown(false);
+    }
+  }, [searchQuery, allCampaigns]);
 
   const handleCampaignPress = (campaign: any) => {
     setSelectedCampaign(campaign.slug);
     onCampaignPress?.(campaign);
+  };
+
+  const handleSearchResultPress = (campaign: any) => {
+    setSearchQuery("");
+    setShowDropdown(false);
+    router.push(`/campaign/${campaign.slug}`);
   };
 
   const handleDonate = () => {
@@ -77,19 +117,87 @@ export default function SupportCampaignsBanner({
         >
           {/* Search Bar and Notification */}
           <View style={styles.headerBar}>
-            <View style={styles.searchContainer}>
-              <Feather name="search" size={16} color="#fff" />
-              <TextInput
-                placeholder="Search"
-                placeholderTextColor="rgba(255,255,255,0.6)"
-                style={styles.searchInput}
-              />
+            <View style={styles.searchWrapper}>
+              <View style={styles.searchContainer}>
+                <Feather name="search" size={16} color="#fff" />
+                <TextInput
+                  placeholder="Search campaigns..."
+                  placeholderTextColor="rgba(255,255,255,0.6)"
+                  style={styles.searchInput}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  onFocus={() => {
+                    if (searchQuery.trim().length >= 2) {
+                      setShowDropdown(true);
+                    }
+                  }}
+                  onBlur={() => {
+                    // Delay to allow click on dropdown item
+                    setTimeout(() => setShowDropdown(false), 200);
+                  }}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSearchQuery("");
+                      setShowDropdown(false);
+                    }}
+                    style={styles.clearButton}
+                  >
+                    <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.8)" />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
             <TouchableOpacity style={styles.notificationButton}>
               <Ionicons name="notifications" size={18} color="#010D264D" />
               <View style={styles.notificationDot} />
             </TouchableOpacity>
           </View>
+
+          {/* Dropdown - rendered as sibling to appear on top */}
+          {showDropdown && searchResults.length > 0 && (
+            <View style={[styles.dropdown, { top: (topInset || 0) + 24 + 44 + 8 }]}>
+              <ScrollView
+                style={styles.dropdownScrollView}
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled={true}
+              >
+                {searchResults.map((item, index) => (
+                  <TouchableOpacity
+                    key={item.id?.toString() || item.slug || index.toString()}
+                    style={[
+                      styles.dropdownItem,
+                      index === searchResults.length - 1 && styles.dropdownItemLast,
+                    ]}
+                    onPress={() => handleSearchResultPress(item)}
+                    activeOpacity={0.8}
+                  >
+                    <ExpoImage
+                      source={
+                        item.coverImage || item.cover_image
+                          ? { uri: item.coverImage || item.cover_image }
+                          : require("../../assets/card1.png")
+                      }
+                      style={styles.dropdownItemImage}
+                      contentFit="cover"
+                    />
+                    <View style={styles.dropdownItemContent}>
+                      <Text style={styles.dropdownItemText} numberOfLines={2}>
+                        {item.name}
+                      </Text>
+                      {item.description && (
+                        <Text style={styles.dropdownItemDescription} numberOfLines={1}>
+                          {item.description.replace(/<[^>]*>/g, "").substring(0, 60)}...
+                        </Text>
+                      )}
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#6B7280" />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           <View style={styles.content}>
             {/* Left Content */}
@@ -369,10 +477,14 @@ const styles = StyleSheet.create({
   },
   headerBar: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     marginBottom: 20,
     gap: 12,
+  },
+  searchWrapper: {
+    flex: 1,
+    position: "relative",
   },
   searchContainer: {
     flex: 1,
@@ -390,6 +502,65 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     fontFamily: "AlbertSans_500Medium",
+  },
+  clearButton: {
+    padding: 4,
+  },
+  dropdown: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 30,
+    maxHeight: 400,
+    overflow: "hidden",
+    zIndex: 99999,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  dropdownScrollView: {
+    maxHeight: 400,
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    gap: 12,
+  },
+  dropdownItemLast: {
+    borderBottomWidth: 0,
+  },
+  dropdownItemImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+  },
+  dropdownItemContent: {
+    flex: 1,
+    gap: 4,
+  },
+  dropdownItemText: {
+    fontSize: 15,
+    color: "#010D26",
+    fontWeight: "600",
+    fontFamily: "AlbertSans_600SemiBold",
+    lineHeight: 20,
+  },
+  dropdownItemDescription: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "400",
+    fontFamily: "AlbertSans_400Regular",
+    lineHeight: 16,
   },
   notificationButton: {
     width: 44,

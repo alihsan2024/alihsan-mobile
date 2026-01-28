@@ -155,7 +155,7 @@ export default function HomeScreen() {
   const [selectedGiving, setSelectedGiving] = useState<number>(0);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(10);
   const [customAmount, setCustomAmount] = useState<string>("");
-  const [isModalVisible, setIsModalVisible] = useState(true);
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const givingAnimation = useRef(new Animated.Value(0)).current;
   const [featuredCampaigns, setFeaturedCampaigns] = useState<CampaignItem[]>(
     []
@@ -173,6 +173,8 @@ export default function HomeScreen() {
   const [guestBasket, setGuestBasket] = useState<any[]>([]);
   const [addingToCart, setAddingToCart] = useState(false);
 
+  const GAZA_MODAL_SEEN_KEY = "@alihsan:gaza_modal_seen";
+
   useEffect(() => {
     if (!isAuthenticated) {
       AsyncStorage.getItem("guestBasket").then((data) => {
@@ -180,6 +182,31 @@ export default function HomeScreen() {
       });
     }
   }, [isAuthenticated]);
+
+  // Show Gaza donation modal only once per install (or until storage is cleared)
+  useEffect(() => {
+    const checkGazaModal = async () => {
+      try {
+        const seen = await AsyncStorage.getItem(GAZA_MODAL_SEEN_KEY);
+        if (seen !== "true") {
+          setIsModalVisible(true);
+        }
+      } catch (e) {
+        // On error, don't block the modal; fail silently
+        setIsModalVisible(true);
+      }
+    };
+    checkGazaModal();
+  }, []);
+
+  const handleCloseGazaModal = async () => {
+    try {
+      await AsyncStorage.setItem(GAZA_MODAL_SEEN_KEY, "true");
+    } catch (e) {
+      // Ignore storage errors
+    }
+    setIsModalVisible(false);
+  };
 
   const handleGazaDonate = async () => {
     const donationAmount = Number(selectedAmount || customAmount);
@@ -247,55 +274,33 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    // Hardcoded featured campaigns with hardcoded totals and donors
-    const campaignImageUrl =
-      "https://alihsan.s3.ap-southeast-2.amazonaws.com/updated-photos/1753924269927-alihsan-1708467468866-alihsan-coverImage.webp";
+    const loadFeaturedCampaigns = async () => {
+      try {
+        setIsLoadingFeaturedCampaigns(true);
+        const campaigns = await fetchFeaturedCampaigns();
+        
+        // Transform API response to match CampaignItem interface
+        const transformedCampaigns: CampaignItem[] = campaigns.map((campaign: any) => ({
+          id: campaign.id,
+          slug: campaign.slug,
+          image: { uri: campaign.coverImage },
+          title: campaign.name,
+          donors: 0, // This would need to come from a separate API call if available
+          status: "Ongoing",
+          amountRaised: `$${Number(campaign.amountDonated || 0).toLocaleString()}`,
+          goal: `$${Number(campaign.mobileGoalAmount || campaign.fundraiserGoal || 0).toLocaleString()}`,
+        }));
 
-    const hardcodedCampaigns: CampaignItem[] = [
-      {
-        id: 1,
-        slug: "gaza-relief",
-        image: { uri: campaignImageUrl },
-        title: "Gaza Relief Appeal",
-        donors: 1250,
-        status: "Ongoing",
-        amountRaised: "$45,680",
-        goal: "$100,000",
-      },
-      {
-        id: 2,
-        slug: "orphan-support",
-        image: { uri: campaignImageUrl },
-        title: "Orphan Support Program",
-        donors: 890,
-        status: "Ongoing",
-        amountRaised: "$32,450",
-        goal: "$75,000",
-      },
-      {
-        id: 3,
-        slug: "food-aid",
-        image: { uri: campaignImageUrl },
-        title: "Food Aid Initiative",
-        donors: 1560,
-        status: "Ongoing",
-        amountRaised: "$58,920",
-        goal: "$80,000",
-      },
-      {
-        id: 4,
-        slug: "water-wells",
-        image: { uri: campaignImageUrl },
-        title: "Clean Water Wells",
-        donors: 720,
-        status: "Ongoing",
-        amountRaised: "$28,350",
-        goal: "$50,000",
-      },
-    ];
+        setFeaturedCampaigns(transformedCampaigns);
+      } catch (error) {
+        console.error("Error loading featured campaigns:", error);
+        setFeaturedCampaigns([]);
+      } finally {
+        setIsLoadingFeaturedCampaigns(false);
+      }
+    };
 
-    setFeaturedCampaigns(hardcodedCampaigns);
-    setIsLoadingFeaturedCampaigns(false);
+    loadFeaturedCampaigns();
   }, []);
 
   const handleAmountPress = (amount: number) => {
@@ -319,7 +324,7 @@ export default function HomeScreen() {
     >
       <DonationAppealModal
         visible={isModalVisible}
-        onClose={() => setIsModalVisible(false)}
+        onClose={handleCloseGazaModal}
         image={require("../../assets/modal-image.png")}
         title="Help Children in Need"
         raised={109690.51}

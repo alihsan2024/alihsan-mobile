@@ -18,6 +18,7 @@ import Button from "../Button";
 import { zakatResetInput, zakatStep } from "@/store/reduxSlice/zakatSlice";
 import { addBasketItem, getBasketItems } from "@/store/reduxSlice/basketSlice";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
+import { getAnyZakatCampaign } from "@/utils/api";
 
 type Props = {
   visible: boolean;
@@ -35,9 +36,25 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
   );
 
   const [loading, setLoading] = useState(false);
+  const [zakatCampaign, setZakatCampaign] = useState<any>(null);
 
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.88)).current;
+
+  // Fetch zakat campaign when modal opens
+  useEffect(() => {
+    if (visible) {
+      const fetchZakatCampaign = async () => {
+        try {
+          const campaign = await getAnyZakatCampaign();
+          setZakatCampaign(campaign);
+        } catch (error) {
+          console.error("Error fetching zakat campaign:", error);
+        }
+      };
+      fetchZakatCampaign();
+    }
+  }, [visible]);
 
   useEffect(() => {
     if (visible) {
@@ -122,13 +139,21 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
       return;
     }
 
+    if (!zakatCampaign) {
+      Alert.alert(
+        "Error",
+        "Unable to load Zakat campaign. Please try again."
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
       const zakatItem = {
-        campaignId: "zakat",
-        name: "Zakat Payment",
-        coverImage: "",
+        campaignId: zakatCampaign.id,
+        name: zakatCampaign.name || "Zakat Al Maal",
+        coverImage: zakatCampaign.coverImage || "",
         amount: Number(zakatOwed.toFixed(2)),
         total: Number(zakatOwed.toFixed(2)),
         isRecurring: false,
@@ -144,7 +169,7 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
         const guestBasket = guestData ? JSON.parse(guestData) : [];
 
         const index = guestBasket.findIndex(
-          (item: any) => item.campaignId === "zakat"
+          (item: any) => item.campaignId === zakatCampaign.id
         );
 
         const updatedBasket =

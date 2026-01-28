@@ -15,6 +15,8 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
+import { LinearGradient } from "expo-linear-gradient";
+import HeroBackground from "@/components/ui/GradientImage";
 
 const OrphanListPage = () => {
   const dispatch = useAppDispatch();
@@ -28,7 +30,6 @@ const OrphanListPage = () => {
   const [filteredOrphans, setFilteredOrphans] = useState<any[]>([]);
   const [filters, setFilters] = useState({
     status: "all",
-    ageRange: "all",
     gender: "all",
   });
 
@@ -60,25 +61,6 @@ const OrphanListPage = () => {
       );
     }
 
-    if (filters.ageRange !== "all") {
-      if (filters.ageRange === "16+") {
-        results = results.filter((orphan) => {
-          if (!orphan.dateOfBirth) return false;
-          const age = calculateAge(orphan.dateOfBirth);
-          return age >= 16;
-        });
-      } else {
-        const [minAge, maxAge] = filters.ageRange.split("-").map(Number);
-        if (!isNaN(minAge) && !isNaN(maxAge)) {
-          results = results.filter((orphan) => {
-            if (!orphan.dateOfBirth) return false;
-            const age = calculateAge(orphan.dateOfBirth);
-            return age >= minAge && age <= maxAge;
-          });
-        }
-      }
-    }
-
     if (filters.gender !== "all") {
       results = results.filter((orphan) => {
         if (!orphan.gender) return false;
@@ -99,7 +81,6 @@ const OrphanListPage = () => {
   const resetFilters = () => {
     setFilters({
       status: "all",
-      ageRange: "all",
       gender: "all",
     });
   };
@@ -123,233 +104,263 @@ const OrphanListPage = () => {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 32 }}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Hero Section */}
-      <View style={styles.hero}>
-        <Text style={styles.heroTitle}>Sponsor a Child</Text>
-        <Text style={styles.heroSubtitle}>
-          Change a child's life through monthly sponsorship. Your support
-          provides education, healthcare, and hope.
-        </Text>
-      </View>
+      <HeroBackground
+        source={{
+          uri: "https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/1708467619845-alihsan-images.png",
+        }}
+        containerStyle={{ height: 240 }}
+        showBack
+      >
+        <View style={styles.headerContent}>
+          <Text style={styles.guthenText}>Child Sponsorship</Text>
+          <Text style={styles.headerTitle}>Transform a Life</Text>
+          <Text style={styles.headerSubtitle}>
+            Provide education, healthcare, and hope through monthly sponsorship.
+          </Text>
+        </View>
+      </HeroBackground>
 
       {/* Stats Banner */}
-      <View style={styles.statsBanner}>
-        <View style={styles.statsItem}>
-          <Text style={styles.statsValue}>$120</Text>
-          <Text style={styles.statsLabel}>/month</Text>
-        </View>
-        <View style={styles.statsDivider} />
-        <View style={styles.statsItem}>
-          <Text style={styles.statsValue}>{orphans.length}+</Text>
-          <Text style={styles.statsLabel}>children</Text>
-        </View>
-        <View style={styles.statsDivider} />
-        <View style={styles.statsItem}>
-          <Text style={styles.statsValue}>
-            {filteredOrphans.filter((o) => o.status === "available").length}
-          </Text>
-          <Text style={styles.statsLabel}>need sponsors</Text>
+      <View style={styles.sectionWrapper}>
+        <View style={styles.statsBanner}>
+          <View style={styles.statsItem}>
+            <Text style={styles.statsValue}>$120</Text>
+            <Text style={styles.statsLabel}>per month</Text>
+          </View>
+          <View style={styles.statsDivider} />
+          <View style={styles.statsItem}>
+            <Text style={styles.statsValue}>{orphans.length}+</Text>
+            <Text style={styles.statsLabel}>children</Text>
+          </View>
+          <View style={styles.statsDivider} />
+          <View style={styles.statsItem}>
+            <Text style={styles.statsValue}>
+              {filteredOrphans.filter((o) => o.status === "available").length}
+            </Text>
+            <Text style={styles.statsLabel}>need sponsors</Text>
+          </View>
         </View>
       </View>
 
       {/* Filters */}
-      <View style={styles.filtersCard}>
-        <Text style={styles.filterTitle}>Filter by</Text>
-        <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>Status:</Text>
-          {["all", "available"].map((status) => (
-            <TouchableOpacity
-              key={status}
-              style={[
-                styles.filterButton,
-                filters.status === status && styles.filterButtonActive,
-              ]}
-              onPress={() => handleFilterChange("status", status)}
-            >
-              <Text
-                style={
-                  filters.status === status
-                    ? styles.filterButtonTextActive
-                    : styles.filterButtonText
+      <View style={styles.sectionWrapper}>
+        <View style={styles.filtersCard}>
+          <View style={styles.filtersHeaderRow}>
+            <Text style={styles.filterTitle}>Filter children</Text>
+            {(filters.status !== "all" || filters.gender !== "all") && (
+              <TouchableOpacity onPress={resetFilters}>
+                <Text style={styles.clearFilters}>Clear</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.filterPillsRow}>
+            {["available", "sponsored"].map((status) => (
+              <TouchableOpacity
+                key={status}
+                style={[
+                  styles.filterButton,
+                  filters.status === status && styles.filterButtonActive,
+                ]}
+                onPress={() =>
+                  handleFilterChange(
+                    "status",
+                    filters.status === status ? "all" : status
+                  )
                 }
+                activeOpacity={0.8}
               >
-                {status === "all" ? "All" : "Available"}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>Age:</Text>
-          {["all", "0-5", "6-10", "11-15", "16+"].map((range) => (
-            <TouchableOpacity
-              key={range}
-              style={[
-                styles.filterButton,
-                filters.ageRange === range && styles.filterButtonActive,
-              ]}
-              onPress={() => handleFilterChange("ageRange", range)}
-            >
-              <Text
-                style={
-                  filters.ageRange === range
-                    ? styles.filterButtonTextActive
-                    : styles.filterButtonText
+                <Text
+                  style={
+                    filters.status === status
+                      ? styles.filterButtonTextActive
+                      : styles.filterButtonText
+                  }
+                >
+                  {status === "available" ? "Available" : "Sponsored"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            {["male", "female"].map((gender) => (
+              <TouchableOpacity
+                key={gender}
+                style={[
+                  styles.filterButton,
+                  filters.gender === gender && styles.filterButtonActive,
+                ]}
+                onPress={() =>
+                  handleFilterChange(
+                    "gender",
+                    filters.gender === gender ? "all" : gender
+                  )
                 }
+                activeOpacity={0.8}
               >
-                {range === "all" ? "All" : range}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={
+                    filters.gender === gender
+                      ? styles.filterButtonTextActive
+                      : styles.filterButtonText
+                  }
+                >
+                  {gender === "male" ? "Boy" : "Girl"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.showingText}>
+            Showing <Text style={styles.bold}>{filteredOrphans.length}</Text>{" "}
+            {filteredOrphans.length === 1 ? "child" : "children"}
+          </Text>
         </View>
-        <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>Gender:</Text>
-          {["all", "male", "female"].map((gender) => (
-            <TouchableOpacity
-              key={gender}
-              style={[
-                styles.filterButton,
-                filters.gender === gender && styles.filterButtonActive,
-              ]}
-              onPress={() => handleFilterChange("gender", gender)}
-            >
-              <Text
-                style={
-                  filters.gender === gender
-                    ? styles.filterButtonTextActive
-                    : styles.filterButtonText
-                }
-              >
-                {gender === "all" ? "All" : gender === "male" ? "Boy" : "Girl"}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        {(filters.status !== "all" ||
-          filters.ageRange !== "all" ||
-          filters.gender !== "all") && (
-          <TouchableOpacity onPress={resetFilters}>
-            <Text style={styles.clearFilters}>Clear filters</Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.showingText}>
-          Showing <Text style={styles.bold}>{filteredOrphans.length}</Text>{" "}
-          {filteredOrphans.length === 1 ? "child" : "children"}
-        </Text>
       </View>
 
       {/* Orphan Cards */}
-      {filteredOrphans.length > 0 ? (
-        <View style={styles.cardsGrid}>
-          {filteredOrphans.map((orphan) => (
-            <TouchableOpacity
-              key={orphan.id}
-              style={styles.card}
-              onPress={() =>
-                (navigation as any).navigate("orphan-profile", {
-                  id: orphan.id,
-                })
-              }
-            >
-              <View style={styles.cardImageWrapper}>
-                <Image
-                  source={{ uri: orphan.photoUrl || orphan.coverImage }}
-                  style={styles.cardImage}
-                  resizeMode="cover"
-                />
-                {orphan.status === "available" && (
-                  <View style={styles.statusBadgeAvailable}>
-                    <Text style={styles.statusBadgeText}>Available</Text>
-                  </View>
-                )}
-                {orphan.gender && (
-                  <View style={styles.statusBadgeGender}>
-                    <Text style={styles.statusBadgeText}>
-                      {orphan.gender === "male" ? "Boy" : "Girl"}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>
-                  {formatOrphanName(orphan.name)}
-                </Text>
-                <View style={styles.cardInfoRow}>
-                  <Text style={styles.cardSubtitle}>
-                    Age {calculateAge(orphan.dateOfBirth)}
-                  </Text>
-                  {orphan.location && (
-                    <Text style={styles.cardLocation}>{orphan.location}</Text>
+      <View style={styles.sectionWrapper}>
+        <Text style={styles.sectionTitle}>Children waiting for your support</Text>
+
+        {filteredOrphans.length > 0 ? (
+          <View style={styles.cardsGrid}>
+            {filteredOrphans.map((orphan) => (
+              <TouchableOpacity
+                key={orphan.id}
+                style={styles.card}
+                onPress={() =>
+                  (navigation as any).navigate("orphan-profile", {
+                    id: orphan.id,
+                  })
+                }
+                activeOpacity={0.9}
+              >
+                <View style={styles.cardImageWrapper}>
+                  <Image
+                    source={{ uri: orphan.photoUrl || orphan.coverImage }}
+                    style={styles.cardImage}
+                    resizeMode="cover"
+                  />
+                  {orphan.status === "available" && (
+                    <View style={styles.statusBadgeAvailable}>
+                      <Text style={styles.statusBadgeText}>Available</Text>
+                    </View>
+                  )}
+                  {orphan.gender && (
+                    <View style={styles.statusBadgeGender}>
+                      <Text style={styles.statusBadgeGenderText}>
+                        {orphan.gender === "male" ? "Boy" : "Girl"}
+                      </Text>
+                    </View>
                   )}
                 </View>
-                {orphan.bio && <Text style={styles.cardBio}>{orphan.bio}</Text>}
-                <Text style={styles.cardLink}>View profile →</Text>
-              </View>
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardTitle} numberOfLines={1}>
+                    {formatOrphanName(orphan.name)}
+                  </Text>
+                  <View style={styles.cardInfoRow}>
+                    {orphan.dateOfBirth && (
+                      <Text style={styles.cardSubtitle}>
+                        Age {calculateAge(orphan.dateOfBirth)}
+                      </Text>
+                    )}
+                    {orphan.location && (
+                      <Text style={styles.cardLocation} numberOfLines={1}>
+                        {orphan.location}
+                      </Text>
+                    )}
+                  </View>
+                  {orphan.bio && (
+                    <Text style={styles.cardBio} numberOfLines={2}>
+                      {orphan.bio}
+                    </Text>
+                  )}
+                  <Text style={styles.cardLink}>View profile →</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.centered}>
+            <Text style={styles.noMatchTitle}>
+              No children match your filters
+            </Text>
+            <Text style={styles.noMatchText}>
+              Try adjusting your filters to see more children.
+            </Text>
+            <TouchableOpacity onPress={resetFilters} style={styles.resetButton}>
+              <Text style={styles.resetButtonText}>Reset Filters</Text>
             </TouchableOpacity>
-          ))}
-        </View>
-      ) : (
-        <View style={styles.centered}>
-          <Text style={styles.noMatchTitle}>
-            No children match your filters
-          </Text>
-          <Text style={styles.noMatchText}>
-            Try adjusting your filters to see more children.
-          </Text>
-          <TouchableOpacity onPress={resetFilters} style={styles.resetButton}>
-            <Text style={styles.resetButtonText}>Reset Filters</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F7FAFC" },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 32,
   },
-  hero: {
-    backgroundColor: "#2D7DD2",
-    padding: 24,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+  headerContent: {
+    position: "absolute",
+    bottom: 24,
+    left: 20,
+    right: 20,
+    zIndex: 1,
   },
-  heroTitle: {
+  guthenText: {
+    fontSize: 24,
+    fontFamily: "Guthen Bloots",
+    color: "#FFD602",
+    marginBottom: 4,
+  },
+  headerTitle: {
     color: "#fff",
-    fontSize: 32,
-    fontWeight: "bold",
-    textAlign: "center",
+    fontSize: 28,
+    fontWeight: "800",
+    fontFamily: "AlbertSans_800ExtraBold",
     marginBottom: 8,
-    letterSpacing: 1,
   },
-  heroSubtitle: {
-    color: "#fff",
-    fontSize: 16,
-    textAlign: "center",
-    opacity: 0.9,
+  headerSubtitle: {
+    color: "#E6ECFF",
+    fontSize: 15,
+    lineHeight: 22,
+    fontFamily: "AlbertSans_400Regular",
+  },
+  sectionWrapper: {
+    paddingHorizontal: 20,
+    marginTop: 20,
   },
   statsBanner: {
     flexDirection: "row",
-    justifyContent: "center",
+    justifyContent: "space-between",
     alignItems: "center",
     padding: 16,
-    backgroundColor: "#E6F0FA",
-    marginHorizontal: 16,
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    marginTop: -24,
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
-  statsItem: { alignItems: "center", marginHorizontal: 12 },
-  statsValue: { color: "#2D7DD2", fontWeight: "bold", fontSize: 20 },
-  statsLabel: { color: "#2D7DD2", fontSize: 14, opacity: 0.7 },
+  statsItem: { alignItems: "flex-start", flex: 1 },
+  statsValue: {
+    color: "#010D26",
+    fontWeight: "800",
+    fontSize: 18,
+  },
+  statsLabel: { color: "#6B7280", fontSize: 12, marginTop: 2 },
   statsDivider: {
     width: 1,
     height: 32,
@@ -357,78 +368,112 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   filtersCard: {
-    backgroundColor: "#fff",
-    margin: 16,
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
     shadowColor: "#000",
     shadowOpacity: 0.04,
     shadowRadius: 8,
-    elevation: 1,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  filtersHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
   },
   filterTitle: {
-    fontWeight: "bold",
-    color: "#2D7DD2",
+    fontWeight: "700",
+    color: "#010D26",
     fontSize: 16,
-    marginBottom: 8,
+    fontFamily: "AlbertSans_700Bold",
   },
-  filterRow: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  filterLabel: { color: "#2D7DD2", fontWeight: "bold", marginRight: 8 },
+  filterPillsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
   filterButton: {
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 14,
-    borderRadius: 8,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#2D7DD2",
-    marginHorizontal: 2,
-    backgroundColor: "#F7FAFC",
+    borderColor: "#D1D5DB",
+    backgroundColor: "#F9FAFB",
   },
-  filterButtonActive: { backgroundColor: "#2D7DD2" },
-  filterButtonText: { color: "#2D7DD2" },
-  filterButtonTextActive: { color: "#fff", fontWeight: "bold" },
+  filterButtonActive: {
+    backgroundColor: "#246BE1",
+    borderColor: "#246BE1",
+  },
+  filterButtonText: {
+    color: "#4B5563",
+    fontSize: 13,
+    fontWeight: "500",
+    fontFamily: "AlbertSans_500Medium",
+  },
+  filterButtonTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 13,
+    fontFamily: "AlbertSans_600SemiBold",
+  },
   clearFilters: {
-    color: "#2D7DD2",
-    textDecorationLine: "underline",
-    marginTop: 8,
-    marginLeft: 8,
+    color: "#246BE1",
+    fontSize: 13,
+    fontWeight: "600",
+    fontFamily: "AlbertSans_600SemiBold",
   },
-  showingText: { color: "#2D7DD2", marginTop: 8 },
+  showingText: {
+    color: "#6B7280",
+    marginTop: 12,
+    fontSize: 13,
+    fontFamily: "AlbertSans_400Regular",
+  },
   bold: { fontWeight: "bold" },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#010D26",
+    marginBottom: 12,
+  },
   cardsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "center",
-    marginTop: 8,
+    justifyContent: "space-between",
+    marginTop: 4,
   },
   card: {
-    width: 170,
-    margin: 8,
-    backgroundColor: "#fff",
-    borderRadius: 16,
+    width: "48%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
     overflow: "hidden",
-    elevation: 3,
+    elevation: 2,
     shadowColor: "#000",
-    shadowOpacity: 0.07,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   cardImageWrapper: {
     position: "relative",
     width: "100%",
-    height: 110,
-    backgroundColor: "#E6F0FA",
+    height: 140,
+    backgroundColor: "#F3F4F6",
   },
   cardImage: {
     width: "100%",
     height: "100%",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
   },
   statusBadgeAvailable: {
     position: "absolute",
     top: 8,
     right: 8,
-    backgroundColor: "#38B000",
-    borderRadius: 8,
+    backgroundColor: "#10B981",
+    borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
     zIndex: 2,
@@ -437,37 +482,81 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     left: 8,
-    backgroundColor: "#fff",
-    borderRadius: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
     zIndex: 2,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
-  statusBadgeText: { color: "#2D7DD2", fontWeight: "bold", fontSize: 12 },
-  cardContent: { padding: 12 },
+  statusBadgeText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 10,
+    fontFamily: "AlbertSans_700Bold",
+  },
+  statusBadgeGenderText: {
+    color: "#010D26",
+    fontWeight: "700",
+    fontSize: 10,
+    fontFamily: "AlbertSans_700Bold",
+  },
+  cardContent: { padding: 14 },
   cardTitle: {
-    color: "#2D7DD2",
-    fontWeight: "bold",
-    fontSize: 17,
-    marginBottom: 2,
+    color: "#010D26",
+    fontWeight: "700",
+    fontSize: 15,
+    marginBottom: 6,
+    fontFamily: "AlbertSans_700Bold",
   },
   cardInfoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
+    alignItems: "flex-start",
+    marginBottom: 6,
+    gap: 8,
   },
-  cardSubtitle: { color: "#2D7DD2", fontSize: 14 },
-  cardLocation: { color: "#2D7DD2", fontSize: 12, opacity: 0.7 },
-  cardBio: { color: "#2D7DD2", fontSize: 12, marginVertical: 4, opacity: 0.8 },
-  cardLink: { color: "#2D7DD2", fontWeight: "bold", marginTop: 8 },
-  errorTitle: { color: "#D7263D", fontSize: 22, fontWeight: "bold" },
+  cardSubtitle: {
+    color: "#6B7280",
+    fontSize: 13,
+    fontFamily: "AlbertSans_500Medium",
+    flex: 1,
+  },
+  cardLocation: {
+    color: "#9CA3AF",
+    fontSize: 12,
+    fontWeight: "500",
+    fontFamily: "AlbertSans_500Medium",
+    flex: 1,
+    textAlign: "right",
+  },
+  cardBio: {
+    color: "#4B5563",
+    fontSize: 12,
+    marginBottom: 8,
+    lineHeight: 16,
+    fontFamily: "AlbertSans_400Regular",
+  },
+  cardLink: {
+    color: "#246BE1",
+    fontWeight: "600",
+    marginTop: 4,
+    fontSize: 13,
+    fontFamily: "AlbertSans_600SemiBold",
+  },
+  errorTitle: { color: "#D7263D", fontSize: 22, fontWeight: "700" },
   errorSubtitle: { color: "#D7263D", fontSize: 16 },
   errorText: { color: "#D7263D", fontSize: 14 },
-  noMatchTitle: { color: "#2D7DD2", fontSize: 18, fontWeight: "bold" },
-  noMatchText: { color: "#2D7DD2", fontSize: 14, marginBottom: 8 },
-  resetButton: { backgroundColor: "#2D7DD2", padding: 10, borderRadius: 8 },
-  resetButtonText: { color: "#fff", fontWeight: "bold" },
+  noMatchTitle: { color: "#010D26", fontSize: 18, fontWeight: "700" },
+  noMatchText: { color: "#6B7280", fontSize: 14, marginBottom: 8 },
+  resetButton: {
+    backgroundColor: "#246BE1",
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+  },
+  resetButtonText: { color: "#fff", fontWeight: "600" },
 });
 
 export default OrphanListPage;

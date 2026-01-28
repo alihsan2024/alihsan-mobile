@@ -2,6 +2,7 @@ import "react-native-get-random-values";
 import { Stack } from "expo-router";
 // import useNotificationNavigation from "../hooks/useNotificationNavigation";
 import React, { useEffect, useContext } from "react";
+import { Platform } from "react-native";
 import IntroSlide from "../components/ui/sliders/IntroSlide";
 
 // import {
@@ -12,7 +13,6 @@ import IntroSlide from "../components/ui/sliders/IntroSlide";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "../context/AuthContext";
-import { Platform } from "react-native";
 // import {
 //   getOrCreateGuestId,
 //   getLastRegisteredDeviceInfo,
@@ -106,6 +106,38 @@ const INTRO_STORAGE_KEY = "@alihsan:intro_completed";
 const INTRO_VERSION_KEY = "@alihsan:intro_version";
 
 export default function RootLayout() {
+  // Suppress NativeEventEmitter errors during development/web
+  React.useEffect(() => {
+    if (__DEV__ || Platform.OS === "web") {
+      const originalError = console.error.bind(console);
+      console.error = (...args: any[]) => {
+        // Check if any argument contains NativeEventEmitter-related errors
+        const errorString = args.map(arg => 
+          typeof arg === 'string' ? arg : 
+          arg?.toString?.() || 
+          JSON.stringify(arg)
+        ).join(' ');
+        
+        // Suppress only NativeEventEmitter errors that occur during module initialization
+        if (
+          errorString.includes("NativeEventEmitter") ||
+          errorString.includes("PushNotificationIOS") ||
+          (errorString.includes("requires a non-null argument") && 
+           errorString.includes("NativeEventEmitter"))
+        ) {
+          // Silently ignore these specific errors in dev/web environments
+          return;
+        }
+        // Call original error handler for all other errors
+        originalError(...args);
+      };
+
+      return () => {
+        console.error = originalError;
+      };
+    }
+  }, []);
+
   // Load fonts including Guthen
   const [fontsLoaded] = useFonts({
     AlbertSans_100Thin,
@@ -175,7 +207,7 @@ export default function RootLayout() {
         if (introCompleted !== "true" || storedVersion !== currentVersion) {
           setShowIntro(true);
         } else {
-          setShowIntro(true);
+          setShowIntro(false);
         }
       } catch (error) {
         console.error("Error checking intro status:", error);

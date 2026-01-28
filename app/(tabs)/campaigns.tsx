@@ -169,31 +169,37 @@ export default function ActiveAppealsScreen() {
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item, index) => index.toString()}
           contentContainerStyle={styles.categoriesHorizontal}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.categoryItemHorizontal,
-                selectedCategory === item.label && styles.categoryItemSelected,
-              ]}
-              onPress={() => setSelectedCategory(item.label)}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={item.Icon as any}
-                size={22}
-                color={selectedCategory === item.label ? "#264B8B" : "#6B7280"}
-                style={{ marginBottom: 6 }}
-              />
-              <Text
+          renderItem={({ item }) => {
+            const Icon = item.Icon;
+            const isSelected = selectedCategory === item.label;
+            const activeColor = isSelected ? "#264B8B" : "#6B7280";
+
+            return (
+              <TouchableOpacity
                 style={[
-                  styles.categoryText,
-                  selectedCategory === item.label && styles.categoryTextSelected,
+                  styles.categoryItemHorizontal,
+                  isSelected && styles.categoryItemSelected,
                 ]}
+                onPress={() => setSelectedCategory(item.label)}
+                activeOpacity={0.7}
               >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          )}
+                <Icon
+                  width={22}
+                  height={22}
+                  color={activeColor}
+                  style={{ marginBottom: 6 }}
+                />
+                <Text
+                  style={[
+                    styles.categoryText,
+                    isSelected && styles.categoryTextSelected,
+                  ]}
+                >
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
         />
       )}
 
@@ -243,62 +249,68 @@ export default function ActiveAppealsScreen() {
           </Text>
         )}
 
-        {filteredCampaigns.map((c) => (
-          <Link key={c.id} href={`/campaign/${c.slug}`} asChild>
-            <TouchableOpacity activeOpacity={0.85} style={styles.card}>
-              <ExpoImage
-                source={{ uri: c.coverImage }}
-                style={styles.cardImage}
-                contentFit="cover"
-              />
-              <View style={styles.cardContent}>
-                <View style={styles.cardTextContainer}>
-                  <Text style={styles.cardTitle} numberOfLines={1}>
-                    {c.name}
-                  </Text>
-                  <Text style={styles.cardSubtitle} numberOfLines={2}>
-                    {c.description
-                      ? c.description
-                          .replace(/<[^>]+>/g, "")
-                          .replace(
-                            /&nbsp;|&amp;|&quot;|&lt;|&gt;/gi,
-                            function (entity) {
-                              switch (entity) {
-                                case "&nbsp;":
-                                  return " ";
-                                case "&amp;":
-                                  return "&";
-                                case "&quot;":
-                                  return '"';
-                                case "&lt;":
-                                  return "<";
-                                case "&gt;":
-                                  return ">";
-                                default:
-                                  return "";
-                              }
-                            }
-                          )
-                      : ""}
-                  </Text>
+        {filteredCampaigns.map((c) => {
+          const displayTitle = c.mobileTitle || c.name;
+          const rawSubtitle = c.mobileSubtitle || c.description || "";
+          const cleanedSubtitle = rawSubtitle
+            ? rawSubtitle
+                .replace(/<[^>]+>/g, "")
+                .replace(
+                  /&nbsp;|&amp;|&quot;|&lt;|&gt;/gi,
+                  function (entity) {
+                    switch (entity) {
+                      case "&nbsp;":
+                        return " ";
+                      case "&amp;":
+                        return "&";
+                      case "&quot;":
+                        return '"';
+                      case "&lt;":
+                        return "<";
+                      case "&gt;":
+                        return ">";
+                      default:
+                        return "";
+                    }
+                  }
+                )
+            : "";
+
+          return (
+            <Link key={c.id} href={`/campaign/${c.slug}`} asChild>
+              <TouchableOpacity activeOpacity={0.85} style={styles.card}>
+                <ExpoImage
+                  source={{ uri: c.coverImage }}
+                  style={styles.cardImage}
+                  contentFit="cover"
+                />
+                <View style={styles.cardContent}>
+                  <View style={styles.cardTextContainer}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>
+                      {displayTitle}
+                    </Text>
+                    <Text style={styles.cardSubtitle} numberOfLines={2}>
+                      {cleanedSubtitle}
+                    </Text>
+                  </View>
+                  <View style={styles.cardFooter}>
+                    <TouchableOpacity
+                      style={styles.donateButton}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.donateButtonText}>Donate</Text>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={14}
+                        color="#010D26"
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <View style={styles.cardFooter}>
-                  <TouchableOpacity
-                    style={styles.donateButton}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.donateButtonText}>Donate</Text>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={14}
-                      color="#010D26"
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableOpacity>
-          </Link>
-        ))}
+              </TouchableOpacity>
+            </Link>
+          );
+        })}
       </View>
     </ScrollView>
   );

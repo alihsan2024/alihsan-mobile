@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { View, StyleSheet, ScrollView, Alert } from "react-native";
+import { View, StyleSheet, ScrollView, Alert, Text, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { StripeProvider, useStripe } from "@stripe/stripe-react-native";
 import { useRouter } from "expo-router";
 import { useSelector } from "react-redux";
+import Constants from "expo-constants";
 import {
   useClearBasketMutation,
   useGetBasketQuery,
@@ -61,6 +62,23 @@ export default function CheckoutScreen() {
   const stripe = useStripe();
   const router = useRouter();
 
+  // Log environment variable for debugging
+  useEffect(() => {
+    const stripeKeyFromEnv = process.env.EXPO_PUBLIC_STRIPE_KEY;
+    const stripeKeyFromConstants = Constants.expoConfig?.extra?.EXPO_PUBLIC_STRIPE_KEY;
+    const allEnvKeys = Object.keys(process.env).filter(k => k.startsWith("EXPO_PUBLIC_"));
+    
+    console.log("=== STRIPE ENV CHECK ===");
+    console.log("Platform:", Platform.OS);
+    console.log("process.env.EXPO_PUBLIC_STRIPE_KEY exists:", !!stripeKeyFromEnv);
+    console.log("process.env.EXPO_PUBLIC_STRIPE_KEY value:", stripeKeyFromEnv ? `${stripeKeyFromEnv.substring(0, 20)}...` : "UNDEFINED");
+    console.log("Constants.expoConfig?.extra?.EXPO_PUBLIC_STRIPE_KEY:", stripeKeyFromConstants ? `${stripeKeyFromConstants.substring(0, 20)}...` : "UNDEFINED");
+    console.log("All EXPO_PUBLIC_* env vars:", allEnvKeys);
+    console.log("Constants.expoConfig?.extra keys:", Constants.expoConfig?.extra ? Object.keys(Constants.expoConfig.extra) : "N/A");
+    console.log("Stripe object:", stripe ? "Initialized" : "NOT INITIALIZED");
+    console.log("=======================");
+  }, [stripe]);
+
   const user = useSelector((s: any) => s.authentication.user);
   const isAuthenticated = !!user;
 
@@ -88,7 +106,7 @@ export default function CheckoutScreen() {
   useEffect(() => {
     if (isAuthenticated) return;
 
-    AsyncStorage.getItem("guestBasket").then((data) => {
+    AsyncStorage.getItem("guestBasket").then((data: string | null) => {
       const items = data ? JSON.parse(data) : [];
 
       if (!items.length) {
@@ -158,14 +176,26 @@ export default function CheckoutScreen() {
     try {
       setLoadingIntent(true);
 
+      console.log("=== ensureClientSecret: RETRIEVING DETAILS ===");
       const stored = await AsyncStorage.getItem("checkoutDetails");
-      if (!stored) throw new Error("Missing checkoutDetails");
+      console.log("Stored value exists:", !!stored);
+      
+      if (!stored) {
+        console.error("ERROR: Missing checkoutDetails in AsyncStorage!");
+        throw new Error("Missing checkoutDetails");
+      }
 
       const checkoutDetails = JSON.parse(stored);
+      console.log("Parsed checkoutDetails in ensureClientSecret:", checkoutDetails);
+      
       const payload = {
         ...checkoutDetails,
         basketItems: checkoutSummary.items,
       };
+      console.log("Payload for API call:", {
+        ...payload,
+        basketItems: `[${payload.basketItems.length} items]`,
+      });
 
       let secret: string | null = null;
 
@@ -206,9 +236,34 @@ export default function CheckoutScreen() {
 
   useEffect(() => {
     if (step === 2) {
+      // Log details retrieval when entering step 2
+      (async () => {
+        console.log("=== STEP 2: RETRIEVING DETAILS ===");
+        const stored = await AsyncStorage.getItem("checkoutDetails");
+        console.log("Raw stored value:", stored);
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            console.log("Parsed checkoutDetails:", parsed);
+            console.log("Details fields:", {
+              firstName: parsed.firstName,
+              lastName: parsed.lastName,
+              email: parsed.email,
+              phone: parsed.phone,
+            });
+          } catch (e) {
+            console.log("Error parsing stored details:", e);
+          }
+        } else {
+          console.log("No checkoutDetails found in AsyncStorage!");
+        }
+        console.log("Current detailsForm state:", detailsForm);
+        console.log("=== END STEP 2 RETRIEVAL ===");
+      })();
+
       ensureClientSecret();
     }
-  }, [step, ensureClientSecret]);
+  }, [step, ensureClientSecret, detailsForm]);
 
   /* ---------- NAVIGATION ---------- */
 
@@ -250,46 +305,200 @@ export default function CheckoutScreen() {
         return;
       }
 
-      setLoadingPayment(true);
-      await new Promise((r) => requestAnimationFrame(r));
-
-      const { paymentIntent, error } = await stripe.confirmPayment(
-        clientSecret,
-        { paymentMethodType: "Card" }
-      );
-
-      setLoadingPayment(false);
-
-      if (error) {
-        Alert.alert("Payment failed", error.message);
+      // On iOS, we need to create a payment method first or pass payment method data
+      if (paymentState.paymentType === "card" && !paymentState.cardComplete) {
+        Alert.alert("Error", "Card details are incomplete");
         return;
       }
 
-      if (paymentIntent && checkoutSummary) {
-        await AsyncStorage.setItem(
-          "checkoutSummary",
-          JSON.stringify({
-            ...checkoutSummary,
-            isAuthenticated,
-            createdAt: Date.now(),
-          })
-        );
+      setLoadingPayment(true);
+      await new Promise((r) => requestAnimationFrame(r));
 
-        if (isAuthenticated) {
-          await clearBasket();
+      try {
+        console.log("=== PAYMENT CONFIRMATION (STEP 3) ===");
+        console.log("Platform:", Platform.OS);
+        console.log("Client secret exists:", !!clientSecret);
+        console.log("Client secret preview:", clientSecret ? `${clientSecret.substring(0, 20)}...` : "N/A");
+        console.log("Card complete:", paymentState.cardComplete);
+        console.log("Card details:", JSON.stringify(paymentState.cardDetails, null, 2));
+        console.log("Payment state:", {
+          paymentType: paymentState.paymentType,
+          cardComplete: paymentState.cardComplete,
+          hasCardDetails: !!paymentState.cardDetails,
+        });
+        console.log("Billing details to send:", {
+          name: detailsForm.fullName,
+          email: detailsForm.email,
+          phone: detailsForm.phone,
+        });
+        console.log("Stripe object:", stripe ? "Available" : "NULL");
+        console.log("Stripe methods:", stripe ? Object.keys(stripe) : "N/A");
+
+        // On iOS, CardField requires creating payment method first
+        // The CardField automatically provides card data to createPaymentMethod
+        let result;
+        const confirmStartTime = Date.now();
+
+        if (Platform.OS === "ios") {
+          console.log("iOS detected - creating payment method from CardField first...");
+          
+          // Step 1: Create payment method - CardField automatically provides the card
+          // When you call createPaymentMethod without card data, it uses CardField
+          const { paymentMethod, error: pmError } = await stripe.createPaymentMethod({
+            paymentMethodType: "Card",
+            paymentMethodData: {
+              billingDetails: {
+                name: detailsForm.fullName,
+                email: detailsForm.email,
+                phone: detailsForm.phone,
+              },
+            },
+          });
+
+          if (pmError) {
+            console.log("❌ Failed to create payment method:", pmError);
+            setLoadingPayment(false);
+            Alert.alert("Payment failed", pmError.message);
+            return;
+          }
+
+          if (!paymentMethod) {
+            console.log("❌ Payment method is null");
+            setLoadingPayment(false);
+            Alert.alert("Payment failed", "Failed to create payment method");
+            return;
+          }
+
+          console.log("✅ Payment method created:", paymentMethod.id);
+          console.log("Full payment method object:", JSON.stringify(paymentMethod, null, 2));
+
+          // Step 2: Confirm payment with the payment method
+          // On iOS, after creating payment method, we need to confirm with it
+          // The payment method ID needs to be passed to the backend or used differently
+          // For now, let's try confirming - Stripe might use the most recent payment method
+          console.log("Confirming payment (payment method should be auto-attached)...");
+          
+          // Add a small delay to ensure payment method is fully processed
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          result = await stripe.confirmPayment(clientSecret, {
+            paymentMethodType: "Card",
+            paymentMethodData: {
+              billingDetails: {
+                name: detailsForm.fullName,
+                email: detailsForm.email,
+                phone: detailsForm.phone,
+              },
+            },
+          });
         } else {
-          await AsyncStorage.removeItem("guestBasket");
+          // Android - can use direct confirmation
+          console.log("Android detected - using direct confirmation with billing details...");
+          result = await stripe.confirmPayment(clientSecret, {
+            paymentMethodType: "Card",
+            paymentMethodData: {
+              billingDetails: {
+                name: detailsForm.fullName,
+                email: detailsForm.email,
+                phone: detailsForm.phone,
+              },
+            },
+          });
         }
 
-        router.push("/thank-you");
+        const confirmDuration = Date.now() - confirmStartTime;
+        console.log(`confirmPayment completed in ${confirmDuration}ms`);
+        console.log("Payment result:", {
+          hasError: !!result.error,
+          hasPaymentIntent: !!result.paymentIntent,
+          errorCode: result.error?.code,
+          errorMessage: result.error?.message,
+          paymentIntentId: result.paymentIntent?.id,
+          paymentIntentStatus: result.paymentIntent?.status,
+        });
+
+        setLoadingPayment(false);
+
+        if (result.error) {
+          console.log("❌ Payment error details:", {
+            code: result.error.code,
+            message: result.error.message,
+            type: result.error.type,
+            declineCode: result.error.declineCode,
+            fullError: JSON.stringify(result.error, null, 2),
+          });
+          Alert.alert("Payment failed", result.error.message);
+          return;
+        }
+
+        const { paymentIntent } = result;
+
+        if (paymentIntent && checkoutSummary) {
+          console.log("✅ Payment successful!");
+          console.log("Payment Intent ID:", paymentIntent.id);
+          console.log("Payment Intent Status:", paymentIntent.status);
+          console.log("Payment Intent Amount:", paymentIntent.amount);
+          console.log("Payment Intent Currency:", paymentIntent.currency);
+          
+          await AsyncStorage.setItem(
+            "checkoutSummary",
+            JSON.stringify({
+              ...checkoutSummary,
+              isAuthenticated,
+              createdAt: Date.now(),
+            })
+          );
+
+          if (isAuthenticated) {
+            await clearBasket();
+          } else {
+            await AsyncStorage.removeItem("guestBasket");
+          }
+
+          console.log("Navigating to thank-you page...");
+          router.push("/thank-you");
+        } else {
+          console.log("❌ Payment intent or checkout summary missing");
+          console.log("Payment intent:", paymentIntent ? "exists" : "null");
+          console.log("Checkout summary:", checkoutSummary ? "exists" : "null");
+        }
+        console.log("=== END PAYMENT CONFIRMATION ===");
+      } catch (err: any) {
+        setLoadingPayment(false);
+        console.log("❌ Payment exception caught:");
+        console.log("Error type:", err?.constructor?.name);
+        console.log("Error message:", err?.message);
+        console.log("Error stack:", err?.stack);
+        console.log("Full error object:", JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+        Alert.alert("Payment failed", err?.message || "An unexpected error occurred");
       }
     }
   };
 
   /* ---------- UI ---------- */
 
+  // Try multiple ways to get the Stripe key
+  const stripePublishableKey = 
+    process.env.EXPO_PUBLIC_STRIPE_KEY || 
+    Constants.expoConfig?.extra?.EXPO_PUBLIC_STRIPE_KEY ||
+    null;
+  
+  if (!stripePublishableKey) {
+    console.error("STRIPE ERROR: EXPO_PUBLIC_STRIPE_KEY is not defined in process.env or Constants!");
+    return (
+      <View style={[styles.container, { paddingTop: insets.top, justifyContent: "center", alignItems: "center", padding: 20 }]}>
+        <Text style={{ color: "red", fontSize: 16, textAlign: "center" }}>
+          Stripe configuration error. Please check environment variables.
+        </Text>
+        <Text style={{ color: "gray", fontSize: 12, marginTop: 10, textAlign: "center" }}>
+          Check console logs for detailed environment variable information.
+        </Text>
+      </View>
+    );
+  }
+
   return (
-    <StripeProvider publishableKey={process.env.EXPO_PUBLIC_STRIPE_KEY!}>
+    <StripeProvider publishableKey={stripePublishableKey}>
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <ProcessingPaymentModal visible={loadingPayment} />
         <CheckoutHeader step={step} setStep={setStep} />
