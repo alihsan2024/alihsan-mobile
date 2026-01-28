@@ -175,14 +175,6 @@ export default function BasketScreen() {
     router.push("/checkout");
   };
 
-  // Test checkout logic
-  const handleTestCheckout = () => {
-    if (basketItems.length === 0) {
-      Alert.alert("Empty Cart", "Your cart is empty");
-      return;
-    }
-    router.push("/test-checkout");
-  };
 
   // Calculate totals
   const processingFee = 0.03; // 3%
@@ -436,25 +428,6 @@ export default function BasketScreen() {
           colors={["#264B8B", "#1E3A8A"]}
           style={styles.footer}
         >
-          <TouchableOpacity
-            style={styles.testCheckoutButton}
-            onPress={handleTestCheckout}
-            disabled={
-              subtotal <= 0 ||
-              basketItems.some(
-                (item: any) =>
-                  parseFloat(
-                    isAuthenticated
-                      ? item.total?.toString() || "0"
-                      : item.amount?.toString() || "0"
-                  ) === 0
-              )
-            }
-            activeOpacity={0.8}
-          >
-            <Text style={styles.testCheckoutText}>Test Checkout</Text>
-            <Ionicons name="card-outline" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
           <TouchableOpacity
             style={styles.checkoutButton}
             onPress={handleCheckout}
@@ -777,24 +750,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 6,
-  },
-  testCheckoutButton: {
-    backgroundColor: "#6B7280",
-    borderRadius: 10,
-    paddingVertical: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#9CA3AF",
-  },
-  testCheckoutText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    fontFamily: "AlbertSans_600SemiBold",
   },
   checkoutButton: {
     backgroundColor: "#FFD602",
