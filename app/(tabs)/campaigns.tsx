@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
+import Feather from "@expo/vector-icons/Feather";
 import Earth from "../../assets/earth.svg";
 import BabyCarriage from "../../assets/baby-carriage.svg";
 import HandHoldingHeart from "../../assets/hand-holding-heart.svg";
@@ -42,7 +43,6 @@ const categories = [
 import { useEffect, useState } from "react";
 import { fetchCampaigns, Campaign } from "../../utils/api";
 import { Link } from "expo-router";
-import HeaderSearchBar from "@/components/ui/HeaderSearchBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ActiveAppealsScreen() {
@@ -106,22 +106,33 @@ export default function ActiveAppealsScreen() {
       }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Search */}
-      {/* <View style={styles.searchContainer}>
-        <Ionicons name="search" size={18} color="#999" />
-        <TextInput
-          placeholder="Search Gaza, Education, or Zakat..."
-          style={styles.searchInput}
-          value={search}
-          onChangeText={setSearch}
-        />
-        <Ionicons name="notifications-outline" size={20} color="#333" />
-      </View> */}
-      <HeaderSearchBar
-        variant="outlined"
-        placeholder="Search Gaza, Education, or Zakat..."
-        onNotificationPress={() => {}}
-      />
+      {/* Search - Same style as Homepage but visible on white background */}
+      <View style={styles.headerBar}>
+        <View style={styles.searchWrapper}>
+          <View style={styles.searchContainer}>
+            <Feather name="search" size={16} color="#6B7280" />
+            <TextInput
+              placeholder="Search campaigns..."
+              placeholderTextColor="#9CA3AF"
+              style={styles.searchInput}
+              value={search}
+              onChangeText={setSearch}
+            />
+            {search.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearch("")}
+                style={styles.clearButton}
+              >
+                <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+        <TouchableOpacity style={styles.notificationButton}>
+          <Ionicons name="notifications" size={18} color="#010D264D" />
+          <View style={styles.notificationDot} />
+        </TouchableOpacity>
+      </View>
 
       {/* Title */}
       <View style={styles.headingContainer}>
@@ -323,19 +334,59 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 
+  // Search Bar - Same as Homepage
+  headerBar: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 20,
+    gap: 12,
+  },
+  searchWrapper: {
+    flex: 1,
+    position: "relative",
+  },
   searchContainer: {
+    flex: 1,
+    height: 44,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F3F3F3",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginTop: 12,
     gap: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   searchInput: {
     flex: 1,
+    color: "#111827",
     fontSize: 14,
+    fontWeight: "500",
+    fontFamily: "AlbertSans_500Medium",
+  },
+  clearButton: {
+    padding: 4,
+  },
+  notificationButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,1)",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    borderWidth: 2,
+    borderColor: "#010D261A",
+  },
+  notificationDot: {
+    position: "absolute",
+    top: 1,
+    right: 2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#DD4344",
   },
 
   headingContainer: {

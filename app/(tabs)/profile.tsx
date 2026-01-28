@@ -7,10 +7,11 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { Image } from "expo-image";
+import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector, useDispatch } from "react-redux";
@@ -152,119 +153,146 @@ export default function ProfileScreen() {
 
   if (!isAuthenticated) {
     return (
-      <View
-        style={[
-          styles.container,
-          { paddingTop: insets.top, paddingBottom: insets.bottom },
-        ]}
-      >
-        <View style={styles.notLoggedInContainer}>
-          {/* Main Content Card */}
-          <View style={styles.notLoggedInCard}>
-            {/* Decorative Top Section with Gradient */}
-            <LinearGradient
-              colors={["#EEF4FF", "#FFFFFF"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.cardTopSection}
+      <View style={styles.container}>
+        {/* Header Banner - Same as Zakat Calculator */}
+        <View style={styles.headerWrapper}>
+          <Image
+            source={require("@/assets/zakat-bg.png")}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+          />
+
+          <LinearGradient
+            colors={["transparent", "rgba(38,75,139,0.6)", "rgba(38,75,139,0.9)"]}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+
+          <View style={styles.headerContent}>
+            <Text style={styles.guthenText}>Welcome</Text>
+            <Text style={[styles.headerTitle, { color: "#fff", textAlign: "left" }]}>Join Our Community</Text>
+            <Text style={styles.headerSubtitle}>
+              Sign in to access your profile, track your donations, and make a lasting impact.
+            </Text>
+          </View>
+        </View>
+
+        {/* Content Section */}
+        <ScrollView
+          style={styles.notLoggedInScroll}
+          contentContainerStyle={styles.notLoggedInContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Action Buttons */}
+          <View style={styles.notLoggedInActions}>
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => router.push("/login")}
+              activeOpacity={0.8}
             >
-              <View style={styles.notLoggedInIconContainer}>
-                <View style={styles.notLoggedInIconCircle}>
-                  <LinearGradient
-                    colors={["#264B8B", "#4066FF"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.iconGradient}
-                  >
-                    <Ionicons name="person" size={36} color="#fff" />
-                  </LinearGradient>
-                </View>
+              <LinearGradient
+                colors={["#264B8B", "#4066FF"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.buttonGradient}
+              >
+                <Ionicons name="log-in-outline" size={20} color="#fff" />
+                <Text style={styles.loginButtonText}>Sign In</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.signUpButton}
+              onPress={() => router.push("/signup")}
+              activeOpacity={0.8}
+            >
+              <View style={styles.signUpButtonContent}>
+                <Ionicons name="person-add-outline" size={20} color="#010D26" />
+                <Text style={styles.signUpButtonText}>Create Account</Text>
               </View>
+            </TouchableOpacity>
+          </View>
 
-              {/* Guthen Font Welcome Text */}
-              <Text style={styles.guthenWelcomeText}>Welcome</Text>
-              <Text style={styles.notLoggedInHeading}>
-                Join Our Community
-              </Text>
-            </LinearGradient>
-
-            <View style={styles.cardContent}>
-              <Text style={styles.notLoggedInDescription}>
-                Sign in to access your profile, track your donations, and make a lasting impact.
-              </Text>
-
-              {/* Action Buttons */}
-              <View style={styles.notLoggedInActions}>
-                <TouchableOpacity
-                  style={styles.loginButton}
-                  onPress={() => router.push("/login")}
-                  activeOpacity={0.8}
+          {/* Benefits Section */}
+          <View style={styles.benefitsSection}>
+            <Text style={styles.benefitsTitle}>Why Join Us?</Text>
+            <View style={styles.benefitsGrid}>
+              <View style={styles.benefitCard}>
+                <LinearGradient
+                  colors={["#EEF4FF", "#F8FAFF"]}
+                  style={styles.benefitCardGradient}
                 >
-                  <Ionicons name="log-in-outline" size={16} color="#fff" />
-                  <Text style={styles.loginButtonText}>Sign In</Text>
-                </TouchableOpacity>
+                  <View style={styles.benefitIconContainer}>
+                    <Ionicons name="receipt-outline" size={24} color="#264B8B" />
+                  </View>
+                  <Text style={styles.benefitText}>Track donations</Text>
+                  <Text style={styles.benefitDescription}>
+                    Monitor all your contributions in one place
+                  </Text>
+                </LinearGradient>
+              </View>
 
-                <TouchableOpacity
-                  style={styles.signUpButton}
-                  onPress={() => router.push("/signup")}
-                  activeOpacity={0.8}
+              <View style={styles.benefitCard}>
+                <LinearGradient
+                  colors={["#EEF4FF", "#F8FAFF"]}
+                  style={styles.benefitCardGradient}
                 >
-                  <Ionicons name="person-add-outline" size={16} color="#010D26" />
-                  <Text style={styles.signUpButtonText}>Create Account</Text>
-                </TouchableOpacity>
+                  <View style={styles.benefitIconContainer}>
+                    <Ionicons name="repeat-outline" size={24} color="#264B8B" />
+                  </View>
+                  <Text style={styles.benefitText}>Recurring gifts</Text>
+                  <Text style={styles.benefitDescription}>
+                    Set up monthly or weekly donations
+                  </Text>
+                </LinearGradient>
               </View>
 
-              {/* Divider */}
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>Benefits</Text>
-                <View style={styles.dividerLine} />
+              <View style={styles.benefitCard}>
+                <LinearGradient
+                  colors={["#EEF4FF", "#F8FAFF"]}
+                  style={styles.benefitCardGradient}
+                >
+                  <View style={styles.benefitIconContainer}>
+                    <Ionicons name="document-text-outline" size={24} color="#264B8B" />
+                  </View>
+                  <Text style={styles.benefitText}>Project updates</Text>
+                  <Text style={styles.benefitDescription}>
+                    Stay informed about your impact
+                  </Text>
+                </LinearGradient>
               </View>
 
-              {/* Benefits Section - Compact Grid */}
-              <View style={styles.benefitsSection}>
-                <View style={styles.benefitsGrid}>
-                  <View style={styles.benefitItem}>
-                    <View style={styles.benefitIconContainer}>
-                      <Ionicons name="receipt-outline" size={16} color="#264B8B" />
-                    </View>
-                    <Text style={styles.benefitText}>Track donations</Text>
+              <View style={styles.benefitCard}>
+                <LinearGradient
+                  colors={["#EEF4FF", "#F8FAFF"]}
+                  style={styles.benefitCardGradient}
+                >
+                  <View style={styles.benefitIconContainer}>
+                    <Ionicons name="settings-outline" size={24} color="#264B8B" />
                   </View>
-                  <View style={styles.benefitItem}>
-                    <View style={styles.benefitIconContainer}>
-                      <Ionicons name="repeat-outline" size={16} color="#264B8B" />
-                    </View>
-                    <Text style={styles.benefitText}>Recurring gifts</Text>
-                  </View>
-                  <View style={styles.benefitItem}>
-                    <View style={styles.benefitIconContainer}>
-                      <Ionicons name="document-text-outline" size={16} color="#264B8B" />
-                    </View>
-                    <Text style={styles.benefitText}>Project updates</Text>
-                  </View>
-                  <View style={styles.benefitItem}>
-                    <View style={styles.benefitIconContainer}>
-                      <Ionicons name="settings-outline" size={16} color="#264B8B" />
-                    </View>
-                    <Text style={styles.benefitText}>Manage profile</Text>
-                  </View>
-                </View>
+                  <Text style={styles.benefitText}>Manage profile</Text>
+                  <Text style={styles.benefitDescription}>
+                    Update your information anytime
+                  </Text>
+                </LinearGradient>
               </View>
             </View>
           </View>
-        </View>
+        </ScrollView>
       </View>
     );
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { paddingTop: insets.top }]}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={onRefresh} />
-      }
-    >
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={onRefresh} />
+        }
+      >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn}>
@@ -482,7 +510,8 @@ export default function ProfileScreen() {
         onCancel={() => setShowLogoutModal(false)}
         onConfirm={handleConfirmSignOut}
       />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -490,168 +519,171 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 20,
   },
 
-  notLoggedInContainer: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  notLoggedInHeader: {
+  // Header Banner (same as Zakat Calculator)
+  headerWrapper: {
+    height: 240,
     width: "100%",
-    marginBottom: 16,
+    position: "relative",
+    justifyContent: "flex-end",
+    overflow: "hidden",
   },
-  notLoggedInTitle: {
+  headerContent: {
+    position: "absolute",
+    bottom: 24,
+    left: 20,
+    right: 20,
+    zIndex: 1,
+    alignItems: "flex-start",
+  },
+  guthenText: {
     fontSize: 24,
-    fontWeight: "800",
-    color: "#010D26",
-    fontFamily: "AlbertSans_800ExtraBold",
-  },
-  notLoggedInCard: {
-    width: "100%",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  cardTopSection: {
-    paddingTop: 20,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    alignItems: "center",
-  },
-  cardContent: {
-    padding: 16,
-  },
-  notLoggedInIconContainer: {
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  notLoggedInIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    overflow: "hidden",
-    shadowColor: "#264B8B",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  iconGradient: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  guthenWelcomeText: {
-    fontSize: 22,
     fontFamily: "Guthen Bloots",
     color: "#FFD602",
     marginBottom: 4,
-    textAlign: "center",
   },
-  notLoggedInHeading: {
-    fontSize: 20,
+  headerTitle: {
+    color: "#fff",
+    fontSize: 40,
     fontWeight: "800",
-    color: "#010D26",
-    textAlign: "center",
     fontFamily: "AlbertSans_800ExtraBold",
+    marginBottom: 8,
+    textAlign: "left",
   },
-  notLoggedInDescription: {
-    fontSize: 13,
-    color: "#6B7280",
-    textAlign: "center",
-    lineHeight: 18,
-    marginBottom: 16,
+  headerSubtitle: {
+    color: "#E6ECFF",
+    fontSize: 15,
+    lineHeight: 22,
     fontFamily: "AlbertSans_400Regular",
+  },
+
+  // Not Logged In Content
+  notLoggedInScroll: {
+    flex: 1,
+  },
+  notLoggedInContent: {
+    padding: 20,
+    paddingTop: 24,
   },
   notLoggedInActions: {
     width: "100%",
-    gap: 10,
-    marginBottom: 16,
+    gap: 12,
+    marginBottom: 32,
   },
   loginButton: {
-    backgroundColor: "#264B8B",
-    paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: 14,
+    overflow: "hidden",
+    shadowColor: "#264B8B",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  buttonGradient: {
+    paddingVertical: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 10,
   },
   loginButtonText: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "700",
     fontFamily: "AlbertSans_700Bold",
   },
   signUpButton: {
     backgroundColor: "#FFD602",
-    paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: 14,
+    overflow: "hidden",
+    shadowColor: "#FFD602",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  signUpButtonContent: {
+    paddingVertical: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 10,
   },
   signUpButtonText: {
     color: "#010D26",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "700",
     fontFamily: "AlbertSans_700Bold",
   },
-  divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 14,
-    gap: 10,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E5E7EB",
-  },
-  dividerText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#9CA3AF",
-    fontFamily: "AlbertSans_600SemiBold",
-  },
   benefitsSection: {
     width: "100%",
+    marginTop: 8,
+  },
+  benefitsTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#010D26",
+    fontFamily: "AlbertSans_800ExtraBold",
+    marginBottom: 20,
+    textAlign: "center",
   },
   benefitsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 12,
   },
-  benefitItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+  benefitCard: {
     width: "48%",
-    paddingVertical: 2,
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  benefitCardGradient: {
+    padding: 16,
+    alignItems: "center",
+    minHeight: 140,
+    justifyContent: "center",
   },
   benefitIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#EEF4FF",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
-    flexShrink: 0,
+    marginBottom: 12,
+    shadowColor: "#264B8B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   benefitText: {
+    fontSize: 15,
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  benefitDescription: {
     fontSize: 12,
-    color: "#374151",
-    fontFamily: "AlbertSans_500Medium",
+    color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
+    textAlign: "center",
     lineHeight: 16,
-    flex: 1,
   },
 
   header: {

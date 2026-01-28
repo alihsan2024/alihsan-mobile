@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: "Guthen Bloots",
     color: "#FFD602",
-    marginBottom: 8,
+    marginBottom: 1,
     textAlign: "left",
   },
   mainHeading: {
