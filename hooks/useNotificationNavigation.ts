@@ -1,22 +1,52 @@
 import { useEffect } from "react";
 import { useRouter } from "expo-router";
 import * as Notifications from "expo-notifications";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const HANDLED_KEY = "@alihsan:last_handled_notification";
 
 export default function useNotificationNavigation() {
   const router = useRouter();
 
   useEffect(() => {
-    // When user taps notification
+    let isMounted = true;
+
+    async function handle(response: any, source: "cold" | "tap") {
+      const url = response?.notification?.request?.content?.data?.url;
+
+      if (typeof url !== "string") return;
+
+      const lastHandled = await AsyncStorage.getItem(HANDLED_KEY);
+
+      // Prevent infinite loop for same notification
+      if (lastHandled === url) {
+        return;
+      }
+
+      console.log(`[NotificationNav] ${source} ->`, url);
+
+      await AsyncStorage.setItem(HANDLED_KEY, url);
+
+      if (isMounted) {
+        router.replace(url); // 🔥 replace avoids stacking routes
+      }
+    }
+
+    // Cold start
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) handle(response, "cold");
+    });
+
+    // Background / foreground tap
     const sub = Notifications.addNotificationResponseReceivedListener(
       (response) => {
-        const url = response.notification.request.content.data?.url;
-
-        if (typeof url === "string") {
-          router.push(url);
-        }
+        handle(response, "tap");
       },
     );
 
-    return () => sub.remove();
+    return () => {
+      isMounted = false;
+      sub.remove();
+    };
   }, [router]);
 }
