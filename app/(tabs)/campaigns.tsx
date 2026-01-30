@@ -36,7 +36,7 @@ const categories = [
   { label: "Appeals", Icon: BriefcaseMedical },
   { label: "Education", Icon: GraduationCap },
   { label: "Health", Icon: HandHoldingMedical },
-  { label: "Ramadhan", Icon: StarAndCrecent },
+  { label: "Ramadan", Icon: StarAndCrecent },
   { label: "Shelter", Icon: HouseChimney },
 ];
 
@@ -147,7 +147,7 @@ export default function ActiveAppealsScreen() {
             const Icon = item.Icon;
             const isSelected = selectedCategory === item.label;
 
-            const activeColor = isSelected ? "#264B8B" : "#6B7280";
+            const activeColor = isSelected ? "#2161CD" : "#6B7280";
 
             return (
               <TouchableOpacity
@@ -159,7 +159,7 @@ export default function ActiveAppealsScreen() {
                 onPress={() => setSelectedCategory(item.label)}
                 activeOpacity={0.7}
               >
-                <Icon width={22} height={22} color={activeColor} />
+                <Icon width={18} height={18} color={activeColor} />
 
                 <Text
                   style={[
@@ -183,7 +183,7 @@ export default function ActiveAppealsScreen() {
           renderItem={({ item }) => {
             const Icon = item.Icon;
             const isSelected = selectedCategory === item.label;
-            const activeColor = isSelected ? "#264B8B" : "#6B7280";
+            const activeColor = isSelected ? "#2161CD" : "#6B7280";
 
             return (
               <TouchableOpacity
@@ -195,10 +195,10 @@ export default function ActiveAppealsScreen() {
                 activeOpacity={0.7}
               >
                 <Icon
-                  width={22}
-                  height={22}
+                  width={18}
+                  height={18}
                   color={activeColor}
-                  style={{ marginBottom: 6 }}
+                  style={{ marginBottom: 4 }}
                 />
                 <Text
                   style={[
@@ -409,44 +409,44 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 8,
+    gap: 6,
   },
   categoriesHorizontal: {
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   categoryItem: {
     width: "23%",
     alignItems: "center",
-    marginBottom: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 12,
+    marginBottom: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 10,
     backgroundColor: "#F9FAFB",
   },
   categoryItemHorizontal: {
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginRight: 8,
-    minWidth: 80,
-    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginRight: 6,
+    minWidth: 70,
+    borderRadius: 10,
     backgroundColor: "#F9FAFB",
   },
   categoryText: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#6B7280",
     textAlign: "center",
-    marginTop: 8,
+    marginTop: 6,
     fontWeight: "500",
     fontFamily: "AlbertSans_500Medium",
   },
   categoryItemSelected: {
     backgroundColor: "#EEF4FF",
     borderWidth: 1,
-    borderColor: "#264B8B",
+    borderColor: "#2161CD",
   },
   categoryTextSelected: {
-    color: "#264B8B",
+    color: "#2161CD",
     fontWeight: "700",
     fontFamily: "AlbertSans_700Bold",
   },

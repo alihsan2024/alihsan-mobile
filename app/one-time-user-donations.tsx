@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
@@ -10,15 +9,18 @@ import {
   LayoutAnimation,
   UIManager,
   Platform,
+  TextInput,
+  Image,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import Feather from "@expo/vector-icons/Feather";
+import { router } from "expo-router";
 import { useSelector } from "react-redux";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { getPaymentsList } from "@/store/reduxSlice/paymentDetailsSlice";
 import {
   generateInvoice,
-  exportInvoice,
 } from "@/store/reduxSlice/myDonationSlice";
-import Button from "@/components/ui/Button";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView as SafeAreaViewContext } from "react-native-safe-area-context";
 
@@ -48,6 +50,13 @@ const initialState = {
   limit: 10,
 };
 
+const categories = [
+  { label: "All", icon: "globe-outline" },
+  { label: "Zakat", icon: "moon-outline" },
+  { label: "Sadaqah", icon: "heart-outline" },
+  { label: "Sponsorship", icon: "people-outline" },
+];
+
 // --- Types
 
 type Payment = {
@@ -65,6 +74,8 @@ type GroupedOrder = {
   orderId: number;
   totalAmount: number;
   payments: Payment[];
+  paymentDate: string;
+  itemCount: number;
 };
 
 const OneTimeUserDonationsScreen = () => {
@@ -75,17 +86,52 @@ const OneTimeUserDonationsScreen = () => {
   const [selectedFilter, setSelectedFilter] = useState(initialState.fromdate);
   const [groupedOrders, setGroupedOrders] = useState<GroupedOrder[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
-  const [selectedOrders, setSelectedOrders] = useState<Set<number>>(new Set());
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const filteredOrders = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const category = selectedCategory.toLowerCase();
+
+    return groupedOrders.filter((order) => {
+      const matchesSearch =
+        !query ||
+        order.orderId.toString().includes(query) ||
+        order.payments.some(
+          (payment) =>
+            payment?.Campaign?.name?.toLowerCase().includes(query) ||
+            payment?.donationId?.toString().includes(query)
+        );
+
+      const matchesCategory =
+        selectedCategory === "All" ||
+        order.payments.some((payment) =>
+          payment?.Campaign?.name?.toLowerCase().includes(category)
+        );
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [groupedOrders, search, selectedCategory]);
 
   useEffect(() => {
+    // Get all donations by using a date far in the past (timestamp in milliseconds)
+    const farPastDate = new Date(2000, 0, 1).getTime().toString();
     void dispatch(
-      getPaymentsList({ ...initialState, fromdate: selectedFilter })
+      getPaymentsList({ 
+        page: "1", 
+        fromdate: farPastDate,
+        limit: 1000 // Large limit to get all donations
+      })
     );
-  }, [selectedFilter, dispatch]);
+  }, [dispatch]);
 
   useEffect(() => {
-    setGroupedOrders(groupPayments(rows as Payment[]));
-  }, [rows]);
+    if (rows && Array.isArray(rows) && rows.length > 0) {
+      const grouped = groupPayments(rows as Payment[]);
+      setGroupedOrders(grouped);
+    } else if (rows && Array.isArray(rows) && rows.length === 0 && !loading) {
+      setGroupedOrders([]);
+    }
+  }, [rows, loading]);
 
   const toggleOrderExpansion = (orderId: number) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -95,23 +141,30 @@ const OneTimeUserDonationsScreen = () => {
     setExpandedOrders(newSet);
   };
 
-  const toggleOrderSelection = (orderId: number) => {
-    const newSet = new Set(selectedOrders);
-    if (newSet.has(orderId)) newSet.delete(orderId);
-    else newSet.add(orderId);
-    setSelectedOrders(newSet);
-  };
-
-  const handleExport = async () => {
-    const exportIds = groupedOrders
-      .filter((order) => selectedOrders.has(order.orderId))
-      .flatMap((order) => order.payments.map((p) => p.id))
-      .join(",");
-    await dispatch(exportInvoice({ exportId: exportIds }) as any);
-  };
-
-  const handleDownload = async (id: number) => {
+  const handleResend = async (id: number) => {
     await dispatch(generateInvoice({ donationId: id }) as any);
+  };
+
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat("en-AU", {
+      style: "currency",
+      currency: "AUD",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string): string => {
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat("en-AU", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }).format(date);
+    } catch {
+      return dateString;
+    }
   };
 
   if (loading) {
@@ -125,33 +178,84 @@ const OneTimeUserDonationsScreen = () => {
   return (
     <SafeAreaViewContext style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Filter Tabs */}
-        <View style={styles.filterTabs}>
-          {filters.map((f) => (
-            <TouchableOpacity
-              key={f.value}
-              style={[
-                styles.filterTab,
-                selectedFilter === f.value && styles.filterTabActive,
-              ]}
-              onPress={() => setSelectedFilter(f.value)}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[
-                  styles.filterTabText,
-                  selectedFilter === f.value && styles.filterTabTextActive,
-                ]}
-              >
-                {f.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.push("/(tabs)/profile")}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-back" size={22} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Giving History</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        {/* Search */}
+        <View style={styles.headerBar}>
+          <View style={styles.searchWrapper}>
+            <View style={styles.searchContainer}>
+              <Feather name="search" size={16} color="#6B7280" />
+              <TextInput
+                placeholder="Search donations..."
+                placeholderTextColor="#9CA3AF"
+                style={styles.searchInput}
+                value={search}
+                onChangeText={setSearch}
+              />
+              {search.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setSearch("")}
+                  style={styles.clearButton}
+                >
+                  <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
         </View>
 
-        {groupedOrders.length === 0 ? (
+        {/* Categories */}
+        <View style={styles.categoriesSection}>
+          <FlatList
+            data={categories}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, index) => `${item.label}-${index}`}
+            contentContainerStyle={styles.categoriesHorizontal}
+            renderItem={({ item }) => {
+              const isSelected = selectedCategory === item.label;
+            const activeColor = isSelected ? "#2161CD" : "#6B7280";
+
+              return (
+                <TouchableOpacity
+                  style={[
+                    styles.categoryItemHorizontal,
+                    isSelected && styles.categoryItemSelected,
+                  ]}
+                  onPress={() => setSelectedCategory(item.label)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={item.icon as keyof typeof Ionicons.glyphMap}
+                    size={12}
+                    color={activeColor}
+                  />
+                  <Text
+                    style={[
+                      styles.categoryText,
+                      isSelected && styles.categoryTextSelected,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </View>
+
+        {filteredOrders.length === 0 ? (
           <View style={styles.emptyState}>
-            <MaterialIcons name="payment" size={60} color="#A5B4FC" />
+            <MaterialIcons name="payment" size={60} color="#2161CD" />
             <Text style={styles.emptyTitle}>No Donations Yet</Text>
             <Text style={styles.emptyDescription}>
               You haven’t made any payments. Start supporting a project today!
@@ -159,85 +263,152 @@ const OneTimeUserDonationsScreen = () => {
           </View>
         ) : (
           <FlatList
-            contentContainerStyle={{ paddingBottom: 80 }}
-            data={groupedOrders as GroupedOrder[]}
+            contentContainerStyle={{ paddingBottom: 140, paddingTop: 4 }}
+            data={filteredOrders as GroupedOrder[]}
             keyExtractor={(item: GroupedOrder) => item.orderId.toString()}
-            renderItem={({ item: order }: { item: GroupedOrder }) => (
-              <View style={styles.orderCard}>
-                <TouchableOpacity
-                  style={styles.orderHeader}
-                  onPress={() => toggleOrderExpansion(order.orderId)}
-                  activeOpacity={0.7}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <MaterialIcons
-                      name={
-                        expandedOrders.has(order.orderId)
-                          ? "expand-less"
-                          : "expand-more"
-                      }
-                      size={24}
-                      color="#4F46E5"
-                    />
-                    <Text style={styles.orderTitle}>
-                      Order #{order.orderId}
-                    </Text>
-                  </View>
-                  <Text style={styles.orderAmount}>
-                    ${order.totalAmount.toFixed(2)}
-                  </Text>
-                </TouchableOpacity>
+            renderItem={({ item: order }: { item: GroupedOrder }) => {
+              // Helper function to check if payment is a processing fee
+              const isProcessingFee = (p: Payment) => {
+                const notes = (p as any)?.notes || (p as any)?.Donation?.notes || "";
+                const campaignId = (p as any)?.campaignId || (p?.Campaign as any)?.id;
+                const donationItem = (p as any)?.donationItem || (p as any)?.Donation?.donationItem || "";
+                return (
+                  notes.toLowerCase().includes("processing fee") ||
+                  campaignId === 259 ||
+                  donationItem.toLowerCase().includes("processing fee") ||
+                  donationItem.toLowerCase().includes("admin fee")
+                );
+              };
 
-                {expandedOrders.has(order.orderId) && (
-                  <View style={styles.orderDetails}>
-                    {order.payments.map((p: Payment) => (
-                      <View key={p.id} style={styles.paymentRow}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.paymentName}>
-                            {p.Campaign?.name || p.orphan_id
-                              ? "Orphan Sponsorship"
-                              : "Unnamed"}
+              // Filter out processing fee items for primary display
+              const nonProcessingFeePayments = order.payments.filter((p: Payment) => !isProcessingFee(p));
+              const primaryPayment = nonProcessingFeePayments[0] || order.payments?.[0];
+              
+              // Get unique campaigns (excluding processing fees)
+              const uniqueCampaigns = new Map<string, number>();
+              nonProcessingFeePayments.forEach((p: Payment) => {
+                const campaignName = p?.Campaign?.name
+                  ? p.Campaign.name
+                  : p?.orphan_id
+                  ? "Orphan Sponsorship"
+                  : "Donation";
+                uniqueCampaigns.set(campaignName, (uniqueCampaigns.get(campaignName) || 0) + 1);
+              });
+              const campaignCount = uniqueCampaigns.size;
+              const totalItems = nonProcessingFeePayments.length;
+              
+              const primaryCampaignName =
+                primaryPayment?.Campaign?.name
+                  ? primaryPayment.Campaign.name
+                  : primaryPayment?.orphan_id
+                  ? "Orphan Sponsorship"
+                  : "Donation";
+              
+              // Build campaign name with count
+              const otherCount = campaignCount > 1 ? campaignCount - 1 : 0;
+              
+              // Get cover image from the campaign (now included in API response)
+              const coverImage =
+                (primaryPayment?.Campaign as any)?.coverImage ||
+                "https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/1708467963799-alihsan-coverImage.png";
+              const statusRaw =
+                (primaryPayment as any)?.status ||
+                (primaryPayment as any)?.Donation?.status ||
+                "COMPLETED";
+              const statusUpper = String(statusRaw).toUpperCase();
+              const statusLabel =
+                statusUpper === "COMPLETED" ? "Completed" : statusUpper;
+              const amountLabel = `AUD $${Number(order.totalAmount).toFixed(2)}`;
+
+              return (
+                <View style={styles.orderCard}>
+                  <TouchableOpacity
+                    style={styles.orderHeader}
+                    onPress={() => toggleOrderExpansion(order.orderId)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.orderHeaderLeft}>
+                      <Image source={{ uri: coverImage }} style={styles.orderImage} />
+                      <View style={styles.orderInfo}>
+                        <View style={styles.orderTitleRow}>
+                          <Text style={styles.orderTitle} numberOfLines={1}>
+                            {primaryCampaignName}
                           </Text>
-                          <Text style={styles.paymentId}>
-                            Donation ID: {p.donationId}
+                          {otherCount > 0 && (
+                            <Text style={styles.orderOtherCampaigns}>
+                              {" "}+ {otherCount} other{otherCount !== 1 ? "s" : ""}
+                            </Text>
+                          )}
+                        </View>
+                        <View style={styles.orderMetaRow}>
+                          <Text style={styles.orderMetaText}>
+                            {formatDate(order.paymentDate)}
+                          </Text>
+                          <Text style={styles.orderMetaDot}>•</Text>
+                          <Text style={styles.orderMetaText}>
+                            {totalItems} item{totalItems !== 1 ? "s" : ""}
+                          </Text>
+                          <Text style={styles.orderMetaDot}>•</Text>
+                          <Text style={styles.orderMetaAmount}>
+                            {amountLabel}
                           </Text>
                         </View>
-                        <Text style={styles.paymentTotal}>${p.total}</Text>
-                        <TouchableOpacity
-                          onPress={() => handleDownload(p.donationId)}
-                        >
-                          <MaterialIcons
-                            name="download"
-                            size={24}
-                            color="#4F46E5"
-                          />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => toggleOrderSelection(order.orderId)}
-                          style={[
-                            styles.checkbox,
-                            selectedOrders.has(order.orderId) &&
-                              styles.checkboxSelected,
-                          ]}
-                        />
                       </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-            )}
+                    </View>
+                    <View style={styles.orderStatusBadge}>
+                      <Text style={styles.orderStatusText}>{statusLabel}</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  {expandedOrders.has(order.orderId) && (
+                    <View style={styles.orderDetails}>
+                      {order.payments.map((p: Payment, index: number) => {
+                        const isFee = isProcessingFee(p);
+                        return (
+                          <View
+                            key={p.id}
+                            style={[
+                              styles.paymentRow,
+                              index === order.payments.length - 1 &&
+                                styles.paymentRowLast,
+                            ]}
+                          >
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.paymentName}>
+                                {isFee
+                                  ? "Processing Fee"
+                                  : p.Campaign?.name
+                                  ? p.Campaign.name
+                                  : p.orphan_id
+                                  ? "Orphan Sponsorship"
+                                  : "Donation"}
+                              </Text>
+                              <Text style={styles.paymentId}>
+                                Order #: {order.orderId}
+                              </Text>
+                            </View>
+                            <Text style={styles.paymentTotal}>${p.total}</Text>
+                          </View>
+                        );
+                      })}
+                      <View style={styles.orderDetailsDivider} />
+                      <TouchableOpacity
+                        style={styles.resendButton}
+                        onPress={() => handleResend(primaryPayment?.donationId)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.resendButtonText}>
+                          Resend invoice
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              );
+            }}
           />
         )}
 
-        {groupedOrders.length > 0 && (
-          <View style={styles.bottomActions}>
-            <Button
-              label="Export Selected"
-              onPress={handleExport}
-              style={{ flex: 1 }}
-            />
-          </View>
-        )}
       </View>
     </SafeAreaViewContext>
   );
@@ -245,73 +416,220 @@ const OneTimeUserDonationsScreen = () => {
 
 // --- Styles
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#F3F4F6" },
-  container: { flex: 1 },
+  safeArea: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, paddingHorizontal: 16 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  filterTabs: {
+  headerBar: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    padding: 12,
+    alignItems: "center",
+    marginTop: 8,
+    marginBottom: 10,
+  },
+  searchWrapper: {
+    flex: 1,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
     backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
     elevation: 2,
   },
-  filterTab: {
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: "#E0E7FF",
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: "#111827",
   },
-  filterTabActive: { backgroundColor: "#4F46E5" },
-  filterTabText: { color: "#1E3A8A", fontWeight: "600" },
-  filterTabTextActive: { color: "#fff" },
+  clearButton: {
+    paddingLeft: 4,
+  },
+  categoriesHorizontal: {
+    paddingBottom: 0,
+    marginBottom: 0,
+    gap: 6,
+  },
+  categoriesSection: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    marginBottom: 10,
+  },
+  categoryItemHorizontal: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 0,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+    justifyContent: "center",
+    height: 36,
+  },
+  categoryItemSelected: {
+    backgroundColor: "rgba(242, 246, 255, 1)",
+  },
+  categoryText: {
+    fontSize: 10,
+    lineHeight: 12,
+    color: "#6B7280",
+    fontWeight: "600",
+  },
+  categoryTextSelected: {
+    color: "#2161CD",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    marginTop: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FFF",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#111",
+  },
+  headerSpacer: {
+    width: 40,
+    height: 40,
+  },
   orderCard: {
     backgroundColor: "#fff",
-    margin: 12,
+    marginTop: 8,
     borderRadius: 16,
-    padding: 12,
-    elevation: 1,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   orderHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 2,
+  },
+  orderHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  orderImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    marginRight: 8,
+  },
+  orderInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  orderStatusBadge: {
+    backgroundColor: "#E6F7D9",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  orderStatusText: {
+    color: "#3C7A2A",
+    fontWeight: "600",
+    fontSize: 11,
+  },
+  orderTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
   },
   orderTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#4F46E5",
-    marginLeft: 8,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0F172A",
   },
-  orderAmount: { fontWeight: "700", color: "#16A34A", fontSize: 16 },
-  orderDetails: {
-    marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-    paddingTop: 8,
+  orderOtherCampaigns: {
+    fontSize: 11,
+    fontWeight: "400",
+    color: "#9CA3AF",
+    fontStyle: "italic",
   },
-  paymentRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  paymentName: { fontWeight: "600", color: "#1E40AF" },
-  paymentId: { fontSize: 12, color: "#6B7280" },
-  paymentTotal: { fontWeight: "700", color: "#16A34A", marginHorizontal: 8 },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 1,
-    borderColor: "#4F46E5",
-    borderRadius: 4,
-    marginLeft: 8,
-  },
-  checkboxSelected: { backgroundColor: "#4F46E5" },
-  bottomActions: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 12,
-    backgroundColor: "#fff",
+  orderMetaRow: {
     flexDirection: "row",
-    gap: 8,
+    alignItems: "center",
+    marginTop: 4,
+  },
+  orderMetaText: {
+    fontSize: 11,
+    color: "#9CA3AF",
+  },
+  orderMetaDot: {
+    marginHorizontal: 8,
+    color: "#9CA3AF",
+    fontSize: 11,
+  },
+  orderMetaAmount: {
+    fontSize: 11,
+    color: "#0F172A",
+    fontWeight: "700",
+  },
+  orderDetails: {
+    marginTop: 10,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#EEF2F7",
+  },
+  paymentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  paymentRowLast: {
+    borderBottomWidth: 0,
+  },
+  paymentName: { fontWeight: "600", color: "#111" },
+  paymentId: { fontSize: 12, color: "#6B7280" },
+  paymentTotal: { fontWeight: "700", color: "#111", marginHorizontal: 8 },
+  orderDetailsDivider: {
+    height: 1,
+    backgroundColor: "#EEF2F7",
+    marginVertical: 10,
+  },
+  resendButton: {
+    alignSelf: "stretch",
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#EEF4FF",
+    alignItems: "center",
+  },
+  resendButtonText: {
+    color: "#2161CD",
+    fontSize: 12,
+    fontWeight: "600",
   },
   emptyState: {
     flex: 1,
@@ -322,7 +640,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#4F46E5",
+    color: "#264B8B",
     marginTop: 16,
   },
   emptyDescription: {
@@ -336,14 +654,53 @@ const styles = StyleSheet.create({
 // --- Utility function
 function groupPayments(payments: Payment[]): GroupedOrder[] {
   const grouped: { [key: number]: GroupedOrder } = {};
+  
+  // Helper function to check if payment is a processing fee
+  const isProcessingFee = (p: Payment) => {
+    const notes = (p as any)?.notes || (p as any)?.Donation?.notes || "";
+    const campaignId = (p as any)?.campaignId || (p?.Campaign as any)?.id;
+    const donationItem = (p as any)?.donationItem || (p as any)?.Donation?.donationItem || "";
+    return (
+      notes.toLowerCase().includes("processing fee") ||
+      campaignId === 259 ||
+      donationItem.toLowerCase().includes("processing fee") ||
+      donationItem.toLowerCase().includes("admin fee")
+    );
+  };
+
   payments.forEach((p) => {
-    const orderId = p.Donation?.orderId || p.orderId || p.donationId || p.id;
-    if (!grouped[orderId])
-      grouped[orderId] = { orderId, totalAmount: 0, payments: [] };
+    // Prioritize orderId from Donation object, then direct orderId, avoid using donationId as fallback
+    const orderId = p.Donation?.orderId || p.orderId;
+    if (!orderId) {
+      console.warn("Payment missing orderId:", p);
+      return; // Skip payments without orderId
+    }
+    if (!grouped[orderId]) {
+      grouped[orderId] = {
+        orderId,
+        totalAmount: 0,
+        payments: [],
+        paymentDate: p.updatedAt,
+        itemCount: 0,
+      };
+    }
+    // Include all payments (including processing fees) in the payments array
     grouped[orderId].payments.push(p);
-    grouped[orderId].totalAmount += parseFloat(p.total) || 0;
+    // Only add to totalAmount and itemCount if it's not a processing fee
+    if (!isProcessingFee(p)) {
+      grouped[orderId].totalAmount += parseFloat(p.total) || 0;
+      grouped[orderId].itemCount += 1;
+    }
+
+    const paymentDate = new Date(p.updatedAt);
+    const currentOrderDate = new Date(grouped[orderId].paymentDate);
+    if (paymentDate < currentOrderDate) {
+      grouped[orderId].paymentDate = p.updatedAt;
+    }
   });
-  return Object.values(grouped).sort((a, b) => b.totalAmount - a.totalAmount);
+  return Object.values(grouped).sort(
+    (a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()
+  );
 }
 
 export default OneTimeUserDonationsScreen;

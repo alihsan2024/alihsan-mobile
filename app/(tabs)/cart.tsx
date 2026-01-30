@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Switch,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -290,54 +291,56 @@ export default function BasketScreen() {
                   "KURBAN",
                 ].includes(checkoutType || "");
 
+                const itemName =
+                  item.name ||
+                  item.Campaign?.name ||
+                  item.Orphan?.name ||
+                  "Campaign";
+                const itemImage =
+                  item.coverImage ||
+                  item.Campaign?.coverImage ||
+                  item.Orphan?.coverImage ||
+                  "https://via.placeholder.com/64";
+                const amountLabel = formatCurrency(itemTotal);
+
                 return (
                   <View key={item.id || index} style={styles.itemCard}>
-                    <ExpoImage
-                      source={{
-                        uri:
-                          item.coverImage ||
-                          item.Campaign?.coverImage ||
-                          item.Orphan?.coverImage ||
-                          "https://via.placeholder.com/64",
-                      }}
-                      style={styles.itemImage}
-                      contentFit="cover"
-                    />
-                    <View style={styles.itemContent}>
-                      <Text style={styles.itemTitle} numberOfLines={2}>
-                        {item.name ||
-                          item.Campaign?.name ||
-                          item.Orphan?.name ||
-                          "Campaign"}
-                      </Text>
-                      <View style={styles.itemMetaRow}>
-                        {item.isRecurring && (
-                          <View style={styles.recurringBadge}>
-                            <Ionicons
-                              name="repeat"
-                              size={9}
-                              color="#264B8B"
-                            />
-                            <Text style={styles.recurringText}>
-                              {getRecurringLabel(item.periodDays)}
-                            </Text>
-                          </View>
-                        )}
-                        {item.donationItem && (
-                          <Text style={styles.donationItem}>
-                            {item.donationItem}
-                          </Text>
-                        )}
-                      </View>
-                      <View style={styles.itemPriceRow}>
-                        <Text style={styles.itemPrice}>
-                          {formatCurrency(itemTotal)}
+                    <View style={styles.itemHeaderLeft}>
+                      <Image source={{ uri: itemImage }} style={styles.itemImage} />
+                      <View style={styles.itemInfo}>
+                        <Text style={styles.itemTitle} numberOfLines={1}>
+                          {itemName}
                         </Text>
-                        {isCommonORZaqat && quantity > 1 && (
-                          <Text style={styles.itemUnitPrice}>
-                            {formatCurrency(price)} each
+                        <View style={styles.itemMetaRow}>
+                          {item.isRecurring && (
+                            <View style={styles.recurringBadge}>
+                              <Ionicons
+                                name="repeat"
+                                size={9}
+                                color="#2161CD"
+                              />
+                              <Text style={styles.recurringText}>
+                                {getRecurringLabel(item.periodDays)}
+                              </Text>
+                            </View>
+                          )}
+                          {item.donationItem && (
+                            <>
+                              {item.isRecurring && (
+                                <Text style={styles.itemMetaDot}>•</Text>
+                              )}
+                              <Text style={styles.donationItem}>
+                                {item.donationItem}
+                              </Text>
+                            </>
+                          )}
+                          {(item.isRecurring || item.donationItem) && (
+                            <Text style={styles.itemMetaDot}>•</Text>
+                          )}
+                          <Text style={styles.itemMetaAmount}>
+                            {amountLabel}
                           </Text>
-                        )}
+                        </View>
                       </View>
                     </View>
                     <TouchableOpacity
@@ -346,7 +349,7 @@ export default function BasketScreen() {
                           item.campaignId,
                           item.orphanId,
                           item.donationItem,
-                          item.name || item.Campaign?.name
+                          itemName
                         )
                       }
                       style={styles.deleteButton}
@@ -365,7 +368,7 @@ export default function BasketScreen() {
 
             {/* Summary Card */}
             <LinearGradient
-              colors={["#6A7BFF", "#5663F7"]}
+              colors={["#5089E7", "#2161CD"]}
               style={styles.summaryCard}
             >
               <Text style={styles.summaryLabel}>Total Amount</Text>
@@ -425,7 +428,7 @@ export default function BasketScreen() {
       {/* Footer with Checkout Button */}
       {basketItems.length > 0 && (
         <LinearGradient
-          colors={["#264B8B", "#1E3A8A"]}
+          colors={["#5089E7", "#2161CD"]}
           style={styles.footer}
         >
           <TouchableOpacity
@@ -549,53 +552,49 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 10,
+    borderRadius: 16,
+    padding: 8,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    justifyContent: "space-between",
     marginBottom: 8,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+  },
+  itemHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
   },
   itemImage: {
-    width: 52,
-    height: 52,
-    borderRadius: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    marginRight: 8,
     backgroundColor: "#F3F4F6",
-    flexShrink: 0,
-    overflow: "hidden",
   },
-  itemContent: {
+  itemInfo: {
     flex: 1,
     minWidth: 0,
   },
   itemTitle: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#010D26",
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#111",
     marginBottom: 4,
-    fontFamily: "AlbertSans_500Medium",
-    lineHeight: 18,
-    letterSpacing: 0,
+    fontFamily: "AlbertSans_600SemiBold",
   },
   itemMetaRow: {
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: 5,
-    marginBottom: 4,
+    gap: 4,
   },
   recurringBadge: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#EEF4FF",
-    paddingHorizontal: 5,
+    paddingHorizontal: 4,
     paddingVertical: 2,
     borderRadius: 4,
     gap: 3,
@@ -603,7 +602,7 @@ const styles = StyleSheet.create({
   recurringText: {
     fontSize: 9,
     fontWeight: "700",
-    color: "#264B8B",
+    color: "#2161CD",
     fontFamily: "AlbertSans_700Bold",
     letterSpacing: 0.3,
     textTransform: "uppercase",
@@ -611,37 +610,25 @@ const styles = StyleSheet.create({
   donationItem: {
     fontSize: 11,
     color: "#6B7280",
-    fontFamily: "AlbertSans_500Medium",
-    lineHeight: 14,
-  },
-  itemPriceRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 5,
-    marginTop: 2,
-  },
-  itemPrice: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#010D26",
-    fontFamily: "AlbertSans_800ExtraBold",
-    letterSpacing: -0.3,
-  },
-  itemUnitPrice: {
-    fontSize: 11,
-    color: "#9CA3AF",
     fontFamily: "AlbertSans_400Regular",
-    lineHeight: 13,
+  },
+  itemMetaDot: {
+    fontSize: 11,
+    color: "#6B7280",
+    marginHorizontal: 2,
+  },
+  itemMetaAmount: {
+    fontSize: 11,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
   },
   deleteButton: {
-    padding: 7,
-    borderRadius: 7,
+    padding: 8,
+    borderRadius: 8,
     backgroundColor: "#FEF2F2",
     justifyContent: "center",
     alignItems: "center",
-    minWidth: 34,
-    minHeight: 34,
-    alignSelf: "center",
+    marginLeft: 8,
   },
   summaryCard: {
     borderRadius: 12,

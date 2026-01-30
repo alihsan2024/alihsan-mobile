@@ -93,5 +93,7 @@
     <string>This app needs access to save photos to your photo library.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>This app uses your location to show nearby campaigns and provide location-based services.</string>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
   </dict>
 </plist>

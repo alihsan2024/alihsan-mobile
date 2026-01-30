@@ -1,11 +1,10 @@
-import React, { useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Alert,
   ScrollView,
   Platform,
   KeyboardAvoidingView,
@@ -19,22 +18,40 @@ import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { loginUser } from "@/store/reduxSlice/authenticationSlice";
 import LoadingScreen from "@/components/LoadingScreen";
 import Google from "@/assets/google.svg";
+import { useToast } from "@/context/ToastContext";
 
 export default function LoginScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
   const authState = useSelector((state: any) => state.authentication);
+  const { showToast } = useToast();
+  const user = authState?.user;
+  const isAuthenticated = !!user;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const emailInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/(tabs)/profile");
+    }
+  }, [isAuthenticated, router]);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       setError("Please fill in all fields");
+      showToast({
+        message: "Please fill in all fields",
+        type: "error",
+        duration: 3000,
+      });
       return;
     }
 
@@ -47,7 +64,7 @@ export default function LoginScreen() {
       );
 
       if (loginUser.fulfilled.match(resultAction)) {
-        router.replace("/");
+        router.replace("/(tabs)/profile");
       } else {
         const errMsg =
           typeof resultAction.error === "string"
@@ -55,14 +72,35 @@ export default function LoginScreen() {
             : resultAction.error?.message || "Login failed. Please try again.";
 
         setError(errMsg);
-        Alert.alert("Login Failed", errMsg);
+        
+        // Show toast notification for errors
+        const errorMessage = errMsg.toLowerCase().includes("invalid email") || 
+                           errMsg.toLowerCase().includes("invalid password") ||
+                           errMsg.toLowerCase().includes("email or password")
+          ? "Invalid email or password"
+          : errMsg;
+        
+        showToast({
+          message: errorMessage,
+          type: "error",
+          duration: 4000,
+        });
       }
     } catch (err: any) {
-      setError(err.message || "Login failed. Please try again.");
-      Alert.alert(
-        "Login Failed",
-        err.message || "Login failed. Please try again."
-      );
+      const errorMessage = err.message || "Login failed. Please try again.";
+      setError(errorMessage);
+      
+      const toastMessage = errorMessage.toLowerCase().includes("invalid email") || 
+                           errorMessage.toLowerCase().includes("invalid password") ||
+                           errorMessage.toLowerCase().includes("email or password")
+        ? "Invalid email or password"
+        : errorMessage;
+      
+      showToast({
+        message: toastMessage,
+        type: "error",
+        duration: 4000,
+      });
     } finally {
       setLoading(false);
     }
@@ -70,6 +108,30 @@ export default function LoginScreen() {
 
   if (loading) {
     return <LoadingScreen message="Logging in..." />;
+  }
+
+  // Show a nice message if already logged in (before redirect)
+  if (isAuthenticated) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.loggedInContainer}>
+          <View style={styles.loggedInCard}>
+            <View style={styles.loggedInIconContainer}>
+              <Ionicons name="checkmark-circle" size={64} color="#16A34A" />
+            </View>
+            <Text style={styles.loggedInTitle}>Already Logged In</Text>
+            <Text style={styles.loggedInSubtitle}>
+              You're already signed in. Redirecting to your profile...
+            </Text>
+            {user?.firstName && (
+              <Text style={styles.loggedInName}>
+                Welcome back, {user.firstName}!
+              </Text>
+            )}
+          </View>
+        </View>
+      </View>
+    );
   }
 
   return (
@@ -126,14 +188,17 @@ export default function LoginScreen() {
 
               {/* Email Input */}
               <Text style={styles.label}>Email</Text>
-              <View
+              <TouchableOpacity
+                activeOpacity={1}
                 style={[
                   styles.inputWrapper,
                   error ? styles.inputError : styles.inputNormal,
                 ]}
+                onPress={() => emailInputRef.current?.focus()}
               >
                 <Ionicons name="mail-outline" size={18} color="#6B7280" />
                 <TextInput
+                  ref={emailInputRef}
                   placeholder="Enter email"
                   placeholderTextColor="#9CA3AF"
                   style={styles.input}
@@ -143,15 +208,20 @@ export default function LoginScreen() {
                   autoCapitalize="none"
                   autoComplete="email"
                 />
-              </View>
+              </TouchableOpacity>
 
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
               {/* Password Input */}
               <Text style={styles.label}>Password</Text>
-              <View style={[styles.inputWrapper, styles.inputNormal]}>
+              <TouchableOpacity
+                activeOpacity={1}
+                style={[styles.inputWrapper, styles.inputNormal]}
+                onPress={() => passwordInputRef.current?.focus()}
+              >
                 <Ionicons name="lock-closed-outline" size={18} color="#6B7280" />
                 <TextInput
+                  ref={passwordInputRef}
                   placeholder="Enter password"
                   placeholderTextColor="#9CA3AF"
                   secureTextEntry={!showPassword}
@@ -168,7 +238,7 @@ export default function LoginScreen() {
                     color="#6B7280"
                   />
                 </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
 
               {/* Login Button */}
               <TouchableOpacity
@@ -378,5 +448,50 @@ const styles = StyleSheet.create({
     color: "#264B8B",
     fontWeight: "600",
     fontFamily: "AlbertSans_600SemiBold",
+  },
+  loggedInContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  loggedInCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 32,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    width: "100%",
+    maxWidth: 400,
+  },
+  loggedInIconContainer: {
+    marginBottom: 20,
+  },
+  loggedInTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#010D26",
+    fontFamily: "AlbertSans_800ExtraBold",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  loggedInSubtitle: {
+    fontSize: 15,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 8,
+  },
+  loggedInName: {
+    fontSize: 16,
+    color: "#2161CD",
+    fontFamily: "AlbertSans_600SemiBold",
+    textAlign: "center",
+    marginTop: 8,
   },
 });

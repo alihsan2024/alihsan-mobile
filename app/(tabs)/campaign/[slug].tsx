@@ -25,6 +25,10 @@ import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { DimensionValue } from "react-native";
 import HeroBackground from "@/components/ui/GradientImage";
 import RenderHTML from "react-native-render-html";
+import { useToast } from "@/context/ToastContext";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
+import CampaignLoadingScreen from "@/components/CampaignLoadingScreen";
 
 export default function GazaDonationScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -42,10 +46,11 @@ export default function GazaDonationScreen() {
   const isAuthenticated = !!user;
 
   const [addToBasket] = useAddToBasketMutation();
-  const { data: basketData } = useGetBasketQuery(undefined, {
+  const { data: basketData, refetch: refetchBasket } = useGetBasketQuery(undefined, {
     skip: !isAuthenticated,
   });
   const dispatch = useAppDispatch();
+  const { showToast } = useToast();
   const liveDonations =
     useSelector((state: any) => state.quickDonations?.liveDonations) ?? [];
 
@@ -86,13 +91,28 @@ export default function GazaDonationScreen() {
     if (slug) load();
   }, [slug]);
 
-  useEffect(() => {
+  // Load guest basket helper
+  const loadGuestBasket = useCallback(async () => {
     if (!isAuthenticated) {
-      AsyncStorage.getItem("guestBasket").then((data) => {
-        setGuestBasket(data ? JSON.parse(data) : []);
-      });
+      const data = await AsyncStorage.getItem("guestBasket");
+      setGuestBasket(data ? JSON.parse(data) : []);
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    loadGuestBasket();
+  }, [loadGuestBasket]);
+
+  // Reload basket when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated) {
+        refetchBasket();
+      } else {
+        loadGuestBasket();
+      }
+    }, [isAuthenticated, refetchBasket, loadGuestBasket])
+  );
 
   const basketItems = isAuthenticated ? basketData?.payload ?? [] : guestBasket;
 
@@ -135,7 +155,23 @@ export default function GazaDonationScreen() {
       return;
     }
 
-    if (isInCart) {
+    // Refresh basket data before checking
+    let currentBasketItems: any[] = [];
+    if (isAuthenticated) {
+      const result = await refetchBasket();
+      currentBasketItems = result.data?.payload ?? [];
+    } else {
+      // Load directly from AsyncStorage to get latest data
+      const data = await AsyncStorage.getItem("guestBasket");
+      currentBasketItems = data ? JSON.parse(data) : [];
+      setGuestBasket(currentBasketItems);
+    }
+
+    const isCurrentlyInCart = currentBasketItems.some(
+      (item: any) => item.campaignId === campaign?.id
+    );
+
+    if (isCurrentlyInCart) {
       router.push("/(tabs)/cart");
       return;
     }
@@ -158,18 +194,27 @@ export default function GazaDonationScreen() {
         setGuestBasket(updated);
         await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
       }
-      Alert.alert("Success", "Added to cart", [
-        { text: "View Cart", onPress: () => router.push("/(tabs)/cart") },
-        { text: "OK" },
-      ]);
+      showToast({
+        message: "Added to cart",
+        type: "success",
+        action: {
+          label: "View Cart",
+          onPress: () => router.push("/(tabs)/cart"),
+        },
+      });
     } catch {
-      Alert.alert("Error", "Failed to add to cart");
+      showToast({
+        message: "Failed to add to cart",
+        type: "error",
+      });
     } finally {
       setAddingToCart(false);
     }
   };
 
-  if (loading || !campaign) return null;
+  if (loading || !campaign) {
+    return <CampaignLoadingScreen />;
+  }
 
   console.log(campaign.name);
 

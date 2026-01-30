@@ -20,6 +20,7 @@ import {
   useAddToBasketMutation,
   useGetBasketQuery,
 } from "@/store/reduxSlice/api/basketApi";
+import { useToast } from "@/context/ToastContext";
 
 const { width, height } = Dimensions.get("window");
 
@@ -59,12 +60,13 @@ export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
   const isAuthenticated = !!user;
 
   const [addToBasket] = useAddToBasketMutation();
-  const { data: basketData } = useGetBasketQuery(undefined, {
+  const { data: basketData, refetch: refetchBasket } = useGetBasketQuery(undefined, {
     skip: !isAuthenticated,
   });
 
   const [guestBasket, setGuestBasket] = useState<any[]>([]);
   const [addingToCart, setAddingToCart] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -109,25 +111,34 @@ export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
   const handleDonate = async () => {
     const donationAmount = 50; // default Gaza amount (same assumption as Home)
 
-    const basketItems = isAuthenticated
-      ? basketData?.payload ?? []
-      : guestBasket;
+    // Refresh basket data before checking
+    let currentBasketItems: any[] = [];
+    if (isAuthenticated) {
+      const result = await refetchBasket();
+      currentBasketItems = result.data?.payload ?? [];
+    } else {
+      // Load directly from AsyncStorage to get latest data
+      const data = await AsyncStorage.getItem("guestBasket");
+      currentBasketItems = data ? JSON.parse(data) : [];
+      setGuestBasket(currentBasketItems);
+    }
 
-    const isInCart = basketItems.some(
+    const isInCart = currentBasketItems.some(
       (item: any) => item.campaignId === GAZA_CAMPAIGN.id
     );
 
     if (isInCart) {
-      Alert.alert("Already in cart", "This campaign is already in your cart.", [
-        {
-          text: "View Cart",
+      showToast({
+        message: "This campaign is already in your cart",
+        type: "info",
+        action: {
+          label: "View Cart",
           onPress: () => {
             onClose();
             router.push("/(tabs)/cart");
           },
         },
-        { text: "OK", style: "cancel" },
-      ]);
+      });
       return;
     }
 
@@ -151,22 +162,22 @@ export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
         await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
       }
 
-      Alert.alert(
-        "Added to cart",
-        "Your donation has been added to the cart.",
-        [
-          {
-            text: "View Cart",
-            onPress: () => {
-              onClose();
-              router.push("/(tabs)/cart");
-            },
+      showToast({
+        message: "Your donation has been added to the cart",
+        type: "success",
+        action: {
+          label: "View Cart",
+          onPress: () => {
+            onClose();
+            router.push("/(tabs)/cart");
           },
-          { text: "OK", style: "cancel" },
-        ]
-      );
+        },
+      });
     } catch {
-      Alert.alert("Error", "Failed to add to cart");
+      showToast({
+        message: "Failed to add to cart",
+        type: "error",
+      });
     } finally {
       setAddingToCart(false);
     }

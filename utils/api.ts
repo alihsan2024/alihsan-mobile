@@ -44,7 +44,7 @@ const getApiUrl = (): string => {
   return (
     process.env.EXPO_PUBLIC_API_URL ||
     (Constants.expoConfig?.extra?.apiUrl as string | undefined) ||
-    "https://api.alihsan.org.au"
+    "https://deenstream.live"
   );
 };
 

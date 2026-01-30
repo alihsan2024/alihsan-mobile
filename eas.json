@@ -8,19 +8,22 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL_DEV": "http://192.168.20.16:4001"
+        "EXPO_PUBLIC_API_URL_DEV": "http://192.168.20.16:4001",
+        "EXPO_PUBLIC_STRIPE_KEY": "pk_test_5178emeJJ6oohcr5ljBoClAZ2tL10lPsY0XVNjPyhnogfrYN649N0EAt5B33Q0jf6QjvpOmqoOgmvmh8o0fn0BHvj00ULR40DFl"
       }
     },
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.alihsan.org.au"
+        "EXPO_PUBLIC_API_URL": "https://deenstream.live",
+        "EXPO_PUBLIC_STRIPE_KEY": "pk_test_5178emeJJ6oohcr5ljBoClAZ2tL10lPsY0XVNjPyhnogfrYN649N0EAt5B33Q0jf6QjvpOmqoOgmvmh8o0fn0BHvj00ULR40DFl"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.alihsan.org.au"
+        "EXPO_PUBLIC_API_URL": "https://deenstream.live",
+        "EXPO_PUBLIC_STRIPE_KEY": "pk_test_5178emeJJ6oohcr5ljBoClAZ2tL10lPsY0XVNjPyhnogfrYN649N0EAt5B33Q0jf6QjvpOmqoOgmvmh8o0fn0BHvj00ULR40DFl"
       }
     }
   },

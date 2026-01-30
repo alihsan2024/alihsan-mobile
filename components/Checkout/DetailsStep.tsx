@@ -139,6 +139,14 @@ const DetailsStep = ({ values, onChange, onValidChange }: Props) => {
         Ensure your details are correct for receipts.
       </Text>
 
+      {isAuthenticated && (
+        <View style={styles.disclaimerContainer}>
+          <Text style={styles.disclaimerText}>
+            To update your name, email, or phone number, please visit your profile page.
+          </Text>
+        </View>
+      )}
+
       <View style={styles.formContainer}>
         <Input
           label="Full Name"
@@ -146,6 +154,7 @@ const DetailsStep = ({ values, onChange, onValidChange }: Props) => {
           value={formik.values.fullName}
           onChangeText={formik.handleChange("fullName")}
           error={formik.touched.fullName ? formik.errors.fullName : undefined}
+          editable={!isAuthenticated}
         />
 
         <Input
@@ -156,6 +165,7 @@ const DetailsStep = ({ values, onChange, onValidChange }: Props) => {
           value={formik.values.email}
           onChangeText={formik.handleChange("email")}
           error={formik.touched.email ? formik.errors.email : undefined}
+          editable={!isAuthenticated}
         />
 
         <Input
@@ -165,6 +175,7 @@ const DetailsStep = ({ values, onChange, onValidChange }: Props) => {
           value={formik.values.phone}
           onChangeText={formik.handleChange("phone")}
           error={formik.touched.phone ? formik.errors.phone : undefined}
+          editable={!isAuthenticated}
         />
       </View>
     </View>
@@ -197,5 +208,19 @@ const styles = StyleSheet.create({
   formContainer: {
     width: "100%",
     gap: 12,
+  },
+  disclaimerContainer: {
+    backgroundColor: "#F3F4F6",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    width: "100%",
+  },
+  disclaimerText: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
+    textAlign: "center",
+    lineHeight: 16,
   },
 });

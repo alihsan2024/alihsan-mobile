@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -29,6 +29,10 @@ export default function SignupScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const fullNameInputRef = useRef<TextInput>(null);
+  const emailInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
+  const confirmPasswordInputRef = useRef<TextInput>(null);
 
   const validateForm = () => {
     if (!fullName.trim() || !email.trim() || !password.trim()) {
@@ -133,9 +137,14 @@ export default function SignupScreen() {
             <View style={styles.cardContent}>
               {/* Full Name Input */}
               <Text style={styles.label}>Full Name</Text>
-              <View style={[styles.inputWrapper, styles.inputNormal]}>
+              <TouchableOpacity
+                activeOpacity={1}
+                style={[styles.inputWrapper, styles.inputNormal]}
+                onPress={() => fullNameInputRef.current?.focus()}
+              >
                 <Ionicons name="person-outline" size={18} color="#6B7280" />
                 <TextInput
+                  ref={fullNameInputRef}
                   placeholder="Enter full name"
                   placeholderTextColor="#9CA3AF"
                   style={styles.input}
@@ -143,18 +152,21 @@ export default function SignupScreen() {
                   onChangeText={setFullName}
                   autoCapitalize="words"
                 />
-              </View>
+              </TouchableOpacity>
 
               {/* Email Input */}
               <Text style={styles.label}>Email Address</Text>
-              <View
+              <TouchableOpacity
+                activeOpacity={1}
                 style={[
                   styles.inputWrapper,
                   error ? styles.inputError : styles.inputNormal,
                 ]}
+                onPress={() => emailInputRef.current?.focus()}
               >
                 <Ionicons name="mail-outline" size={18} color="#6B7280" />
                 <TextInput
+                  ref={emailInputRef}
                   placeholder="Enter email"
                   placeholderTextColor="#9CA3AF"
                   style={styles.input}
@@ -163,13 +175,18 @@ export default function SignupScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
-              </View>
+              </TouchableOpacity>
 
               {/* Password Input */}
               <Text style={styles.label}>Password</Text>
-              <View style={[styles.inputWrapper, styles.inputNormal]}>
+              <TouchableOpacity
+                activeOpacity={1}
+                style={[styles.inputWrapper, styles.inputNormal]}
+                onPress={() => passwordInputRef.current?.focus()}
+              >
                 <Ionicons name="lock-closed-outline" size={18} color="#6B7280" />
                 <TextInput
+                  ref={passwordInputRef}
                   placeholder="Enter password"
                   placeholderTextColor="#9CA3AF"
                   secureTextEntry={!showPassword}
@@ -184,13 +201,18 @@ export default function SignupScreen() {
                     color="#6B7280"
                   />
                 </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
 
               {/* Confirm Password Input */}
               <Text style={styles.label}>Confirm Password</Text>
-              <View style={[styles.inputWrapper, styles.inputNormal]}>
+              <TouchableOpacity
+                activeOpacity={1}
+                style={[styles.inputWrapper, styles.inputNormal]}
+                onPress={() => confirmPasswordInputRef.current?.focus()}
+              >
                 <Ionicons name="lock-closed-outline" size={18} color="#6B7280" />
                 <TextInput
+                  ref={confirmPasswordInputRef}
                   placeholder="Confirm password"
                   placeholderTextColor="#9CA3AF"
                   secureTextEntry={!showConfirmPassword}
@@ -207,7 +229,7 @@ export default function SignupScreen() {
                     color="#6B7280"
                   />
                 </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
 
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
 

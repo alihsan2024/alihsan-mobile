@@ -30,7 +30,7 @@ const Button: React.FC<Props> = ({
 }) => {
   const backgroundColor =
     variant === "primary"
-      ? "#264B8B"
+      ? "#2161CD"
       : variant === "secondary"
       ? "#FFD602"
       : "#E0E0E0";

@@ -23,6 +23,7 @@ module.exports = {
         NSPhotoLibraryUsageDescription: "This app needs access to your photo library to allow you to select and upload images.",
         NSPhotoLibraryAddUsageDescription: "This app needs access to save photos to your photo library.",
         NSLocationWhenInUseUsageDescription: "This app uses your location to show nearby campaigns and provide location-based services.",
+        ITSAppUsesNonExemptEncryption: false,
       },
     },
     android: {
@@ -59,8 +60,11 @@ module.exports = {
         projectId: "acdb8797-5055-407c-a49f-f5c99516013d",
       },
       // API URL will be set via environment variables during build
-      apiUrl: process.env.EXPO_PUBLIC_API_URL || "https://api.alihsan.org.au",
+      apiUrl: process.env.EXPO_PUBLIC_API_URL || "https://deenstream.live",
       apiUrlDev: process.env.EXPO_PUBLIC_API_URL_DEV || "http://192.168.20.16:4001",
+      EXPO_PUBLIC_STRIPE_KEY:
+        process.env.EXPO_PUBLIC_STRIPE_KEY ||
+        "pk_test_5178emeJJ6oohcr5ljBoClAZ2tL10lPsY0XVNjPyhnogfrYN649N0EAt5B33Q0jf6QjvpOmqoOgmvmh8o0fn0BHvj00ULR40DFl",
     },
   },
 };

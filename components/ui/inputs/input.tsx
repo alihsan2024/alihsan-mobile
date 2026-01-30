@@ -12,10 +12,14 @@ type InputProps = TextInputProps & {
   error?: string;
 };
 
-const Input = ({ label, small, error, style, ...props }: InputProps) => (
+const Input = ({ label, small, error, style, editable = true, ...props }: InputProps) => (
   <View style={{ flex: small ? 1 : undefined }}>
     {label && <Text style={styles.label}>{label}</Text>}
-    <TextInput style={[styles.input, style]} {...props} />
+    <TextInput 
+      style={[styles.input, !editable && styles.inputDisabled, style]} 
+      editable={editable}
+      {...props} 
+    />
     {error ? <Text style={styles.error}>{error}</Text> : null}
   </View>
 );
@@ -30,6 +34,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     marginBottom: 12,
+  },
+  inputDisabled: {
+    backgroundColor: "#F3F4F6",
+    color: "#6B7280",
   },
   error: {
     color: "red",

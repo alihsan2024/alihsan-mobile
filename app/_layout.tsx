@@ -20,6 +20,7 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 // } from "@/utils/deviceRegistration";
 // import { registerDeviceToken } from "@/utils/api";
 import { BasketProvider } from "../context/BasketContext";
+import { ToastProvider } from "../context/ToastContext";
 import { Provider } from "react-redux";
 import { store } from "@/store/store";
 import { Alert, View, Text, TextInput } from "react-native";
@@ -289,7 +290,8 @@ export default function RootLayout() {
         <AuthProvider>
           {/* <DeviceRegistrationManager /> */}
           <BasketProvider>
-            <Stack
+            <ToastProvider>
+              <Stack
               screenOptions={{
                 headerShown: false,
               }}
@@ -306,15 +308,12 @@ export default function RootLayout() {
                 options={{ headerShown: false }}
               />
               <Stack.Screen
-                name="campaign/[slug]"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
                 name="zakat-calculator"
                 options={{ headerShown: false }}
               />
             </Stack>
             <StatusBar style="auto" />
+            </ToastProvider>
           </BasketProvider>
         </AuthProvider>
       </Provider>

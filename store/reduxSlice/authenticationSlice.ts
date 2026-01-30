@@ -111,47 +111,7 @@ export const loginUser = createAsyncThunk(
       );
       api.defaults.headers.common["Authorization"] = `Bearer ${payload.token}`;
 
-      // Device registration logic (copied from api.ts login)
-      try {
-        const { requestUserPermission } = await import("@/utils/notifications");
-        const { getOrCreateGuestId, setLastRegisteredDeviceInfo } =
-          await import("@/utils/deviceRegistration");
-        const { Platform } = await import("react-native");
-        console.log(
-          "[DeviceReg] Starting device registration after login (redux)"
-        );
-        const token = await requestUserPermission();
-        console.log("[DeviceReg] FCM token from requestUserPermission:", token);
-        if (token) {
-          const guest_id = await getOrCreateGuestId();
-          console.log("[DeviceReg] guest_id:", guest_id);
-          const user_id = payload.id;
-          const platform = Platform.OS;
-          const { registerDeviceToken } = await import("@/utils/api");
-          console.log("[DeviceReg] About to call registerDeviceToken with:", {
-            token,
-            user_id,
-            guest_id,
-            platform,
-          });
-          await registerDeviceToken({ token, user_id, guest_id, platform });
-          console.log("[DeviceReg] registerDeviceToken call finished");
-          await setLastRegisteredDeviceInfo({
-            token,
-            user_id,
-            guest_id,
-            platform,
-          });
-          console.log("[DeviceReg] setLastRegisteredDeviceInfo call finished");
-        } else {
-          console.log("[DeviceReg] No FCM token, skipping device registration");
-        }
-      } catch (e) {
-        console.log(
-          "[DeviceReg] Device registration after login (redux) failed",
-          e
-        );
-      }
+      // Notification device registration disabled to prevent native emitter crashes.
 
       return response.data;
     } catch (e: any) {

@@ -591,7 +591,10 @@ export default function ZakatCalculatorScreen() {
       </ScrollView>
 
       {/* FOOTER */}
-      <View style={styles.footer}>
+      <LinearGradient
+        colors={["#5089E7", "#2161CD"]}
+        style={styles.footer}
+      >
         {/* Row 1 */}
         <View style={styles.footerRow}>
           <Text style={styles.footerTitle}>Your estimated Zakat Payment</Text>
@@ -649,7 +652,7 @@ export default function ZakatCalculatorScreen() {
             </TouchableOpacity>
           )}
         </View>
-      </View>
+      </LinearGradient>
     </View>
   );
 }
@@ -861,7 +864,6 @@ const styles = StyleSheet.create({
   reviewWrap: { alignItems: "flex-end" },
 
   footer: {
-    backgroundColor: "#264B8B",
     padding: 20,
     marginTop: 16,
     borderTopLeftRadius: 20,

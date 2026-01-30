@@ -162,6 +162,8 @@ export default function SupportCampaignsBanner({
                 style={styles.dropdownScrollView}
                 showsVerticalScrollIndicator={false}
                 nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
               >
                 {searchResults.map((item, index) => (
                   <TouchableOpacity
@@ -244,50 +246,68 @@ export default function SupportCampaignsBanner({
             <View style={styles.donationCard}>
               {/* Frequency Tabs */}
               <View style={styles.frequencyTabs}>
-                {frequencies.map((freq) => (
-                  <TouchableOpacity
-                    key={freq.value}
-                    style={[
-                      styles.frequencyTab,
-                      selectedFrequency === freq.value && styles.frequencyTabActive,
-                    ]}
-                    onPress={() => setSelectedFrequency(freq.value)}
-                  >
-                    <Text
-                      style={[
-                        styles.frequencyTabText,
-                        selectedFrequency === freq.value && styles.frequencyTabTextActive,
-                      ]}
+                {frequencies.map((freq) => {
+                  const isSelected = selectedFrequency === freq.value;
+                  return (
+                    <TouchableOpacity
+                      key={freq.value}
+                      style={styles.frequencyTab}
+                      onPress={() => setSelectedFrequency(freq.value)}
+                      activeOpacity={0.85}
                     >
-                      {freq.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      {isSelected ? (
+                        <LinearGradient
+                          colors={["#246BE1", "#064DC3"]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 0, y: 1 }}
+                          style={styles.frequencyTabGradient}
+                        >
+                          <Text style={styles.frequencyTabTextActive}>
+                            {freq.label}
+                          </Text>
+                        </LinearGradient>
+                      ) : (
+                        <Text style={styles.frequencyTabText}>
+                          {freq.label}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               {/* Amount Selection */}
               <View style={styles.amountContainer}>
                 <Text style={styles.amountLabel}>Choose an amount</Text>
                 <View style={styles.amountGrid}>
-                  {amounts.map((amount) => (
-                    <TouchableOpacity
-                      key={amount}
-                      style={[
-                        styles.amountButton,
-                        selectedAmount === amount && styles.amountButtonActive,
-                      ]}
-                      onPress={() => setSelectedAmount(amount)}
-                    >
-                      <Text
-                        style={[
-                          styles.amountText,
-                          selectedAmount === amount && styles.amountTextActive,
-                        ]}
+                  {amounts.map((amount) => {
+                    const isSelected = selectedAmount === amount;
+                    return (
+                      <TouchableOpacity
+                        key={amount}
+                        style={styles.amountButton}
+                        onPress={() => setSelectedAmount(amount)}
+                        activeOpacity={0.85}
                       >
-                        ${amount}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        {isSelected ? (
+                          <LinearGradient
+                            colors={["#246BE1", "#064DC3"]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 0, y: 1 }}
+                            style={styles.amountGradient}
+                          >
+                            <Text style={styles.amountTextActive}>
+                              ${amount}
+                            </Text>
+                          </LinearGradient>
+                        ) : (
+                          <Text style={styles.amountText}>
+                            ${amount}
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
 
@@ -409,21 +429,29 @@ const styles = StyleSheet.create({
   },
   frequencyTab: {
     flex: 1,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  frequencyTabGradient: {
+    width: "100%",
     paddingVertical: 10,
     alignItems: "center",
+    justifyContent: "center",
     borderRadius: 8,
-  },
-  frequencyTabActive: {
-    backgroundColor: "#264B8B",
   },
   frequencyTabText: {
     fontSize: 12,
     fontWeight: "600",
     color: "#010D26B2",
     fontFamily: "AlbertSans_600SemiBold",
+    paddingVertical: 10,
+    textAlign: "center",
   },
   frequencyTabTextActive: {
+    fontSize: 12,
+    fontWeight: "700",
     color: "#fff",
+    fontFamily: "AlbertSans_700Bold",
   },
   amountContainer: {
     marginBottom: 16,
@@ -442,23 +470,31 @@ const styles = StyleSheet.create({
   },
   amountButton: {
     width: (screenWidth - 80) / 3,
-    paddingVertical: 12,
     borderRadius: 10,
+    overflow: "hidden",
     backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
   },
-  amountButtonActive: {
-    backgroundColor: "#264B8B",
+  amountGradient: {
+    width: "100%",
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
   },
   amountText: {
     fontSize: 14,
     fontWeight: "600",
     color: "#010D26",
     fontFamily: "AlbertSans_600SemiBold",
+    paddingVertical: 12,
   },
   amountTextActive: {
+    fontSize: 14,
+    fontWeight: "700",
     color: "#fff",
+    fontFamily: "AlbertSans_700Bold",
   },
   donateButton: {
     flexDirection: "row",
