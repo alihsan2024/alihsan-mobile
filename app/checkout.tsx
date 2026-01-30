@@ -437,35 +437,130 @@ export default function CheckoutScreen() {
 
           if (response?.success && !response?.payload?.error && response?.payload?.approvalUrl) {
             console.log("✅ PayPal checkout successful, opening approval URL");
+            
+            // Store PayPal order ID and checkout summary for later verification
+            if (response.payload.orderId) {
+              await AsyncStorage.setItem("paypalOrderId", response.payload.orderId);
+            }
+            
+            // Store checkout summary for thank-you page
+            if (checkoutSummary) {
+              await AsyncStorage.setItem(
+                "checkoutSummary",
+                JSON.stringify({
+                  ...checkoutSummary,
+                  isAuthenticated,
+                  createdAt: Date.now(),
+                  paypalOrderId: response.payload.orderId,
+                })
+              );
+            }
+            
             setLoadingPayment(false);
             
-            // Open PayPal approval URL in browser
-            const canOpen = await Linking.canOpenURL(response.payload.approvalUrl);
-            if (canOpen) {
-              await Linking.openURL(response.payload.approvalUrl);
-              
-              // Store PayPal order ID for later verification
-              if (response.payload.orderId) {
-                await AsyncStorage.setItem("paypalOrderId", response.payload.orderId);
+            // Open PayPal approval URL in Expo Web Browser
+            try {
+              // Dynamically import WebBrowser to handle cases where it might not be available
+              let WebBrowser: any;
+              try {
+                WebBrowser = require("expo-web-browser");
+              } catch (importError) {
+                console.log("WebBrowser import failed, using Linking fallback:", importError);
+                // Fallback to Linking if WebBrowser is not available
+                const canOpen = await Linking.canOpenURL(response.payload.approvalUrl);
+                if (canOpen) {
+                  await Linking.openURL(response.payload.approvalUrl);
+                  Alert.alert(
+                    "Complete Payment",
+                    "You will be redirected to PayPal to complete your payment. Please return to the app after completing the payment.",
+                    [
+                      {
+                        text: "OK",
+                        onPress: () => {
+                          // Payment status will be updated via webhook
+                        },
+                      },
+                    ]
+                  );
+                } else {
+                  Alert.alert("Error", "Could not open PayPal payment page");
+                }
+                return;
               }
               
-              // Show message to user
+              // Check if WebBrowser is available and has the method
+              if (!WebBrowser || !WebBrowser.openBrowserAsync) {
+                // Fallback to Linking
+                const canOpen = await Linking.canOpenURL(response.payload.approvalUrl);
+                if (canOpen) {
+                  await Linking.openURL(response.payload.approvalUrl);
+                  Alert.alert(
+                    "Complete Payment",
+                    "You will be redirected to PayPal to complete your payment. Please return to the app after completing the payment.",
+                    [
+                      {
+                        text: "OK",
+                        onPress: () => {
+                          // Payment status will be updated via webhook
+                        },
+                      },
+                    ]
+                  );
+                } else {
+                  Alert.alert("Error", "Could not open PayPal payment page");
+                }
+                return;
+              }
+              
+              const result = await WebBrowser.openBrowserAsync(response.payload.approvalUrl, {
+                showTitle: false,
+                enableBarCollapsing: false,
+                presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+              });
+              
+              console.log("WebBrowser result:", result);
+              
+              // Check if user cancelled the payment
+              if (result.type === 'cancel') {
+                // User cancelled or closed the browser without completing payment
+                Alert.alert(
+                  "Payment Cancelled",
+                  "You cancelled the PayPal payment. You can try again when you're ready."
+                );
+                return;
+              }
+              
+              // If browser was dismissed (user closed it after completing payment)
+              // PayPal redirects to the return URL on the web frontend, and when user closes the browser,
+              // we assume payment was completed (webhook will process it in the background)
+              if (result.type === 'dismiss') {
+                // Wait a moment for webhook to process, then navigate to thank-you page
+                setTimeout(async () => {
+                  // Mark payment as completed to prevent empty cart alert
+                  setPaymentCompleted(true);
+                  
+                  // Clear basket after saving summary
+                  try {
+                    if (isAuthenticated) {
+                      await clearBasket();
+                    } else {
+                      await AsyncStorage.removeItem("guestBasket");
+                    }
+                  } catch (basketError) {
+                    console.log("Warning: Error clearing basket:", basketError);
+                  }
+                  
+                  // Navigate to thank you page
+                  router.replace("/thank-you");
+                }, 1500);
+              }
+            } catch (error: any) {
+              setLoadingPayment(false);
+              console.log("❌ WebBrowser error:", error);
               Alert.alert(
-                "Complete Payment",
-                "You will be redirected to PayPal to complete your payment. Please return to the app after completing the payment.",
-                [
-                  {
-                    text: "OK",
-                    onPress: () => {
-                      // The user will complete payment in browser
-                      // Payment status will be updated via webhook
-                      // We can navigate to thank-you page when they return
-                    },
-                  },
-                ]
+                "Error",
+                "Could not open PayPal payment page. Please try again."
               );
-            } else {
-              Alert.alert("Error", "Could not open PayPal payment page");
             }
           } else {
             setLoadingPayment(false);

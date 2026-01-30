@@ -53,7 +53,7 @@ module.exports = {
       bundler: "metro",
     },
     scheme: "alihsan",
-    plugins: ["expo-router", "expo-font"],
+    plugins: ["expo-router", "expo-font", "expo-web-browser"],
     extra: {
       router: {},
       eas: {
