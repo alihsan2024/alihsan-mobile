@@ -89,6 +89,7 @@ function DeviceRegistrationManager() {
 }
 
 import SplashScreen from "../components/ui/SplashScreen";
+import { DonationAppealModal } from "../components/ui/Modals/DonationAppealModal";
 
 const introSlides = [
   {
@@ -194,6 +195,8 @@ export default function RootLayout() {
   // }, []);
   const [showIntro, setShowIntro] = React.useState<boolean | null>(null);
   const [showSplash, setShowSplash] = React.useState(true);
+  const [showGazaModal, setShowGazaModal] = React.useState(false);
+  const [splashFinished, setSplashFinished] = React.useState(false);
 
   // Check if intro has been completed for current app version
   React.useEffect(() => {
@@ -220,19 +223,25 @@ export default function RootLayout() {
     checkIntroStatus();
   }, []);
 
-  // Handle splash screen timer - hide after splash finishes (5 seconds total)
+  // Handle splash screen - show it first, then show Gaza modal
   React.useEffect(() => {
-    if (showIntro !== null && showIntro) {
-      // Wait 5 seconds for splash, then hide it (intro is already rendered behind)
+    if (showIntro === false && !splashFinished) {
+      // Show splash for 2.8 seconds (matching SplashScreen component duration)
+      const timer = setTimeout(() => {
+        setSplashFinished(true);
+        setShowSplash(false);
+        // Show Gaza modal after splash finishes
+        setShowGazaModal(true);
+      }, 2800);
+      return () => clearTimeout(timer);
+    } else if (showIntro !== null && showIntro) {
+      // If intro is needed, handle splash normally
       const timer = setTimeout(() => {
         setShowSplash(false);
       }, 5000);
       return () => clearTimeout(timer);
-    } else if (showIntro === false) {
-      // If intro is not needed, hide splash immediately
-      setShowSplash(false);
     }
-  }, [showIntro]);
+  }, [showIntro, splashFinished]);
 
   // Save intro completion status
   const handleIntroFinish = async () => {
@@ -291,6 +300,25 @@ export default function RootLayout() {
           {/* <DeviceRegistrationManager /> */}
           <BasketProvider>
             <ToastProvider>
+              {/* Show splash screen first */}
+              {showSplash && !showIntro && (
+                <View style={{ backgroundColor: "#000", flex: 1, position: "absolute", width: "100%", height: "100%", zIndex: 9999 }}>
+                  <SplashScreen />
+                </View>
+              )}
+              
+              {/* Show Gaza modal after splash */}
+              {showGazaModal && (
+                <DonationAppealModal
+                  visible={showGazaModal}
+                  onClose={() => setShowGazaModal(false)}
+                  image={require("../assets/modal-image.png")}
+                  title="Help Children in Need"
+                  raised={109690.51}
+                  goal={150000}
+                />
+              )}
+              
               <Stack
               screenOptions={{
                 headerShown: false,
@@ -309,6 +337,14 @@ export default function RootLayout() {
               />
               <Stack.Screen
                 name="zakat-calculator"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="checkout"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="thank-you"
                 options={{ headerShown: false }}
               />
             </Stack>

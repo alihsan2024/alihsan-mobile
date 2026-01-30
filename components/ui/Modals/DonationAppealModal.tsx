@@ -19,8 +19,10 @@ import { router } from "expo-router";
 import {
   useAddToBasketMutation,
   useGetBasketQuery,
+  useRemoveFromBasketMutation,
 } from "@/store/reduxSlice/api/basketApi";
 import { useToast } from "@/context/ToastContext";
+import ReplaceOrRemoveModal from "./ReplaceOrRemoveModal";
 
 const { width, height } = Dimensions.get("window");
 
@@ -66,7 +68,12 @@ export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
 
   const [guestBasket, setGuestBasket] = useState<any[]>([]);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [replaceModalVisible, setReplaceModalVisible] = useState(false);
+  const [pendingBasketItem, setPendingBasketItem] = useState<any>(null);
+  const [existingCartItem, setExistingCartItem] = useState<any>(null);
   const { showToast } = useToast();
+  
+  const [removeFromBasket] = useRemoveFromBasketMutation();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -123,24 +130,9 @@ export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
       setGuestBasket(currentBasketItems);
     }
 
-    const isInCart = currentBasketItems.some(
+    const existingItem = currentBasketItems.find(
       (item: any) => item.campaignId === GAZA_CAMPAIGN.id
     );
-
-    if (isInCart) {
-      showToast({
-        message: "This campaign is already in your cart",
-        type: "info",
-        action: {
-          label: "View Cart",
-          onPress: () => {
-            onClose();
-            router.push("/(tabs)/cart");
-          },
-        },
-      });
-      return;
-    }
 
     const basketItem = {
       campaignId: GAZA_CAMPAIGN.id,
@@ -151,6 +143,15 @@ export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
       checkoutType: GAZA_CAMPAIGN.checkoutType,
     };
 
+    if (existingItem) {
+      // Show modal to replace or remove
+      setExistingCartItem(existingItem);
+      setPendingBasketItem(basketItem);
+      setReplaceModalVisible(true);
+      return;
+    }
+
+    // Add to cart if not already there
     try {
       setAddingToCart(true);
 
@@ -183,7 +184,67 @@ export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
     }
   };
 
+  const handleReplace = async () => {
+    if (!pendingBasketItem || !existingCartItem) return;
+
+    try {
+      setAddingToCart(true);
+      setReplaceModalVisible(false);
+
+      // Remove existing item
+      if (isAuthenticated) {
+        await removeFromBasket({
+          campaignId: existingCartItem.campaignId,
+          orphanId: existingCartItem.orphanId,
+          donationItem: existingCartItem.donationItem,
+        });
+        await refetchBasket();
+      } else {
+        const updated = guestBasket.filter(
+          (item: any) => item.campaignId !== existingCartItem.campaignId
+        );
+        setGuestBasket(updated);
+        await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
+      }
+
+      // Add new item
+      if (isAuthenticated) {
+        await addToBasket({ body: pendingBasketItem });
+        await refetchBasket();
+      } else {
+        const updated = [...guestBasket.filter(
+          (item: any) => item.campaignId !== existingCartItem.campaignId
+        ), pendingBasketItem];
+        setGuestBasket(updated);
+        await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
+      }
+
+      showToast({
+        message: "Campaign replaced in cart",
+        type: "success",
+        action: {
+          label: "View Cart",
+          onPress: () => {
+            onClose();
+            router.push("/(tabs)/cart");
+          },
+        },
+      });
+    } catch (error: any) {
+      showToast({
+        message: error?.message || "Failed to replace item",
+        type: "error",
+      });
+    } finally {
+      setAddingToCart(false);
+      setPendingBasketItem(null);
+      setExistingCartItem(null);
+    }
+  };
+
+
   return (
+    <>
     <Modal
       visible={visible}
       transparent
@@ -252,6 +313,17 @@ export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
         </Animated.View>
       </Animated.View>
     </Modal>
+    <ReplaceOrRemoveModal
+      visible={replaceModalVisible}
+      campaignName={pendingBasketItem?.name}
+      onCancel={() => {
+        setReplaceModalVisible(false);
+        setPendingBasketItem(null);
+        setExistingCartItem(null);
+      }}
+      onReplace={handleReplace}
+    />
+    </>
   );
 };
 

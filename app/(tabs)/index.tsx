@@ -19,12 +19,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import ImageSlider from "@/components/ui/sliders/ImageSlider";
 import CampaignSlider from "@/components/ui/sliders/CampaignSlider";
-import { DonationAppealModal } from "@/components/ui/Modals/DonationAppealModal";
+import ReplaceOrRemoveModal from "@/components/ui/Modals/ReplaceOrRemoveModal";
 import { router } from "expo-router";
 import { fetchFeaturedCampaigns, getCampaignDetails } from "@/utils/api";
 import {
   useAddToBasketMutation,
   useGetBasketQuery,
+  useRemoveFromBasketMutation,
 } from "@/store/reduxSlice/api/basketApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSelector } from "react-redux";
@@ -129,14 +130,6 @@ const CARDS = [
   },
 ];
 
-const GAZA_CAMPAIGN = {
-  id: 188,
-  name: "Gaza",
-  slug: "gaza",
-  checkoutType: "COMMON",
-  coverImage:
-    "https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/1753249055468-alihsan-coverImage.png",
-};
 
 export type CampaignItem = {
   id: string | number;
@@ -157,7 +150,6 @@ export default function HomeScreen() {
   const [selectedGiving, setSelectedGiving] = useState<number>(0);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(10);
   const [customAmount, setCustomAmount] = useState<string>("");
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const givingAnimation = useRef(new Animated.Value(0)).current;
   const [featuredCampaigns, setFeaturedCampaigns] = useState<CampaignItem[]>(
     []
@@ -168,12 +160,16 @@ export default function HomeScreen() {
   const isAuthenticated = !!user;
 
   const [addToBasket] = useAddToBasketMutation();
+  const [removeFromBasket] = useRemoveFromBasketMutation();
   const { data: basketData, refetch: refetchBasket } = useGetBasketQuery(undefined, {
     skip: !isAuthenticated,
   });
 
   const [guestBasket, setGuestBasket] = useState<any[]>([]);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [replaceModalVisible, setReplaceModalVisible] = useState(false);
+  const [pendingBasketItem, setPendingBasketItem] = useState<any>(null);
+  const [existingCartItem, setExistingCartItem] = useState<any>(null);
   const { showToast } = useToast();
 
   // Load guest basket helper
@@ -183,8 +179,6 @@ export default function HomeScreen() {
       setGuestBasket(data ? JSON.parse(data) : []);
     }
   }, [isAuthenticated]);
-
-  const GAZA_MODAL_SEEN_KEY = "@alihsan:gaza_modal_seen";
 
   useEffect(() => {
     loadGuestBasket();
@@ -201,104 +195,6 @@ export default function HomeScreen() {
     }, [isAuthenticated, refetchBasket, loadGuestBasket])
   );
 
-  // Show Gaza donation modal only once per install (or until storage is cleared)
-  useEffect(() => {
-    const checkGazaModal = async () => {
-      try {
-        const seen = await AsyncStorage.getItem(GAZA_MODAL_SEEN_KEY);
-        if (seen !== "true") {
-          setIsModalVisible(true);
-        }
-      } catch (e) {
-        // On error, don't block the modal; fail silently
-        setIsModalVisible(true);
-      }
-    };
-    checkGazaModal();
-  }, []);
-
-  const handleCloseGazaModal = async () => {
-    try {
-      await AsyncStorage.setItem(GAZA_MODAL_SEEN_KEY, "true");
-    } catch (e) {
-      // Ignore storage errors
-    }
-    setIsModalVisible(false);
-  };
-
-  const handleGazaDonate = async () => {
-    const donationAmount = Number(selectedAmount || customAmount);
-
-    if (!donationAmount || donationAmount <= 0) {
-      Alert.alert("Please enter a valid amount");
-      return;
-    }
-
-    // Refresh basket data before checking
-    let currentBasketItems: any[] = [];
-    if (isAuthenticated) {
-      const result = await refetchBasket();
-      currentBasketItems = result.data?.payload ?? [];
-    } else {
-      // Load directly from AsyncStorage to get latest data
-      const data = await AsyncStorage.getItem("guestBasket");
-      currentBasketItems = data ? JSON.parse(data) : [];
-      setGuestBasket(currentBasketItems);
-    }
-
-    const isInCart = currentBasketItems.some(
-      (item: any) => item.campaignId === GAZA_CAMPAIGN.id
-    );
-
-    if (isInCart) {
-      showToast({
-        message: "This campaign is already in your cart",
-        type: "info",
-        action: {
-          label: "View Cart",
-          onPress: () => router.push("/(tabs)/cart"),
-        },
-      });
-      return;
-    }
-
-    const basketItem = {
-      campaignId: GAZA_CAMPAIGN.id,
-      amount: donationAmount,
-      quantity: 1,
-      name: GAZA_CAMPAIGN.name,
-      coverImage: GAZA_CAMPAIGN.coverImage,
-      checkoutType: GAZA_CAMPAIGN.checkoutType,
-    };
-
-    try {
-      setAddingToCart(true);
-
-      if (isAuthenticated) {
-        await addToBasket({ body: basketItem });
-      } else {
-        const updated = [...guestBasket, basketItem];
-        setGuestBasket(updated);
-        await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
-      }
-
-      showToast({
-        message: "Your donation has been added to the cart",
-        type: "success",
-        action: {
-          label: "View Cart",
-          onPress: () => router.push("/(tabs)/cart"),
-        },
-      });
-    } catch {
-      showToast({
-        message: "Failed to add to cart",
-        type: "error",
-      });
-    } finally {
-      setAddingToCart(false);
-    }
-  };
 
   useEffect(() => {
     const loadFeaturedCampaigns = async () => {
@@ -351,14 +247,6 @@ export default function HomeScreen() {
       contentContainerStyle={{ paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
     >
-      <DonationAppealModal
-        visible={isModalVisible}
-        onClose={handleCloseGazaModal}
-        image={require("../../assets/modal-image.png")}
-        title="Help Children in Need"
-        raised={109690.51}
-        goal={150000}
-      />
       {/* Top Banner Section - "Making a Difference Together" / "Support Our Campaigns" */}
       <SupportCampaignsBanner
         topInset={insets.top}
@@ -397,21 +285,9 @@ export default function HomeScreen() {
               setGuestBasket(currentBasketItems);
             }
 
-            const isInCart = currentBasketItems.some(
+            const existingItem = currentBasketItems.find(
               (item: any) => item.campaignId === campaign.id
             );
-
-            if (isInCart) {
-              showToast({
-                message: "This campaign is already in your cart",
-                type: "info",
-                action: {
-                  label: "View Cart",
-                  onPress: () => router.push("/(tabs)/cart"),
-                },
-              });
-              return;
-            }
 
             const basketItem = {
               campaignId: campaign.id,
@@ -424,6 +300,16 @@ export default function HomeScreen() {
               isRecurring: isRecurring,
             };
 
+            if (existingItem) {
+              // Show modal to replace or remove
+              setExistingCartItem(existingItem);
+              setPendingBasketItem(basketItem);
+              setReplaceModalVisible(true);
+              setAddingToCart(false);
+              return;
+            }
+
+            // Add to cart if not already there
             if (isAuthenticated) {
               await addToBasket({ body: basketItem });
             } else {
@@ -448,6 +334,70 @@ export default function HomeScreen() {
             });
           } finally {
             setAddingToCart(false);
+          }
+        }}
+      />
+      
+      <ReplaceOrRemoveModal
+        visible={replaceModalVisible}
+        campaignName={pendingBasketItem?.name}
+        onCancel={() => {
+          setReplaceModalVisible(false);
+          setPendingBasketItem(null);
+          setExistingCartItem(null);
+        }}
+        onReplace={async () => {
+          if (!pendingBasketItem || !existingCartItem) return;
+
+          try {
+            setAddingToCart(true);
+            setReplaceModalVisible(false);
+
+            // Remove existing item
+            if (isAuthenticated) {
+              await removeFromBasket({
+                campaignId: existingCartItem.campaignId,
+                orphanId: existingCartItem.orphanId,
+                donationItem: existingCartItem.donationItem,
+              });
+              await refetchBasket();
+            } else {
+              const updated = guestBasket.filter(
+                (item: any) => item.campaignId !== existingCartItem.campaignId
+              );
+              setGuestBasket(updated);
+              await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
+            }
+
+            // Add new item
+            if (isAuthenticated) {
+              await addToBasket({ body: pendingBasketItem });
+              await refetchBasket();
+            } else {
+              const updated = [...guestBasket.filter(
+                (item: any) => item.campaignId !== existingCartItem.campaignId
+              ), pendingBasketItem];
+              setGuestBasket(updated);
+              await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
+            }
+
+            showToast({
+              message: "Campaign replaced in cart",
+              type: "success",
+              action: {
+                label: "View Cart",
+                onPress: () => router.push("/(tabs)/cart"),
+              },
+            });
+          } catch (error: any) {
+            showToast({
+              message: error?.message || "Failed to replace item",
+              type: "error",
+            });
+          } finally {
+            setAddingToCart(false);
+            setPendingBasketItem(null);
+            setExistingCartItem(null);
           }
         }}
       />

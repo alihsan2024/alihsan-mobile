@@ -41,6 +41,7 @@ export default function CheckoutScreen() {
   const [checkoutSummary, setCheckoutSummary] =
     useState<CheckoutSummary | null>(null);
   const [cardComplete, setCardComplete] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [paymentState, setPaymentState] = useState<PaymentState>({
     paymentType: "card",
     cardDetails: null,
@@ -179,6 +180,9 @@ export default function CheckoutScreen() {
   /* ---------- CHECK EMPTY BASKET ---------- */
 
   useEffect(() => {
+    // Skip check if payment was just completed (basket will be empty intentionally)
+    if (paymentCompleted) return;
+
     const checkBasket = async () => {
       let items: any[] = [];
       if (isAuthenticated) {
@@ -188,14 +192,14 @@ export default function CheckoutScreen() {
         items = guestBasketData ? JSON.parse(guestBasketData) : [];
       }
 
+      // Only navigate back if basket is empty, but don't show alert
       if (items.length === 0) {
-        Alert.alert("Empty Cart", "Your cart is empty");
         router.back();
       }
     };
 
     checkBasket();
-  }, [isAuthenticated, basketItems]);
+  }, [isAuthenticated, basketItems, paymentCompleted]);
 
   /* ---------- STRIPE INTENT ---------- */
 
@@ -560,30 +564,58 @@ export default function CheckoutScreen() {
 
         const { paymentIntent } = result;
 
+        console.log("Payment result:", {
+          paymentIntent: !!paymentIntent,
+          status: paymentIntent?.status,
+          checkoutSummary: !!checkoutSummary,
+        });
+
+        // Check if payment was successful
+        // If paymentIntent exists and there's no error, payment was successful
         if (paymentIntent && checkoutSummary) {
           console.log("✅ Payment successful!");
           console.log("Payment Intent ID:", paymentIntent.id);
           console.log("Payment Intent Status:", paymentIntent.status);
           
+          // Save checkout summary before navigation
           await AsyncStorage.setItem(
             "checkoutSummary",
             JSON.stringify({
               ...checkoutSummary,
               isAuthenticated,
               createdAt: Date.now(),
+              paymentIntentId: paymentIntent.id,
             })
           );
 
-          if (isAuthenticated) {
-            await clearBasket();
-          } else {
-            await AsyncStorage.removeItem("guestBasket");
+          // Mark payment as completed before clearing basket to prevent empty cart alert
+          setPaymentCompleted(true);
+
+          // Clear basket after saving summary
+          try {
+            if (isAuthenticated) {
+              await clearBasket();
+            } else {
+              await AsyncStorage.removeItem("guestBasket");
+            }
+          } catch (basketError) {
+            console.log("Warning: Error clearing basket:", basketError);
+            // Continue with navigation even if basket clearing fails
           }
 
+          // Navigate to thank you page - use replace to prevent going back
           console.log("Navigating to thank-you page...");
-          router.push("/thank-you");
+          setTimeout(() => {
+            router.replace("/thank-you");
+          }, 100);
         } else {
           console.log("❌ Payment intent or checkout summary missing");
+          console.log("PaymentIntent:", paymentIntent);
+          console.log("CheckoutSummary:", checkoutSummary);
+          Alert.alert(
+            "Payment Error",
+            "There was an issue processing your payment. Please contact support if the payment was deducted."
+          );
         }
         console.log("=== END PAYMENT CONFIRMATION ===");
       } catch (err: any) {
