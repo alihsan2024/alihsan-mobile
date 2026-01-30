@@ -1,20 +1,22 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { View, StyleSheet, ScrollView, Alert, Text, Platform } from "react-native";
+import { View, StyleSheet, ScrollView, Alert, Text, Platform, Linking } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { StripeProvider, useStripe, CardField } from "@stripe/stripe-react-native";
+import { StripeProvider, useStripe } from "@stripe/stripe-react-native";
 import { useRouter } from "expo-router";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import Constants from "expo-constants";
 import {
   useClearBasketMutation,
   useGetBasketQuery,
 } from "@/store/reduxSlice/api/basketApi";
+import { handlePaypalCheckout } from "@/store/reduxSlice/basketSlice";
 import api from "@/utils/api";
 
 import CheckoutHeader from "@/components/Checkout/CheckoutHeader";
 import StepIndicator from "@/components/Checkout/StepIndicator";
 import DetailsStep from "@/components/Checkout/DetailsStep";
 import ConfirmStep from "@/components/Checkout/ConfirmStep";
+import PaymentStep, { PaymentState } from "@/components/Checkout/PaymentStep";
 import BottomBar from "@/components/Checkout/BottomBar";
 import ProcessingPaymentModal from "@/components/ui/Modals/ProcessingPaymentModal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -39,6 +41,11 @@ export default function CheckoutScreen() {
   const [checkoutSummary, setCheckoutSummary] =
     useState<CheckoutSummary | null>(null);
   const [cardComplete, setCardComplete] = useState(false);
+  const [paymentState, setPaymentState] = useState<PaymentState>({
+    paymentType: "card",
+    cardDetails: null,
+    cardComplete: false,
+  });
 
   const [detailsForm, setDetailsForm] = useState({
     fullName: "",
@@ -49,6 +56,11 @@ export default function CheckoutScreen() {
   const insets = useSafeAreaInsets();
   const stripe = useStripe();
   const router = useRouter();
+  const dispatch = useDispatch();
+  
+  // Apple Pay is available on iOS devices
+  // The SDK will handle actual device support when presenting Apple Pay
+  const isApplePaySupported = Platform.OS === "ios";
 
   // Get Stripe publishable key
   const stripePublishableKey =
@@ -77,7 +89,16 @@ export default function CheckoutScreen() {
   const isStep1Disabled = step === 1 && !isDetailsValid;
 
   const isCheckoutDisabled =
-    (step === 3 && (!clientSecret || loadingIntent || !cardComplete)) || loadingPayment;
+    (step === 3 && 
+      paymentState.paymentType === "card" && 
+      (!clientSecret || loadingIntent || !paymentState.cardComplete)) || 
+    (step === 3 && 
+      paymentState.paymentType === "paypal" && 
+      loadingPayment) ||
+    (step === 3 && 
+      paymentState.paymentType === "applepay" && 
+      loadingPayment) ||
+    loadingPayment;
 
   /* ---------- BASKET ITEMS (STABLE) ---------- */
 
@@ -267,10 +288,16 @@ export default function CheckoutScreen() {
   /* ---------- PREFETCH ON STEP 3 ---------- */
 
   useEffect(() => {
-    if (step === 3 && !clientSecret && !loadingIntent) {
+    if (step === 3 && paymentState.paymentType === "card" && !clientSecret && !loadingIntent) {
       ensureClientSecret();
     }
-  }, [step, ensureClientSecret, clientSecret, loadingIntent]);
+  }, [step, paymentState.paymentType, ensureClientSecret, clientSecret, loadingIntent]);
+
+  /* ---------- SYNC CARD COMPLETE STATE ---------- */
+
+  useEffect(() => {
+    setCardComplete(paymentState.cardComplete);
+  }, [paymentState.cardComplete]);
 
   /* ---------- NAVIGATION ---------- */
 
@@ -310,12 +337,157 @@ export default function CheckoutScreen() {
     }
 
     if (step === 3) {
+      // Handle Apple Pay payment
+      // Note: Apple Pay API methods may vary by Stripe React Native version
+      // For now, we'll show the option but handle it as card payment
+      // TODO: Implement proper Apple Pay when SDK version supports it
+      if (paymentState.paymentType === "applepay" && Platform.OS === "ios") {
+        setLoadingPayment(false);
+        Alert.alert(
+          "Apple Pay",
+          "Apple Pay is not yet fully implemented. Please use a credit card or PayPal to complete your payment.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                setPaymentState((s) => ({ ...s, paymentType: "card" }));
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      // Handle PayPal payment
+      if (paymentState.paymentType === "paypal") {
+        setLoadingPayment(true);
+        try {
+          console.log("=== PAYPAL CHECKOUT (STEP 3) ===");
+          
+          // Get checkout details
+          const stored = await AsyncStorage.getItem("checkoutDetails");
+          const checkoutDetails = stored ? JSON.parse(stored) : {};
+
+          // Check for orphan items - PayPal is not available for orphan sponsorships
+          const items = isAuthenticated ? basketItems : checkoutSummary?.items || [];
+          const hasOrphanItem = items.some((item: any) => item.orphanId != null);
+          
+          if (hasOrphanItem) {
+            setLoadingPayment(false);
+            Alert.alert(
+              "PayPal Not Available",
+              "PayPal is not available for orphan sponsorships. Please use a credit card to complete your donation."
+            );
+            setPaymentState((s) => ({ ...s, paymentType: "card" }));
+            return;
+          }
+
+          let response;
+          if (isAuthenticated) {
+            // Authenticated user PayPal checkout
+            const result = await dispatch(
+              handlePaypalCheckout({
+                isAnonymous: false,
+              }) as any
+            );
+
+            if (result.error) {
+              setLoadingPayment(false);
+              Alert.alert(
+                "PayPal Checkout Failed",
+                result.payload?.message || "Something went wrong. Please try again."
+              );
+              return;
+            }
+
+            response = result.payload;
+          } else {
+            // Guest user PayPal checkout
+            const mappedBasketItems = checkoutSummary?.items.map((item) => {
+              const mappedItem: any = {
+                campaignId: item.campaignId,
+                amount: parseFloat(item.amount?.toString() || "0"),
+                quantity: parseInt(item.quantity?.toString() || "1"),
+                orphanId: item.orphanId || null,
+                isRecurring: item.isRecurring || false,
+                periodDays: item.periodDays || null,
+              };
+              
+              if (item.donationItem) mappedItem.donationItem = item.donationItem;
+              if (item.isWaleemah) mappedItem.isWaleemah = item.isWaleemah;
+              if (item.behalfOf) mappedItem.behalfOf = item.behalfOf;
+              if (item.notes) mappedItem.notes = item.notes;
+              if (item.name) mappedItem.name = item.name;
+              
+              return mappedItem;
+            });
+
+            const res = await api.post("/basket/checkout-unknown", {
+              ...checkoutDetails,
+              paymentGateway: "paypal",
+              basketItems: mappedBasketItems,
+              isMobile: true,
+            });
+            response = res.data;
+          }
+
+          if (response?.success && !response?.payload?.error && response?.payload?.approvalUrl) {
+            console.log("✅ PayPal checkout successful, opening approval URL");
+            setLoadingPayment(false);
+            
+            // Open PayPal approval URL in browser
+            const canOpen = await Linking.canOpenURL(response.payload.approvalUrl);
+            if (canOpen) {
+              await Linking.openURL(response.payload.approvalUrl);
+              
+              // Store PayPal order ID for later verification
+              if (response.payload.orderId) {
+                await AsyncStorage.setItem("paypalOrderId", response.payload.orderId);
+              }
+              
+              // Show message to user
+              Alert.alert(
+                "Complete Payment",
+                "You will be redirected to PayPal to complete your payment. Please return to the app after completing the payment.",
+                [
+                  {
+                    text: "OK",
+                    onPress: () => {
+                      // The user will complete payment in browser
+                      // Payment status will be updated via webhook
+                      // We can navigate to thank-you page when they return
+                    },
+                  },
+                ]
+              );
+            } else {
+              Alert.alert("Error", "Could not open PayPal payment page");
+            }
+          } else {
+            setLoadingPayment(false);
+            Alert.alert(
+              "PayPal Checkout Failed",
+              response?.payload?.error || response?.message || "Something went wrong. Please try again."
+            );
+          }
+        } catch (err: any) {
+          setLoadingPayment(false);
+          console.log("❌ PayPal checkout exception:", err);
+          Alert.alert(
+            "PayPal Checkout Failed",
+            err?.response?.data?.message || err?.message || "An unexpected error occurred"
+          );
+        }
+        return;
+      }
+
+      // Handle Stripe card payment
       if (!clientSecret || !stripe) {
         Alert.alert("Error", "Payment not ready");
         return;
       }
 
-      if (!cardComplete) {
+      if (!paymentState.cardComplete) {
         Alert.alert("Error", "Please enter complete card information");
         return;
       }
@@ -327,7 +499,7 @@ export default function CheckoutScreen() {
         console.log("=== PAYMENT CONFIRMATION (STEP 3) ===");
         console.log("Platform:", Platform.OS);
         console.log("Client secret exists:", !!clientSecret);
-        console.log("Card complete:", cardComplete);
+        console.log("Card complete:", paymentState.cardComplete);
 
         // Get checkout details for billing
         const stored = await AsyncStorage.getItem("checkoutDetails");
@@ -449,38 +621,11 @@ export default function CheckoutScreen() {
           )}
 
           {step === 3 && (
-            <View style={styles.paymentContainer}>
-              <Text style={styles.sectionTitle}>Payment Details</Text>
-              <Text style={styles.helperText}>
-                Enter your card information to complete the payment
-              </Text>
-              
-              <View style={styles.cardContainer}>
-                <CardField
-                  postalCodeEnabled={false}
-                  placeholders={{
-                    number: "4242 4242 4242 4242",
-                  }}
-                  cardStyle={{
-                    backgroundColor: "#FFFFFF",
-                    textColor: "#000000",
-                    borderWidth: 1,
-                    borderColor: "#E0E0E0",
-                    borderRadius: 8,
-                  }}
-                  style={styles.cardField}
-                  onCardChange={(details) => {
-                    setCardComplete(details.complete);
-                  }}
-                />
-              </View>
-
-              {loadingIntent && (
-                <View style={styles.loadingContainer}>
-                  <Text style={styles.loadingText}>Preparing payment...</Text>
-                </View>
-              )}
-            </View>
+            <PaymentStep
+              paymentState={paymentState}
+              setPaymentState={setPaymentState}
+              isApplePaySupported={isApplePaySupported}
+            />
           )}
         </ScrollView>
 

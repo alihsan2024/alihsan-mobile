@@ -28,17 +28,27 @@ export const registerDeviceToken = async ({
 import axios from "axios";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 
 // Configure API URLs for different environments
-// IMPORTANT: Replace YOUR_LAN_IP below with your computer's actual LAN IP address
-const API_URLS = {
-  development: "http://192.168.20.16:4001", // e.g., http://192.168.1.100:4000
-  production: "https://deenstream.live",
-  // production: "https://api.alihsan.org.au",
+// Priority: __DEV__ -> dev env/config -> fallback, otherwise prod env/config -> fallback
+const getApiUrl = (): string => {
+  if (__DEV__) {
+    return (
+      process.env.EXPO_PUBLIC_API_URL_DEV ||
+      (Constants.expoConfig?.extra?.apiUrlDev as string | undefined) ||
+      "http://192.168.20.16:4001"
+    );
+  }
+
+  return (
+    process.env.EXPO_PUBLIC_API_URL ||
+    (Constants.expoConfig?.extra?.apiUrl as string | undefined) ||
+    "https://api.alihsan.org.au"
+  );
 };
 
-// Use development URL if in dev mode, otherwise production
-const API_URL = __DEV__ ? API_URLS.development : API_URLS.production;
+const API_URL = getApiUrl();
 
 console.log(`Using API URL: ${API_URL}`);
 

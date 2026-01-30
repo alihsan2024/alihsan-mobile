@@ -101,11 +101,11 @@
 //   },
 // });
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { CardField } from "@stripe/stripe-react-native";
 import { Ionicons } from "@expo/vector-icons";
 export type PaymentState = {
-  paymentType: "card" | "paypal";
+  paymentType: "card" | "paypal" | "applepay";
   cardDetails: any;
   cardComplete: boolean;
 };
@@ -113,18 +113,67 @@ export type PaymentState = {
 type Props = {
   paymentState: PaymentState;
   setPaymentState: React.Dispatch<React.SetStateAction<PaymentState>>;
+  isApplePaySupported?: boolean;
 };
 
-export default function PaymentStep({ paymentState, setPaymentState }: Props) {
+export default function PaymentStep({ paymentState, setPaymentState, isApplePaySupported = false }: Props) {
+
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Select Payment Method</Text>
 
+      {/* APPLE PAY - iOS only */}
+      {Platform.OS === "ios" && isApplePaySupported && (
+        <TouchableOpacity
+          style={[
+            styles.card,
+            paymentState.paymentType === "applepay" && styles.cardSelected,
+          ]}
+          onPress={() =>
+            setPaymentState((s) => ({
+              ...s,
+              paymentType: "applepay",
+            }))
+          }
+        >
+          <View style={styles.cardHeader}>
+            <Ionicons name="logo-apple" size={18} color="#010D26" />
+            <Text style={styles.cardTitle}>Apple Pay</Text>
+            {paymentState.paymentType === "applepay" && (
+              <View style={styles.selectedIndicator}>
+                <Ionicons name="checkmark-circle" size={20} color="#264B8B" />
+              </View>
+            )}
+          </View>
+
+          <Text style={styles.checkboxText}>
+            Pay securely with Touch ID or Face ID
+          </Text>
+        </TouchableOpacity>
+      )}
+
       {/* CREDIT CARD */}
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={[
+          styles.card,
+          paymentState.paymentType === "card" && styles.cardSelected,
+        ]}
+        onPress={() =>
+          setPaymentState((s) => ({
+            ...s,
+            paymentType: "card",
+          }))
+        }
+        activeOpacity={0.7}
+      >
         <View style={styles.cardHeader}>
           <Ionicons name="card-outline" size={18} color="#264B8B" />
           <Text style={styles.cardTitle}>Credit Card</Text>
+          {paymentState.paymentType === "card" && (
+            <View style={styles.selectedIndicator}>
+              <Ionicons name="checkmark-circle" size={20} color="#264B8B" />
+            </View>
+          )}
         </View>
 
         {/* Stripe CardField styled to match Figma */}
@@ -153,23 +202,47 @@ export default function PaymentStep({ paymentState, setPaymentState }: Props) {
             <Text style={styles.checkboxText}>Save this card for later</Text>
           </View>
 
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              setPaymentState((s) => ({
+                ...s,
+                cardDetails: null,
+                cardComplete: false,
+              }));
+            }}
+          >
             <Text style={styles.link}>Clear form</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </TouchableOpacity>
 
       {/* PAYPAL */}
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={[
+          styles.card,
+          paymentState.paymentType === "paypal" && styles.cardSelected,
+        ]}
+        onPress={() =>
+          setPaymentState((s) => ({
+            ...s,
+            paymentType: "paypal",
+          }))
+        }
+      >
         <View style={styles.cardHeader}>
           <Ionicons name="logo-paypal" size={18} color="#264B8B" />
           <Text style={styles.cardTitle}>Paypal</Text>
+          {paymentState.paymentType === "paypal" && (
+            <View style={styles.selectedIndicator}>
+              <Ionicons name="checkmark-circle" size={20} color="#264B8B" />
+            </View>
+          )}
         </View>
 
-        <TouchableOpacity>
-          <Text style={styles.link}>Link PayPal account</Text>
-        </TouchableOpacity>
-      </View>
+        <Text style={styles.checkboxText}>
+          Complete payment securely with PayPal
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -256,5 +329,13 @@ const styles = StyleSheet.create({
     color: "#264B8B",
     fontWeight: "600",
     fontFamily: "AlbertSans_600SemiBold",
+  },
+  cardSelected: {
+    borderColor: "#264B8B",
+    borderWidth: 2,
+    backgroundColor: "#F0F4FF",
+  },
+  selectedIndicator: {
+    marginLeft: "auto",
   },
 });
