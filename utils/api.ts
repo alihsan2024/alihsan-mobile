@@ -277,6 +277,19 @@ export const login = async (
   }
 };
 
+// Forgot password
+export const forgotPassword = async (email: string): Promise<void> => {
+  try {
+    await api.post("/auth/forgotpassword", {
+      email: email.toLowerCase().trim(),
+    });
+  } catch (error: any) {
+    const message =
+      error.response?.data?.message || "Failed to send reset email. Please try again.";
+    throw new Error(message);
+  }
+};
+
 // Register user
 export const register = async (userData: RegisterRequest): Promise<void> => {
   try {

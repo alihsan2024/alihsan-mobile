@@ -286,10 +286,11 @@ export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
             <View
               style={{ flexDirection: "row", justifyContent: "space-between" }}
             >
+                            <Text style={styles.amount}>${raised.toLocaleString()}</Text>
+
               <Text style={styles.amount}>
                 of ${goal.toLocaleString()} goal
               </Text>
-              <Text style={styles.amount}>${raised.toLocaleString()}</Text>
             </View>
 
             {/* Progress Bar */}

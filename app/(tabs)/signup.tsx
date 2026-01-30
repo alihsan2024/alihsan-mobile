@@ -18,6 +18,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 import LoadingScreen from "@/components/LoadingScreen";
 import { register } from "@/utils/api";
+import TermsAndConditionsModal from "@/components/ui/Modals/TermsAndConditionsModal";
+import PrivacyPolicyModal from "@/components/ui/Modals/PrivacyPolicyModal";
 
 const COVER_IMAGE_URL =
   "https://alihsan.s3.ap-southeast-2.amazonaws.com/gaza/1766535509636-alihsan-2025_11_17_10_40_IMG_4900%20Large.jpeg";
@@ -36,6 +38,8 @@ export default function SignupScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [termsModalVisible, setTermsModalVisible] = useState(false);
+  const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
   const fullNameInputRef = useRef<TextInput>(null);
   const emailInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
@@ -258,11 +262,19 @@ export default function SignupScreen() {
               </TouchableOpacity>
 
               {/* Terms Text */}
-              <Text style={styles.terms}>
-                By signing up, you agree to our{" "}
-                <Text style={styles.link}>Terms of Service</Text> and{" "}
-                <Text style={styles.link}>Privacy Policy</Text>.
-              </Text>
+              <View style={styles.termsContainer}>
+                <Text style={styles.terms}>
+                  By signing up, you agree to our{" "}
+                </Text>
+                <TouchableOpacity onPress={() => setTermsModalVisible(true)}>
+                  <Text style={styles.link}>Terms of Service</Text>
+                </TouchableOpacity>
+                <Text style={styles.terms}> and </Text>
+                <TouchableOpacity onPress={() => setPrivacyModalVisible(true)}>
+                  <Text style={styles.link}>Privacy Policy</Text>
+                </TouchableOpacity>
+                <Text style={styles.terms}>.</Text>
+              </View>
 
               {/* Login Link */}
               <View style={styles.loginLink}>
@@ -275,6 +287,16 @@ export default function SignupScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      
+      <TermsAndConditionsModal
+        visible={termsModalVisible}
+        onClose={() => setTermsModalVisible(false)}
+      />
+      
+      <PrivacyPolicyModal
+        visible={privacyModalVisible}
+        onClose={() => setPrivacyModalVisible(false)}
+      />
     </View>
   );
 }
@@ -401,17 +423,24 @@ const styles = StyleSheet.create({
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },
+  termsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    marginBottom: 16,
+  },
   terms: {
     fontSize: 11,
     color: "#6B7280",
-    textAlign: "center",
-    marginBottom: 16,
     lineHeight: 16,
     fontFamily: "AlbertSans_400Regular",
   },
   link: {
+    fontSize: 11,
     color: "#264B8B",
     fontFamily: "AlbertSans_500Medium",
+    textDecorationLine: "underline",
   },
   loginLink: {
     flexDirection: "row",

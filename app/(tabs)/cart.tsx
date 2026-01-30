@@ -23,6 +23,7 @@ import {
   useRemoveFromBasketMutation,
 } from "@/store/reduxSlice/api/basketApi";
 import RemoveDonationModal from "@/components/ui/Modals/RemoveDonationModal";
+import TermsAndConditionsModal from "@/components/ui/Modals/TermsAndConditionsModal";
 import { useFocusEffect } from "@react-navigation/native";
 
 // Format price helper
@@ -72,6 +73,7 @@ export default function BasketScreen() {
   const [guestBasket, setGuestBasket] = useState<any[]>([]);
   const [guestLoading, setGuestLoading] = useState(false);
   const [removeModalVisible, setRemoveModalVisible] = useState(false);
+  const [termsModalVisible, setTermsModalVisible] = useState(false);
   const [pendingRemoveItem, setPendingRemoveItem] = useState<{
     campaignId: number;
     orphanId: number;
@@ -221,6 +223,11 @@ export default function BasketScreen() {
           setPendingRemoveItem(null);
         }}
         onConfirm={confirmRemoveItem}
+      />
+      
+      <TermsAndConditionsModal
+        visible={termsModalVisible}
+        onClose={() => setTermsModalVisible(false)}
       />
       
       {/* Header */}
@@ -450,10 +457,20 @@ export default function BasketScreen() {
             <Text style={styles.checkoutText}>Proceed to Checkout</Text>
             <Ionicons name="chevron-forward" size={18} color="#010D26" />
           </TouchableOpacity>
-          <Text style={styles.termsText}>
-            By continuing, you agree to the{" "}
-            <Text style={styles.termsLink}>terms and conditions</Text>
-          </Text>
+          <View style={styles.termsContainer}>
+            <Text style={styles.termsText}>
+              By continuing, you agree to the{" "}
+            </Text>
+            <TouchableOpacity 
+              onPress={() => {
+                console.log("Terms clicked, opening modal");
+                setTermsModalVisible(true);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.termsLink}>terms and conditions</Text>
+            </TouchableOpacity>
+          </View>
         </LinearGradient>
       )}
     </View>
@@ -754,6 +771,12 @@ const styles = StyleSheet.create({
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },
+  termsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap",
+  },
   termsText: {
     fontSize: 11,
     textAlign: "center",
@@ -761,7 +784,9 @@ const styles = StyleSheet.create({
     fontFamily: "AlbertSans_400Regular",
   },
   termsLink: {
+    fontSize: 11,
     textDecorationLine: "underline",
     color: "#FFD602",
+    fontFamily: "AlbertSans_400Regular",
   },
 });
