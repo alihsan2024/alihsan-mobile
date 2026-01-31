@@ -1,10 +1,10 @@
 import { Tabs } from "expo-router";
-import { Platform, View, Text, StyleSheet } from "react-native";
+import { Platform, View, Text, StyleSheet, Animated } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import { useGetBasketQuery } from "@/store/reduxSlice/api/basketApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import Home from "../../assets/home.svg";
 import Compass from "../../assets/compass.svg";
@@ -19,7 +19,7 @@ const TabIcon = ({
   focused: boolean;
 }) => (
   <View style={styles.tabItem}>
-    <Ionicons name={name} size={22} color={focused ? "#4F6EF7" : "#9CA3AF"} />
+  <Ionicons name={name} size={22} color={focused ? "#2161CD" : "#9CA3AF"} />
   </View>
 );
 
@@ -32,11 +32,78 @@ const SvgTabIcon = ({
   focused: boolean;
   size?: number;
 }) => {
-  const color = focused ? "#4F6EF7" : "#9CA3AF";
+  const color = focused ? "#2161CD" : "#9CA3AF";
 
   return (
     <View style={[styles.tabItem, { marginTop: 8 }]}>
       <Icon width={size} height={size} color={color} />
+    </View>
+  );
+};
+
+const AnimatedCartIcon = ({
+  focused,
+  itemCount,
+}: {
+  focused: boolean;
+  itemCount: number;
+}) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: focused ? 1.05 : 1,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 10,
+    }).start();
+  }, [focused, scaleAnim]);
+
+  return (
+    <View
+      style={[
+        {
+          alignItems: "center",
+          justifyContent: "center",
+          marginTop: 22,
+          position: "relative",
+        },
+        focused && styles.cartIconSelected,
+      ]}
+    >
+      <Animated.View
+        style={{
+          transform: [{ rotate: "45deg" }, { scale: scaleAnim }],
+        }}
+      >
+        <LinearGradient
+          colors={["#246BE1", "#064DC3"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 10,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <View style={{ transform: [{ rotate: "-45deg" }] }}>
+            <Ionicons 
+              name="cart" 
+              size={focused ? 23 : 22} 
+              color="#fff" 
+            />
+          </View>
+        </LinearGradient>
+      </Animated.View>
+      {itemCount > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>
+            {itemCount > 99 ? "99+" : itemCount}
+          </Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -133,40 +200,8 @@ export default function TabsLayout() {
         options={{
           title: "",
           tabBarLabel: () => null, // ✅ NO LABEL
-          tabBarIcon: () => (
-            <View
-              style={{
-                alignItems: "center",
-                justifyContent: "center",
-                marginTop: 22,
-                position: "relative",
-              }}
-            >
-              <LinearGradient
-                colors={["#246BE1", "#064DC3"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 10,
-                  transform: [{ rotate: "45deg" }],
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <View style={{ transform: [{ rotate: "-45deg" }] }}>
-                  <Ionicons name="cart" size={22} color="#fff" />
-                </View>
-              </LinearGradient>
-              {itemCount > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>
-                    {itemCount > 99 ? "99+" : itemCount}
-                  </Text>
-                </View>
-              )}
-            </View>
+          tabBarIcon: ({ focused }) => (
+            <AnimatedCartIcon focused={focused} itemCount={itemCount} />
           ),
         }}
       />
@@ -204,6 +239,20 @@ export default function TabsLayout() {
           href: null,
         }}
       />
+
+      <Tabs.Screen
+        name="one-time-user-donations"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="campaign/[slug]"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
@@ -231,5 +280,15 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 11,
     fontWeight: "700",
+  },
+  cartIconSelected: {
+    shadowColor: "#246BE1",
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 16,
   },
 });

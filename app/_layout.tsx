@@ -12,6 +12,7 @@ import SplashScreen from "../components/ui/SplashScreen";
 
 import { AuthProvider } from "../context/AuthContext";
 import { BasketProvider } from "../context/BasketContext";
+import { ToastProvider } from "../context/ToastContext";
 import { Provider } from "react-redux";
 import { store } from "@/store/store";
 
@@ -43,6 +44,62 @@ import {
   AlbertSans_900Black_Italic,
 } from "@expo-google-fonts/albert-sans";
 import DeviceRegistrationManager from "@/utils/DeviceRegistrationManager";
+
+function DeviceRegistrationManager() {
+  const { user } = useAuth();
+  // useEffect(() => {
+  //   let isMounted = true;
+  //   async function registerDeviceIfNeeded() {
+  //     // const token = await requestUserPermission();
+  //     // if (!token) return;
+  //     const guest_id = await getOrCreateGuestId();
+  //     const user_id = user?.id || null;
+  //     const platform = Platform.OS;
+  //     const lastInfo = await getLastRegisteredDeviceInfo();
+  //     // Only register if any value changed
+  //     if (
+  //       !lastInfo ||
+  //       lastInfo.token !== token ||
+  //       lastInfo.user_id !== user_id ||
+  //       lastInfo.guest_id !== guest_id ||
+  //       lastInfo.platform !== platform
+  //     ) {
+  //       try {
+  //         await registerDeviceToken({ token, user_id, guest_id, platform });
+  //         await setLastRegisteredDeviceInfo({
+  //           token,
+  //           user_id,
+  //           guest_id,
+  //           platform,
+  //         });
+  //       } catch (e) {
+  //         console.log("Device registration failed", e);
+  //       }
+  //     }
+  //   }
+  //   registerDeviceIfNeeded();
+  //   return () => {
+  //     isMounted = false;
+  //   };
+  // }, [user]);
+  return null;
+}
+
+import SplashScreen from "../components/ui/SplashScreen";
+import { DonationAppealModal } from "../components/ui/Modals/DonationAppealModal";
+
+const introSlides = [
+  {
+    title: "Kindness at Your Fingertips.",
+    description: "Easily calculate and manage your zakat in one place.",
+    background: require("../assets/intro-1.png"),
+  },
+  {
+    title: "Stay Organized",
+    description: "All your records are safe and accessible anytime.",
+    background: require("../assets/intro-1.png"),
+  },
+];
 
 const INTRO_STORAGE_KEY = "@alihsan:intro_completed";
 const INTRO_VERSION_KEY = "@alihsan:intro_version";
@@ -111,6 +168,8 @@ export default function RootLayout() {
 
   const [showIntro, setShowIntro] = React.useState<boolean | null>(null);
   const [showSplash, setShowSplash] = React.useState(true);
+  const [showGazaModal, setShowGazaModal] = React.useState(false);
+  const [splashFinished, setSplashFinished] = React.useState(false);
 
   // Check intro status
   React.useEffect(() => {
@@ -133,17 +192,25 @@ export default function RootLayout() {
     checkIntroStatus();
   }, []);
 
-  // Splash timer
+  // Handle splash screen - show it first, then show Gaza modal
   React.useEffect(() => {
-    if (showIntro !== null && showIntro) {
+    if (showIntro === false && !splashFinished) {
+      // Show splash for 2.8 seconds (matching SplashScreen component duration)
+      const timer = setTimeout(() => {
+        setSplashFinished(true);
+        setShowSplash(false);
+        // Show Gaza modal after splash finishes
+        setShowGazaModal(true);
+      }, 2800);
+      return () => clearTimeout(timer);
+    } else if (showIntro !== null && showIntro) {
+      // If intro is needed, handle splash normally
       const timer = setTimeout(() => {
         setShowSplash(false);
       }, 5000);
       return () => clearTimeout(timer);
-    } else if (showIntro === false) {
-      setShowSplash(false);
     }
-  }, [showIntro]);
+  }, [showIntro, splashFinished]);
 
   const handleIntroFinish = async () => {
     try {
@@ -194,16 +261,57 @@ export default function RootLayout() {
         <AuthProvider>
           <DeviceRegistrationManager />
           <BasketProvider>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="login" />
-              <Stack.Screen name="signup" />
-              <Stack.Screen name="user-donations" />
-              <Stack.Screen name="project-status" />
-              <Stack.Screen name="campaign/[slug]" />
-              <Stack.Screen name="zakat-calculator" />
+            <ToastProvider>
+              {/* Show splash screen first */}
+              {showSplash && !showIntro && (
+                <View style={{ backgroundColor: "#000", flex: 1, position: "absolute", width: "100%", height: "100%", zIndex: 9999 }}>
+                  <SplashScreen />
+                </View>
+              )}
+              
+              {/* Show Gaza modal after splash */}
+              {showGazaModal && (
+                <DonationAppealModal
+                  visible={showGazaModal}
+                  onClose={() => setShowGazaModal(false)}
+                  image={require("../assets/modal-image.png")}
+                  title="Help Children in Need"
+                  raised={109690.51}
+                  goal={150000}
+                />
+              )}
+              
+              <Stack
+              screenOptions={{
+                headerShown: false,
+              }}
+            >
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="login" options={{ headerShown: false }} />
+              <Stack.Screen name="signup" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="user-donations"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="project-status"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="zakat-calculator"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="checkout"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="thank-you"
+                options={{ headerShown: false }}
+              />
             </Stack>
             <StatusBar style="auto" />
+            </ToastProvider>
           </BasketProvider>
         </AuthProvider>
       </Provider>

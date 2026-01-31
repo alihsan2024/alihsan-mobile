@@ -186,6 +186,7 @@ const ConfirmScreen = () => {
       publishableKey={
         process.env.EXPO_PUBLIC_STRIPE_KEY || "YOUR_STRIPE_PUBLISHABLE_KEY"
       }
+      merchantIdentifier="merchant.au.org.alihsan.www"
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}

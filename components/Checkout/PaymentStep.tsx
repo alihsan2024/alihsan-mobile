@@ -100,10 +100,12 @@
 //     marginTop: 8,
 //   },
 // });
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import React, { useEffect } from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { CardField } from "@stripe/stripe-react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useToast } from "@/context/ToastContext";
+
 export type PaymentState = {
   paymentType: "card" | "paypal" | "applepay";
   cardDetails: any;
@@ -114,16 +116,48 @@ type Props = {
   paymentState: PaymentState;
   setPaymentState: React.Dispatch<React.SetStateAction<PaymentState>>;
   isApplePaySupported?: boolean;
+  hasRecurringItems?: boolean;
 };
 
-export default function PaymentStep({ paymentState, setPaymentState, isApplePaySupported = false }: Props) {
+export default function PaymentStep({ paymentState, setPaymentState, isApplePaySupported = false, hasRecurringItems = false }: Props) {
+  const { showToast } = useToast();
+
+  // Automatically switch from PayPal to card if recurring items are detected
+  useEffect(() => {
+    if (hasRecurringItems && paymentState.paymentType === "paypal") {
+      setPaymentState((s) => ({
+        ...s,
+        paymentType: "card",
+      }));
+      showToast({
+        message: "PayPal is not available for subscriptions. Switched to credit card.",
+        type: "info",
+        duration: 3000,
+      });
+    }
+  }, [hasRecurringItems, paymentState.paymentType, setPaymentState, showToast]);
+
+  const handlePaypalPress = () => {
+    if (hasRecurringItems) {
+      showToast({
+        message: "PayPal is not available for subscriptions. Please use a credit card to complete your payment.",
+        type: "error",
+        duration: 4000,
+      });
+      return;
+    }
+    setPaymentState((s) => ({
+      ...s,
+      paymentType: "paypal",
+    }));
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Select Payment Method</Text>
 
-      {/* APPLE PAY - iOS only */}
-      {Platform.OS === "ios" && isApplePaySupported && (
+      {/* APPLE PAY */}
+      {isApplePaySupported && (
         <TouchableOpacity
           style={[
             styles.card,
@@ -221,26 +255,38 @@ export default function PaymentStep({ paymentState, setPaymentState, isApplePayS
         style={[
           styles.card,
           paymentState.paymentType === "paypal" && styles.cardSelected,
+          hasRecurringItems && styles.cardDisabled,
         ]}
-        onPress={() =>
-          setPaymentState((s) => ({
-            ...s,
-            paymentType: "paypal",
-          }))
-        }
+        onPress={handlePaypalPress}
+        disabled={hasRecurringItems}
+        activeOpacity={hasRecurringItems ? 1 : 0.7}
       >
         <View style={styles.cardHeader}>
-          <Ionicons name="logo-paypal" size={18} color="#264B8B" />
-          <Text style={styles.cardTitle}>Paypal</Text>
-          {paymentState.paymentType === "paypal" && (
+          <Ionicons 
+            name="logo-paypal" 
+            size={18} 
+            color={hasRecurringItems ? "#9CA3AF" : "#264B8B"} 
+          />
+          <Text style={[
+            styles.cardTitle,
+            hasRecurringItems && styles.cardTitleDisabled
+          ]}>
+            Paypal
+          </Text>
+          {paymentState.paymentType === "paypal" && !hasRecurringItems && (
             <View style={styles.selectedIndicator}>
               <Ionicons name="checkmark-circle" size={20} color="#264B8B" />
             </View>
           )}
         </View>
 
-        <Text style={styles.checkboxText}>
-          Complete payment securely with PayPal
+        <Text style={[
+          styles.checkboxText,
+          hasRecurringItems && styles.textDisabled
+        ]}>
+          {hasRecurringItems 
+            ? "PayPal is not available for subscriptions" 
+            : "Complete payment securely with PayPal"}
         </Text>
       </TouchableOpacity>
     </View>
@@ -337,5 +383,15 @@ const styles = StyleSheet.create({
   },
   selectedIndicator: {
     marginLeft: "auto",
+  },
+  cardDisabled: {
+    opacity: 0.5,
+    backgroundColor: "#F9FAFB",
+  },
+  cardTitleDisabled: {
+    color: "#9CA3AF",
+  },
+  textDisabled: {
+    color: "#9CA3AF",
   },
 });

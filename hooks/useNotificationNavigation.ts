@@ -4,6 +4,8 @@ import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const HANDLED_KEY = "@alihsan:last_handled_notification";
+import { Linking, Platform } from "react-native";
+import type * as Notifications from "expo-notifications";
 
 export default function useNotificationNavigation() {
   const router = useRouter();
@@ -48,5 +50,19 @@ export default function useNotificationNavigation() {
       isMounted = false;
       sub.remove();
     };
+
+    const subscription =
+      NotificationsModule.addNotificationResponseReceivedListener(handleResponse);
+
+    NotificationsModule.getLastNotificationResponseAsync().then(
+      (response: Notifications.NotificationResponse | null) => {
+      if (response) {
+        console.log("[NotificationNav] getLastNotificationResponse fired");
+        handleResponse(response);
+      }
+      }
+    );
+
+    return () => subscription.remove();
   }, [router]);
 }

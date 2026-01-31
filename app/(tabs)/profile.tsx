@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from "react";
+import React, { useEffect, useCallback, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,9 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,10 +20,19 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector, useDispatch } from "react-redux";
 import {
   fetchProfileData,
+  clearCache,
   setProfileDetails,
 } from "@/store/reduxSlice/profileStatisticsSlice";
 import { getProfile, logoutUser } from "@/store/reduxSlice/authenticationSlice";
 import LogoutConfirmationModal from "@/components/ui/Modals/LogoutConfirmationModal";
+import { generateInvoice } from "@/store/reduxSlice/myDonationSlice";
+import { getPaymentsList } from "@/store/reduxSlice/paymentDetailsSlice";
+import { useAppDispatch } from "@/hooks/useAppDispatch";
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // Format currency
 const formatCurrency = (amount: number): string => {
@@ -62,6 +74,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
+  const appDispatch = useAppDispatch();
 
   // Redux state
   const user = useSelector((state: any) => state.authentication.user);
@@ -77,10 +90,20 @@ export default function ProfileScreen() {
   );
   const loading = useSelector((state: any) => state.profileStatistics.loading);
   const error = useSelector((state: any) => state.profileStatistics.error);
+  const paymentRows = useSelector(
+    (state: any) => state.paymentDetails.paymentList.rows
+  );
+  const paymentsLoading = useSelector(
+    (state: any) => state.paymentDetails.paymentList.loading
+  );
 
   const isAuthenticated = !!user || !!authUser;
   const currentUser = user || authUser;
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [expandedOrders, setExpandedOrders] = useState<Set<string | number>>(
+    new Set()
+  );
 
   // Fetch profile data on mount and when user changes
   useEffect(() => {
@@ -94,20 +117,141 @@ export default function ProfileScreen() {
 
       // Fetch donation statistics and recent donations
       dispatch(fetchProfileData(5));
+
+      // Fetch payments for payment history (includes orderId)
+      const farPastDate = new Date(2000, 0, 1).getTime().toString();
+      appDispatch(
+        getPaymentsList({
+          page: "1",
+          fromdate: farPastDate,
+          limit: 50, // Fetch more to account for grouping by orderId
+        })
+      );
     }
-  }, [isAuthenticated, dispatch]);
+  }, [isAuthenticated, dispatch, appDispatch]);
 
   // Refresh handler
   const onRefresh = useCallback(() => {
-    if (isAuthenticated) {
-      dispatch(getProfile()).then((action: any) => {
+    if (!isAuthenticated) return;
+    setRefreshing(true);
+    dispatch(clearCache());
+    dispatch(getProfile())
+      .then((action: any) => {
         if (action.payload) {
           dispatch(setProfileDetails(action.payload));
         }
+      })
+      .finally(() => {
+        Promise.all([
+          dispatch(fetchProfileData(5)),
+          appDispatch(
+            getPaymentsList({
+              page: "1",
+              fromdate: new Date(2000, 0, 1).getTime().toString(),
+              limit: 50,
+            })
+          ),
+        ]).finally(() => {
+          setRefreshing(false);
+        });
       });
-      dispatch(fetchProfileData(5));
-    }
-  }, [isAuthenticated, dispatch]);
+  }, [isAuthenticated, dispatch, appDispatch]);
+
+  const handleDownloadInvoice = (donationId: string | number) => {
+    if (!donationId) return;
+    dispatch(generateInvoice({ donationId }) as any);
+  };
+
+  const handleResendInvoice = (donationId: string | number) => {
+    if (!donationId) return;
+    dispatch(generateInvoice({ donationId }) as any);
+  };
+
+  const groupedOrders = useMemo(() => {
+    const grouped: Record<
+      string,
+      {
+        orderId: string | number;
+        totalAmount: number;
+        paymentDate: string;
+        items: any[];
+      }
+    > = {};
+
+    // Use payments from getPaymentsList (includes orderId) instead of recentDonations
+    const paymentsToGroup = paymentRows && Array.isArray(paymentRows) ? paymentRows : [];
+
+    // Helper function to check if payment is a processing fee
+    const isProcessingFee = (payment: any) => {
+      const notes = payment?.notes || payment?.Donation?.notes || "";
+      const campaignId = payment?.campaignId || payment?.Campaign?.id;
+      const donationItem = payment?.donationItem || payment?.Donation?.donationItem || "";
+      return (
+        notes.toLowerCase().includes("processing fee") ||
+        campaignId === 259 ||
+        donationItem.toLowerCase().includes("processing fee") ||
+        donationItem.toLowerCase().includes("admin fee")
+      );
+    };
+
+    paymentsToGroup.forEach((payment: any) => {
+      // Skip processing fee items
+      if (isProcessingFee(payment)) {
+        return;
+      }
+
+      // Get orderId from Donation object (payments API structure)
+      const orderId = payment?.Donation?.orderId || payment?.orderId;
+      
+      // Only group by orderId - skip payments without orderId
+      if (!orderId) {
+        console.warn("Payment missing orderId, skipping:", payment);
+        return;
+      }
+      
+      const date = payment?.updatedAt || payment?.createdAt;
+
+      if (!grouped[orderId]) {
+        grouped[orderId] = {
+          orderId,
+          totalAmount: 0,
+          paymentDate: date || "",
+          items: [],
+        };
+      }
+
+      grouped[orderId].items.push(payment);
+      grouped[orderId].totalAmount += Number(payment?.total) || 0;
+
+      if (date) {
+        const paymentDate = new Date(date);
+        const currentOrderDate = new Date(grouped[orderId].paymentDate || date);
+        if (paymentDate < currentOrderDate) {
+          grouped[orderId].paymentDate = date;
+        }
+      }
+    });
+
+    const sorted = Object.values(grouped).sort(
+      (a, b) =>
+        new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()
+    );
+    // Return only top 5 orders for profile page preview
+    return sorted.slice(0, 5);
+  }, [paymentRows]);
+
+  const toggleOrderExpansion = (orderId: string | number) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedOrders((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) {
+        next.delete(orderId);
+      } else {
+        next.add(orderId);
+      }
+      return next;
+    });
+  };
 
   // Get user display name
   const getUserDisplayName = () => {
@@ -292,7 +436,7 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
       {/* Header */}
@@ -314,10 +458,7 @@ export default function ProfileScreen() {
       <View style={styles.profileRow}>
         <Image
           source={{
-            uri:
-              profileDetails?.profileImage ||
-              currentUser?.profileImage ||
-              "https://i.pravatar.cc/150?img=12",
+            uri: "https://static.vecteezy.com/system/resources/thumbnails/005/544/718/small/profile-icon-design-free-vector.jpg",
           }}
           style={styles.avatar}
           contentFit="cover"
@@ -334,7 +475,7 @@ export default function ProfileScreen() {
 
       {/* Donation Summary */}
       <LinearGradient
-        colors={["#6A7BFF", "#5663F7"]}
+        colors={["#5089E7", "#2161CD"]}
         style={styles.summaryCard}
       >
         <View style={styles.summaryHeader}>
@@ -347,6 +488,7 @@ export default function ProfileScreen() {
             </Text>
           )}
         </View>
+        <View style={styles.summaryDivider} />
 
         <View style={styles.statsRow}>
           {[
@@ -398,63 +540,157 @@ export default function ProfileScreen() {
 
       {/* Recent History */}
       <View style={styles.historyHeader}>
-        <Text style={styles.sectionTitle}>Recent History</Text>
-        <TouchableOpacity onPress={() => router.push("/user-donations")}>
+        <Text style={styles.sectionTitle}>Payment History</Text>
+        <TouchableOpacity
+          onPress={() => router.push("/(tabs)/one-time-user-donations")}
+        >
           <Text style={styles.link}>See All</Text>
         </TouchableOpacity>
       </View>
 
-      {loading && recentDonations.length === 0 ? (
+      {(loading || paymentsLoading) && groupedOrders.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6A7BFF" />
           <Text style={styles.loadingText}>Loading donations...</Text>
         </View>
-      ) : recentDonations.length > 0 ? (
-        recentDonations.map((donation, index) => {
-          const campaignName =
-            donation.Campaign?.name || "Donation" || "Unknown Campaign";
+      ) : groupedOrders.length > 0 ? (
+        groupedOrders.map((order, index) => {
+          const isExpanded = expandedOrders.has(order.orderId);
+          // Helper function to check if payment is a processing fee
+          const isProcessingFee = (item: any) => {
+            const notes = item?.notes || item?.Donation?.notes || "";
+            const campaignId = item?.campaignId || item?.Campaign?.id;
+            const donationItem = item?.donationItem || item?.Donation?.donationItem || "";
+            return (
+              notes.toLowerCase().includes("processing fee") ||
+              campaignId === 259 ||
+              donationItem.toLowerCase().includes("processing fee") ||
+              donationItem.toLowerCase().includes("admin fee")
+            );
+          };
+          // Filter out processing fee items and get the first non-processing-fee item
+          const nonProcessingFeeItems = order.items.filter((item: any) => !isProcessingFee(item));
+          const primaryItem = nonProcessingFeeItems[0] || order.items[0];
+          
+          // Get unique campaigns (excluding processing fees)
+          const uniqueCampaigns = new Map<string, number>();
+          nonProcessingFeeItems.forEach((item: any) => {
+            const campaignName = item?.Campaign?.name
+              ? item.Campaign.name
+              : item?.orphan_id
+              ? "Orphan Sponsorship"
+              : "Donation";
+            uniqueCampaigns.set(campaignName, (uniqueCampaigns.get(campaignName) || 0) + 1);
+          });
+          const campaignCount = uniqueCampaigns.size;
+          const totalItems = nonProcessingFeeItems.length;
+          
+          const primaryCampaignName =
+            primaryItem?.Campaign?.name
+              ? primaryItem.Campaign.name
+              : primaryItem?.orphan_id
+              ? "Orphan Sponsorship"
+              : "Donation";
+          
+          // Build campaign name with count
+          const otherCount = campaignCount > 1 ? campaignCount - 1 : 0;
+          
           const coverImage =
-            donation.Campaign?.coverImage || "https://i.pravatar.cc/150?img=20";
-          const status = donation.status || "COMPLETED";
-          const badgeStyle = getStatusBadgeStyle(status);
+            (primaryItem?.Campaign as any)?.coverImage ||
+            "https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/1708467963799-alihsan-coverImage.png";
+          const orderStatus =
+            primaryItem?.status ||
+            primaryItem?.Donation?.status ||
+            "COMPLETED";
+          const statusUpper = String(orderStatus).toUpperCase();
+          const statusLabel =
+            statusUpper === "COMPLETED" ? "Completed" : statusUpper;
+          const amountLabel = `AUD $${Number(order.totalAmount).toFixed(2)}`;
 
           return (
-            <TouchableOpacity
-              key={donation.id || index}
-              style={styles.historyItem}
-              onPress={() => {
-                if (donation.Campaign?.slug) {
-                  router.push(`/campaign/${donation.Campaign.slug}`);
-                }
-              }}
-            >
-              <Image
-                source={{ uri: coverImage }}
-                style={styles.historyImg}
-                contentFit="cover"
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.historyTitle} numberOfLines={1}>
-                  {campaignName.length > 25
-                    ? `${campaignName.substring(0, 25)}...`
-                    : campaignName}
-                </Text>
-                <Text style={styles.historySub}>
-                  {formatDate(donation.donatedAt || donation.createdAt)} •{" "}
-                  {formatCurrency(parseFloat(donation.total) || 0)}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.badge,
-                  { backgroundColor: badgeStyle.backgroundColor },
-                ]}
+            <View key={order.orderId || index} style={styles.orderCard}>
+              <TouchableOpacity
+                style={styles.orderHeader}
+                onPress={() => toggleOrderExpansion(order.orderId)}
+                activeOpacity={0.7}
               >
-                <Text style={[styles.badgeText, { color: badgeStyle.color }]}>
-                  {status === "COMPLETED" ? "Distributed" : status}
-                </Text>
-              </View>
-            </TouchableOpacity>
+                    <View style={styles.orderHeaderLeft}>
+                  <Image source={{ uri: coverImage }} style={styles.orderImage} />
+                  <View style={styles.orderInfo}>
+                    <View style={styles.orderTitleRow}>
+                      <Text style={styles.orderTitle} numberOfLines={1}>
+                        {primaryCampaignName}
+                      </Text>
+                      {otherCount > 0 && (
+                        <Text style={styles.orderOtherCampaigns}>
+                          {" "}+ {otherCount} other{otherCount !== 1 ? "s" : ""}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.orderMetaRow}>
+                      <Text style={styles.orderMetaText}>
+                        {formatDate(order.paymentDate)}
+                      </Text>
+                      <Text style={styles.orderMetaDot}>•</Text>
+                      <Text style={styles.orderMetaText}>
+                        {totalItems} item{totalItems !== 1 ? "s" : ""}
+                      </Text>
+                      <Text style={styles.orderMetaDot}>•</Text>
+                      <Text style={styles.orderMetaAmount}>
+                        {amountLabel}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <View style={styles.orderStatusBadge}>
+                  <Text style={styles.orderStatusText}>{statusLabel}</Text>
+                </View>
+              </TouchableOpacity>
+
+              {isExpanded && (
+                <View style={styles.orderDetails}>
+                  {order.items.map((item: any, itemIndex: number) => {
+                    const isFee = isProcessingFee(item);
+                    return (
+                      <View
+                        key={item.id}
+                        style={[
+                          styles.paymentRow,
+                          itemIndex === order.items.length - 1 &&
+                            styles.paymentRowLast,
+                        ]}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.paymentName}>
+                            {isFee
+                              ? "Processing Fee"
+                              : item?.Campaign?.name
+                              ? item.Campaign.name
+                              : item?.orphan_id
+                              ? "Orphan Sponsorship"
+                              : "Donation"}
+                          </Text>
+                          <Text style={styles.paymentId}>
+                            Order #: {order.orderId}
+                          </Text>
+                        </View>
+                        <Text style={styles.paymentTotal}>${item?.total || item?.Donation?.total || 0}</Text>
+                      </View>
+                    );
+                  })}
+                  <View style={styles.orderDetailsDivider} />
+                  <TouchableOpacity
+                    style={styles.resendButton}
+                    onPress={() => handleResendInvoice(primaryItem?.donationId || primaryItem?.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.resendButtonText}>
+                      Resend invoice
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           );
         })
       ) : (
@@ -477,31 +713,54 @@ export default function ProfileScreen() {
         <Text style={styles.sectionTitle}>Profile Details</Text>
         <View style={styles.detailsCard}>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Email</Text>
+            <View style={styles.detailRowHeader}>
+              <View style={styles.detailIconContainer}>
+                <Ionicons name="mail-outline" size={16} color="#2161CD" />
+              </View>
+              <Text style={styles.detailLabel}>Email</Text>
+            </View>
             <Text style={styles.detailValue}>
               {profileDetails?.email || currentUser?.email || "—"}
             </Text>
           </View>
+          
           {profileDetails?.phone && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Phone</Text>
-              <Text style={styles.detailValue}>{profileDetails.phone}</Text>
-            </View>
+            <>
+              <View style={styles.detailDivider} />
+              <View style={styles.detailRow}>
+                <View style={styles.detailRowHeader}>
+                  <View style={styles.detailIconContainer}>
+                    <Ionicons name="call-outline" size={16} color="#2161CD" />
+                  </View>
+                  <Text style={styles.detailLabel}>Phone</Text>
+                </View>
+                <Text style={styles.detailValue}>{profileDetails.phone}</Text>
+              </View>
+            </>
           )}
+          
           {(profileDetails?.address || profileDetails?.city) && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Address</Text>
-              <Text style={styles.detailValue}>
-                {[
-                  profileDetails.address,
-                  profileDetails.city,
-                  profileDetails.state,
-                  profileDetails.country,
-                ]
-                  .filter(Boolean)
-                  .join(", ") || "—"}
-              </Text>
-            </View>
+            <>
+              <View style={styles.detailDivider} />
+              <View style={styles.detailRow}>
+                <View style={styles.detailRowHeader}>
+                  <View style={styles.detailIconContainer}>
+                    <Ionicons name="location-outline" size={16} color="#2161CD" />
+                  </View>
+                  <Text style={styles.detailLabel}>Address</Text>
+                </View>
+                <Text style={styles.detailValue}>
+                  {[
+                    profileDetails.address,
+                    profileDetails.city,
+                    profileDetails.state,
+                    profileDetails.country,
+                  ]
+                    .filter(Boolean)
+                    .join(", ") || "—"}
+                </Text>
+              </View>
+            </>
           )}
         </View>
       </View>
@@ -693,6 +952,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     marginTop: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
   },
   backBtn: {
     width: 40,
@@ -701,6 +964,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   headerTitle: {
     flex: 1,
@@ -728,6 +993,9 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     marginRight: 12,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F3F4F6",
   },
   greeting: {
     fontSize: 16,
@@ -749,6 +1017,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 16,
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.3)",
     marginBottom: 16,
   },
   summaryLabel: {
@@ -834,6 +1107,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
+  link: {
+    color: "#2161CD",
+    fontSize: 14,
+    fontWeight: "600",
+  },
 
   historyItem: {
     flexDirection: "row",
@@ -868,6 +1146,120 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 11,
+    fontWeight: "600",
+  },
+
+  orderCard: {
+    backgroundColor: "#fff",
+    marginTop: 8,
+    borderRadius: 16,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  orderHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 2,
+  },
+  orderHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  orderImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    marginRight: 8,
+  },
+  orderInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  orderStatusBadge: {
+    backgroundColor: "#E6F7D9",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  orderStatusText: {
+    color: "#3C7A2A",
+    fontWeight: "600",
+    fontSize: 11,
+  },
+  orderTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  orderTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  orderOtherCampaigns: {
+    fontSize: 11,
+    fontWeight: "400",
+    color: "#9CA3AF",
+    fontStyle: "italic",
+  },
+  orderMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  orderMetaText: {
+    fontSize: 11,
+    color: "#9CA3AF",
+  },
+  orderMetaDot: {
+    marginHorizontal: 8,
+    color: "#9CA3AF",
+    fontSize: 11,
+  },
+  orderMetaAmount: {
+    fontSize: 11,
+    color: "#0F172A",
+    fontWeight: "700",
+  },
+  orderDetails: {
+    marginTop: 10,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#EEF2F7",
+  },
+  paymentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  paymentRowLast: {
+    borderBottomWidth: 0,
+  },
+  paymentName: { fontWeight: "600", color: "#111" },
+  paymentId: { fontSize: 12, color: "#6B7280" },
+  paymentTotal: { fontWeight: "700", color: "#111", marginHorizontal: 8 },
+  orderDetailsDivider: {
+    height: 1,
+    backgroundColor: "#EEF2F7",
+    marginVertical: 10,
+  },
+  resendButton: {
+    alignSelf: "stretch",
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#EEF4FF",
+    alignItems: "center",
+  },
+  resendButtonText: {
+    color: "#2161CD",
+    fontSize: 12,
     fontWeight: "600",
   },
 
@@ -906,23 +1298,53 @@ const styles = StyleSheet.create({
   },
   detailsCard: {
     backgroundColor: "#FFF",
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     borderWidth: 1,
-    borderColor: "#010D261A",
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   detailRow: {
-    marginBottom: 12,
+    marginBottom: 0,
+  },
+  detailRowHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 8,
+  },
+  detailIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#F2F6FF",
+    justifyContent: "center",
+    alignItems: "center",
   },
   detailLabel: {
     fontSize: 12,
     color: "#6B7280",
-    marginBottom: 4,
     fontWeight: "500",
+    fontFamily: "AlbertSans_500Medium",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   detailValue: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#111",
     fontWeight: "600",
+    fontFamily: "AlbertSans_600SemiBold",
+    lineHeight: 22,
+    paddingLeft: 36,
+  },
+  detailDivider: {
+    height: 1,
+    backgroundColor: "#F3F4F6",
+    marginVertical: 16,
+    marginLeft: 36,
   },
 });

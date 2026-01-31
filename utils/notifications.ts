@@ -1,6 +1,8 @@
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
+import Constants from "expo-constants";
+import type { Notification } from "expo-notifications";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({

@@ -44,7 +44,7 @@ const getApiUrl = (): string => {
   return (
     process.env.EXPO_PUBLIC_API_URL ||
     (Constants.expoConfig?.extra?.apiUrl as string | undefined) ||
-    "https://api.alihsan.org.au"
+    "https://deenstream.live"
   );
 };
 
@@ -273,6 +273,19 @@ export const login = async (
   } catch (error: any) {
     const message =
       error.response?.data?.message || "Login failed. Please try again.";
+    throw new Error(message);
+  }
+};
+
+// Forgot password
+export const forgotPassword = async (email: string): Promise<void> => {
+  try {
+    await api.post("/auth/forgotpassword", {
+      email: email.toLowerCase().trim(),
+    });
+  } catch (error: any) {
+    const message =
+      error.response?.data?.message || "Failed to send reset email. Please try again.";
     throw new Error(message);
   }
 };

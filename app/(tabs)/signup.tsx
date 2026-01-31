@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 import LoadingScreen from "@/components/LoadingScreen";
 import { register } from "@/utils/api";
+import TermsAndConditionsModal from "@/components/ui/Modals/TermsAndConditionsModal";
+import PrivacyPolicyModal from "@/components/ui/Modals/PrivacyPolicyModal";
 
 const COVER_IMAGE_URL =
   "https://alihsan.s3.ap-southeast-2.amazonaws.com/gaza/1766535509636-alihsan-2025_11_17_10_40_IMG_4900%20Large.jpeg";
@@ -36,6 +38,12 @@ export default function SignupScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [termsModalVisible, setTermsModalVisible] = useState(false);
+  const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
+  const fullNameInputRef = useRef<TextInput>(null);
+  const emailInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
+  const confirmPasswordInputRef = useRef<TextInput>(null);
 
   const validateForm = () => {
     if (!fullName.trim() || !email.trim() || !password.trim()) {
@@ -146,9 +154,14 @@ export default function SignupScreen() {
             <View style={styles.cardContent}>
               {/* Full Name Input */}
               <Text style={styles.label}>Full Name</Text>
-              <View style={[styles.inputWrapper, styles.inputNormal]}>
+              <TouchableOpacity
+                activeOpacity={1}
+                style={[styles.inputWrapper, styles.inputNormal]}
+                onPress={() => fullNameInputRef.current?.focus()}
+              >
                 <Ionicons name="person-outline" size={18} color="#6B7280" />
                 <TextInput
+                  ref={fullNameInputRef}
                   placeholder="Enter full name"
                   placeholderTextColor="#9CA3AF"
                   style={styles.input}
@@ -156,18 +169,21 @@ export default function SignupScreen() {
                   onChangeText={setFullName}
                   autoCapitalize="words"
                 />
-              </View>
+              </TouchableOpacity>
 
               {/* Email Input */}
               <Text style={styles.label}>Email Address</Text>
-              <View
+              <TouchableOpacity
+                activeOpacity={1}
                 style={[
                   styles.inputWrapper,
                   error ? styles.inputError : styles.inputNormal,
                 ]}
+                onPress={() => emailInputRef.current?.focus()}
               >
                 <Ionicons name="mail-outline" size={18} color="#6B7280" />
                 <TextInput
+                  ref={emailInputRef}
                   placeholder="Enter email"
                   placeholderTextColor="#9CA3AF"
                   style={styles.input}
@@ -176,13 +192,18 @@ export default function SignupScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
-              </View>
+              </TouchableOpacity>
 
               {/* Password Input */}
               <Text style={styles.label}>Password</Text>
-              <View style={[styles.inputWrapper, styles.inputNormal]}>
+              <TouchableOpacity
+                activeOpacity={1}
+                style={[styles.inputWrapper, styles.inputNormal]}
+                onPress={() => passwordInputRef.current?.focus()}
+              >
                 <Ionicons name="lock-closed-outline" size={18} color="#6B7280" />
                 <TextInput
+                  ref={passwordInputRef}
                   placeholder="Enter password"
                   placeholderTextColor="#9CA3AF"
                   secureTextEntry={!showPassword}
@@ -197,13 +218,18 @@ export default function SignupScreen() {
                     color="#6B7280"
                   />
                 </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
 
               {/* Confirm Password Input */}
               <Text style={styles.label}>Confirm Password</Text>
-              <View style={[styles.inputWrapper, styles.inputNormal]}>
+              <TouchableOpacity
+                activeOpacity={1}
+                style={[styles.inputWrapper, styles.inputNormal]}
+                onPress={() => confirmPasswordInputRef.current?.focus()}
+              >
                 <Ionicons name="lock-closed-outline" size={18} color="#6B7280" />
                 <TextInput
+                  ref={confirmPasswordInputRef}
                   placeholder="Confirm password"
                   placeholderTextColor="#9CA3AF"
                   secureTextEntry={!showConfirmPassword}
@@ -220,7 +246,7 @@ export default function SignupScreen() {
                     color="#6B7280"
                   />
                 </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
 
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
@@ -236,11 +262,19 @@ export default function SignupScreen() {
               </TouchableOpacity>
 
               {/* Terms Text */}
-              <Text style={styles.terms}>
-                By signing up, you agree to our{" "}
-                <Text style={styles.link}>Terms of Service</Text> and{" "}
-                <Text style={styles.link}>Privacy Policy</Text>.
-              </Text>
+              <View style={styles.termsContainer}>
+                <Text style={styles.terms}>
+                  By signing up, you agree to our{" "}
+                </Text>
+                <TouchableOpacity onPress={() => setTermsModalVisible(true)}>
+                  <Text style={styles.link}>Terms of Service</Text>
+                </TouchableOpacity>
+                <Text style={styles.terms}> and </Text>
+                <TouchableOpacity onPress={() => setPrivacyModalVisible(true)}>
+                  <Text style={styles.link}>Privacy Policy</Text>
+                </TouchableOpacity>
+                <Text style={styles.terms}>.</Text>
+              </View>
 
               {/* Login Link */}
               <View style={styles.loginLink}>
@@ -253,6 +287,16 @@ export default function SignupScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      
+      <TermsAndConditionsModal
+        visible={termsModalVisible}
+        onClose={() => setTermsModalVisible(false)}
+      />
+      
+      <PrivacyPolicyModal
+        visible={privacyModalVisible}
+        onClose={() => setPrivacyModalVisible(false)}
+      />
     </View>
   );
 }
@@ -379,17 +423,24 @@ const styles = StyleSheet.create({
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },
+  termsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    marginBottom: 16,
+  },
   terms: {
     fontSize: 11,
     color: "#6B7280",
-    textAlign: "center",
-    marginBottom: 16,
     lineHeight: 16,
     fontFamily: "AlbertSans_400Regular",
   },
   link: {
+    fontSize: 11,
     color: "#264B8B",
     fontFamily: "AlbertSans_500Medium",
+    textDecorationLine: "underline",
   },
   loginLink: {
     flexDirection: "row",

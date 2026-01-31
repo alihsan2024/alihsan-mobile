@@ -1,154 +1,327 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, TextInput, Alert } from "react-native";
+import React, { useRef, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import HeroBackground from "@/components/ui/GradientImage";
-import Button from "@/components/ui/Button";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image as ExpoImage } from "expo-image";
+import LoadingScreen from "@/components/LoadingScreen";
+import { forgotPassword } from "@/utils/api";
+import { useToast } from "@/context/ToastContext";
+
+const COVER_IMAGE_URL =
+  "https://alihsan.s3.ap-southeast-2.amazonaws.com/gaza/1766468664003-alihsan-IMG_3894%20-%20Blog%201.JPG";
+
+const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 88 : 68;
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
+  const insets = useSafeAreaInsets();
+  const { showToast } = useToast();
 
-  const handleReset = async () => {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const emailInputRef = useRef<TextInput>(null);
+
+  const validateEmail = () => {
     if (!email.trim()) {
       setError("Email address is required");
-      return;
+      return false;
     }
 
-    setError("");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address");
+      return false;
+    }
 
-    // 🔌 Hook your API here later
-    // await sendResetLink(email);
-
-    Alert.alert(
-      "Reset Link Sent",
-      "Please check your email for password reset instructions.",
-      [{ text: "OK", onPress: () => router.push("/create-new-password") }]
-    );
+    return true;
   };
+
+  const handleReset = async () => {
+    if (!validateEmail()) return;
+
+    setError("");
+    setLoading(true);
+
+    try {
+      await forgotPassword(email);
+      
+      showToast({
+        message: "Reset link sent! Please check your email.",
+        type: "success",
+        duration: 4000,
+      });
+
+      Alert.alert(
+        "Reset Link Sent",
+        "Please check your email for password reset instructions.",
+        [{ text: "OK", onPress: () => router.back() }]
+      );
+    } catch (err: any) {
+      const msg = err.message || "Failed to send reset email. Please try again.";
+      setError(msg);
+      
+      showToast({
+        message: msg,
+        type: "error",
+        duration: 4000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <LoadingScreen message="Sending reset link..." />;
+  }
 
   return (
     <View style={styles.container}>
-      {/* ===== HEADER IMAGE ===== */}
-      <HeroBackground
-        source={require("@/assets/header-image.png")}
-        containerStyle={{ height: 220 }}
-        gradientLocations={[0.6, 1]}
-      />
-
-      {/* ===== CONTENT ===== */}
-      <View style={styles.content}>
-        <Text style={styles.title}>Reset Password</Text>
-        <Text style={styles.subtitle}>
-          Enter your registered email and we'll send you instructions to reset
-          your password.
-        </Text>
-
-        {/* ===== EMAIL ===== */}
-        <Text style={styles.label}>Email Address</Text>
-        <View
-          style={[
-            styles.inputWrapper,
-            error ? styles.inputErrorBorder : styles.inputNormalBorder,
-          ]}
-        >
-          <TextInput
-            placeholder="Enter email"
-            placeholderTextColor="#9CA3AF"
-            style={styles.input}
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              if (error) setError("");
-            }}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-          />
-        </View>
-
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-      </View>
-
-      {/* ===== CTA ===== */}
-      <View style={styles.footer}>
-        <Button
-          label="Send Reset Link"
-          variant="secondary"
-          onPress={handleReset}
-          textStyle={{ fontSize: 14, fontWeight: "500" }}
+      {/* HEADER BANNER */}
+      <View style={[styles.headerWrapper, { paddingTop: insets.top }]}>
+        <ExpoImage
+          source={{ uri: COVER_IMAGE_URL }}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
         />
+
+        <LinearGradient
+          colors={["transparent", "rgba(38,75,139,0.6)", "rgba(38,75,139,0.9)"]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+
+        <View style={styles.headerContent}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="chevron-back" size={20} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.guthenText}>Welcome</Text>
+          <Text style={styles.headerTitle}>Reset Password</Text>
+          <Text style={styles.headerSubtitle}>
+            Enter your email and we'll send you instructions to reset your password.
+          </Text>
+        </View>
       </View>
+
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Main Card */}
+          <View style={styles.card}>
+            <View style={styles.cardContent}>
+              {/* Email Input */}
+              <Text style={styles.label}>Email Address</Text>
+              <TouchableOpacity
+                activeOpacity={1}
+                style={[
+                  styles.inputWrapper,
+                  error ? styles.inputError : styles.inputNormal,
+                ]}
+                onPress={() => emailInputRef.current?.focus()}
+              >
+                <Ionicons name="mail-outline" size={18} color="#6B7280" />
+                <TextInput
+                  ref={emailInputRef}
+                  placeholder="Enter email"
+                  placeholderTextColor="#9CA3AF"
+                  style={styles.input}
+                  value={email}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    if (error) setError("");
+                  }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                />
+              </TouchableOpacity>
+
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+              {/* Send Reset Link Button */}
+              <TouchableOpacity
+                style={styles.resetButton}
+                onPress={handleReset}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.resetButtonText}>Send Reset Link</Text>
+                <Ionicons name="chevron-forward" size={18} color="#010D26" />
+              </TouchableOpacity>
+
+              {/* Back to Login Link */}
+              <View style={styles.loginLink}>
+                <Text style={styles.loginText}>Remember your password? </Text>
+                <TouchableOpacity onPress={() => router.back()}>
+                  <Text style={styles.loginLinkText}>Log In</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
-
-/* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
   },
-
-  content: {
-    paddingHorizontal: 20,
+  // Header Banner (same style as Login/Signup)
+  headerWrapper: {
+    height: 240,
+    width: "100%",
+    position: "relative",
+    justifyContent: "flex-end",
+    overflow: "hidden",
+  },
+  headerContent: {
+    position: "absolute",
+    bottom: 24,
+    left: 20,
+    right: 20,
+    zIndex: 1,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  guthenText: {
+    fontSize: 24,
+    fontFamily: "Guthen Bloots",
+    color: "#FFD602",
+    marginBottom: 4,
+  },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 28,
+    fontWeight: "800",
+    fontFamily: "AlbertSans_800ExtraBold",
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    color: "#E6ECFF",
+    fontSize: 15,
+    lineHeight: 22,
+    fontFamily: "AlbertSans_400Regular",
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 16,
     paddingTop: 24,
+    paddingBottom: TAB_BAR_HEIGHT + 20,
   },
-
-  title: {
-    fontSize: 26,
-    fontWeight: "600",
-    color: "#010D26",
-    marginBottom: 6,
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    width: "100%",
+    maxWidth: 400,
+    alignSelf: "center",
   },
-
-  subtitle: {
-    fontSize: 14,
-    color: "#010D26",
-    opacity: 0.6,
-    lineHeight: 20,
-    marginBottom: 24,
+  cardContent: {
+    padding: 20,
   },
-
   label: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#010D26",
-    marginBottom: 6,
+    marginBottom: 8,
+    fontFamily: "AlbertSans_600SemiBold",
   },
-
   inputWrapper: {
     height: 48,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+    backgroundColor: "#fff",
   },
-
+  inputNormal: {
+    borderColor: "#E5E7EB",
+  },
+  inputError: {
+    borderColor: "#DC2626",
+  },
   input: {
     flex: 1,
     fontSize: 14,
     color: "#010D26",
+    fontFamily: "AlbertSans_400Regular",
   },
-
-  inputNormalBorder: {
-    borderColor: "#E5E7EB",
-  },
-
-  inputErrorBorder: {
-    borderColor: "#FF5582",
-  },
-
   errorText: {
     color: "#DC2626",
     fontSize: 12,
-    marginTop: 8,
+    marginBottom: 12,
+    fontFamily: "AlbertSans_400Regular",
   },
-
-  footer: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    marginTop: "auto",
+  resetButton: {
+    backgroundColor: "#FFD602",
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  resetButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  loginLink: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loginText: {
+    fontSize: 13,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
+  },
+  loginLinkText: {
+    fontSize: 13,
+    color: "#264B8B",
+    fontWeight: "600",
+    fontFamily: "AlbertSans_600SemiBold",
   },
 });

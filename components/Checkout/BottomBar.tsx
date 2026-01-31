@@ -54,7 +54,7 @@ export default function BottomBar({
 
   const breakdownHeight = animation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 70],
+    outputRange: [0, 80],
   });
 
   const breakdownOpacity = animation.interpolate({
@@ -69,7 +69,7 @@ export default function BottomBar({
 
   return (
     <LinearGradient
-      colors={["#264B8B", "#1E3A8A"]}
+      colors={["#5089E7", "#2161CD"]}
       style={[styles.container, { paddingBottom: Math.max(insets.bottom, 16) }]}
     >
       {/* Expandable Breakdown */}
@@ -93,6 +93,14 @@ export default function BottomBar({
             <Text style={styles.breakdownValue}>{formatCurrency(adminFee)}</Text>
           </View>
         </View>
+        <Animated.View
+          style={[
+            styles.divider,
+            {
+              opacity: breakdownOpacity,
+            },
+          ]}
+        />
       </Animated.View>
 
       {/* Main Bottom Bar */}
@@ -110,7 +118,7 @@ export default function BottomBar({
               },
             ]}
           >
-            <Ionicons name="chevron-up" size={12} color="#264B8B" />
+            <Ionicons name="chevron-up" size={12} color="#2161CD" />
           </Animated.View>
           <View style={styles.totalTextContainer}>
             <Text style={styles.totalLabel}>Total</Text>
@@ -136,14 +144,14 @@ export default function BottomBar({
             <Ionicons
               name="chevron-forward"
               size={18}
-              color={isLast ? "#010D26" : "#264B8B"}
+              color={isLast ? "#010D26" : "#2161CD"}
             />
           </View>
 
           {/* Spinner overlay */}
           {loading && (
             <View style={styles.loaderOverlay}>
-              <ActivityIndicator color={isLast ? "#010D26" : "#264B8B"} />
+              <ActivityIndicator color={isLast ? "#010D26" : "#2161CD"} />
             </View>
           )}
         </TouchableOpacity>
@@ -169,8 +177,15 @@ const styles = StyleSheet.create({
   },
   breakdownContent: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
+    paddingTop: 12,
+    paddingBottom: 8,
+    gap: 10,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    marginHorizontal: 16,
+    marginVertical: 4,
   },
   breakdownRow: {
     flexDirection: "row",
@@ -256,7 +271,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   buttonText: {
-    color: "#264B8B",
+    color: "#2161CD",
     fontWeight: "700",
     fontSize: 14,
     fontFamily: "AlbertSans_700Bold",

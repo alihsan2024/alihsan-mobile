@@ -16,6 +16,7 @@ import { useSelector } from "react-redux";
 import {
   useAddToBasketMutation,
   useGetBasketQuery,
+  useRemoveFromBasketMutation,
 } from "@/store/reduxSlice/api/basketApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getCampaignDetails } from "@/utils/api";
@@ -25,6 +26,11 @@ import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { DimensionValue } from "react-native";
 import HeroBackground from "@/components/ui/GradientImage";
 import RenderHTML from "react-native-render-html";
+import { useToast } from "@/context/ToastContext";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
+import CampaignLoadingScreen from "@/components/CampaignLoadingScreen";
+import ReplaceOrRemoveModal from "@/components/ui/Modals/ReplaceOrRemoveModal";
 
 export default function GazaDonationScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -37,15 +43,20 @@ export default function GazaDonationScreen() {
   const [amount, setAmount] = useState("50");
   const [addingToCart, setAddingToCart] = useState(false);
   const [guestBasket, setGuestBasket] = useState<any[]>([]);
+  const [replaceModalVisible, setReplaceModalVisible] = useState(false);
+  const [pendingBasketItem, setPendingBasketItem] = useState<any>(null);
+  const [existingCartItem, setExistingCartItem] = useState<any>(null);
 
   const { user } = useSelector((state: any) => state.authentication);
   const isAuthenticated = !!user;
 
   const [addToBasket] = useAddToBasketMutation();
-  const { data: basketData } = useGetBasketQuery(undefined, {
+  const [removeFromBasket] = useRemoveFromBasketMutation();
+  const { data: basketData, refetch: refetchBasket } = useGetBasketQuery(undefined, {
     skip: !isAuthenticated,
   });
   const dispatch = useAppDispatch();
+  const { showToast } = useToast();
   const liveDonations =
     useSelector((state: any) => state.quickDonations?.liveDonations) ?? [];
 
@@ -86,13 +97,28 @@ export default function GazaDonationScreen() {
     if (slug) load();
   }, [slug]);
 
-  useEffect(() => {
+  // Load guest basket helper
+  const loadGuestBasket = useCallback(async () => {
     if (!isAuthenticated) {
-      AsyncStorage.getItem("guestBasket").then((data) => {
-        setGuestBasket(data ? JSON.parse(data) : []);
-      });
+      const data = await AsyncStorage.getItem("guestBasket");
+      setGuestBasket(data ? JSON.parse(data) : []);
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    loadGuestBasket();
+  }, [loadGuestBasket]);
+
+  // Reload basket when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated) {
+        refetchBasket();
+      } else {
+        loadGuestBasket();
+      }
+    }, [isAuthenticated, refetchBasket, loadGuestBasket])
+  );
 
   const basketItems = isAuthenticated ? basketData?.payload ?? [] : guestBasket;
 
@@ -135,10 +161,21 @@ export default function GazaDonationScreen() {
       return;
     }
 
-    if (isInCart) {
-      router.push("/(tabs)/cart");
-      return;
+    // Refresh basket data before checking
+    let currentBasketItems: any[] = [];
+    if (isAuthenticated) {
+      const result = await refetchBasket();
+      currentBasketItems = result.data?.payload ?? [];
+    } else {
+      // Load directly from AsyncStorage to get latest data
+      const data = await AsyncStorage.getItem("guestBasket");
+      currentBasketItems = data ? JSON.parse(data) : [];
+      setGuestBasket(currentBasketItems);
     }
+
+    const existingItem = currentBasketItems.find(
+      (item: any) => item.campaignId === campaign?.id
+    );
 
     const basketItem = {
       campaignId: campaign.id,
@@ -149,6 +186,15 @@ export default function GazaDonationScreen() {
       checkoutType: campaign.checkoutType,
     };
 
+    if (existingItem) {
+      // Show modal to replace or remove
+      setExistingCartItem(existingItem);
+      setPendingBasketItem(basketItem);
+      setReplaceModalVisible(true);
+      return;
+    }
+
+    // Add to cart if not already there
     try {
       setAddingToCart(true);
       if (isAuthenticated) {
@@ -158,22 +204,93 @@ export default function GazaDonationScreen() {
         setGuestBasket(updated);
         await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
       }
-      Alert.alert("Success", "Added to cart", [
-        { text: "View Cart", onPress: () => router.push("/(tabs)/cart") },
-        { text: "OK" },
-      ]);
+      showToast({
+        message: "Added to cart",
+        type: "success",
+        action: {
+          label: "View Cart",
+          onPress: () => router.push("/(tabs)/cart"),
+        },
+      });
     } catch {
-      Alert.alert("Error", "Failed to add to cart");
+      showToast({
+        message: "Failed to add to cart",
+        type: "error",
+      });
     } finally {
       setAddingToCart(false);
     }
   };
 
-  if (loading || !campaign) return null;
+  const handleReplace = async () => {
+    if (!pendingBasketItem || !existingCartItem) return;
+
+    try {
+      setAddingToCart(true);
+      setReplaceModalVisible(false);
+
+      // Remove existing item
+      if (isAuthenticated) {
+        await removeFromBasket({
+          campaignId: existingCartItem.campaignId,
+          orphanId: existingCartItem.orphanId,
+          donationItem: existingCartItem.donationItem,
+        });
+        await refetchBasket();
+      } else {
+        const updated = guestBasket.filter(
+          (item: any) => item.campaignId !== existingCartItem.campaignId
+        );
+        setGuestBasket(updated);
+        await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
+      }
+
+      // Add new item
+      if (isAuthenticated) {
+        await addToBasket({ body: pendingBasketItem });
+        await refetchBasket();
+      } else {
+        const updated = [...guestBasket.filter(
+          (item: any) => item.campaignId !== existingCartItem.campaignId
+        ), pendingBasketItem];
+        setGuestBasket(updated);
+        await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
+      }
+
+      showToast({
+        message: "Campaign replaced in cart",
+        type: "success",
+        action: {
+          label: "View Cart",
+          onPress: () => router.push("/(tabs)/cart"),
+        },
+      });
+    } catch (error: any) {
+      showToast({
+        message: error?.message || "Failed to replace item",
+        type: "error",
+      });
+    } finally {
+      setAddingToCart(false);
+      setPendingBasketItem(null);
+      setExistingCartItem(null);
+    }
+  };
+
+  const handleCancelModal = () => {
+    setReplaceModalVisible(false);
+    setPendingBasketItem(null);
+    setExistingCartItem(null);
+  };
+
+  if (loading || !campaign) {
+    return <CampaignLoadingScreen />;
+  }
 
   console.log(campaign.name);
 
   return (
+    <>
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* ===== HERO ===== */}
       <HeroBackground
@@ -433,6 +550,13 @@ export default function GazaDonationScreen() {
         )}
       </View>
     </ScrollView>
+    <ReplaceOrRemoveModal
+      visible={replaceModalVisible}
+      campaignName={campaign?.name}
+      onCancel={handleCancelModal}
+      onReplace={handleReplace}
+    />
+  </>
   );
 }
 
