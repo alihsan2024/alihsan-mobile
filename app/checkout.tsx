@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { View, StyleSheet, ScrollView, Alert, Text, Platform, Linking } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { StripeProvider, useStripe, isPlatformPaySupported } from "@stripe/stripe-react-native";
@@ -39,6 +39,8 @@ export default function CheckoutScreen() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [loadingPayment, setLoadingPayment] = useState(false);
   const [loadingIntent, setLoadingIntent] = useState(false);
+  const [checkingPaymentStatus, setCheckingPaymentStatus] = useState(false);
+  const isCheckingPaymentStatusRef = useRef(false);
   const [checkoutSummary, setCheckoutSummary] =
     useState<CheckoutSummary | null>(null);
   const [cardComplete, setCardComplete] = useState(false);
@@ -317,6 +319,130 @@ export default function CheckoutScreen() {
     setCardComplete(paymentState.cardComplete);
   }, [paymentState.cardComplete]);
 
+  /* ---------- CHECK PAYMENT STATUS ---------- */
+
+  const checkPaymentStatusAndNavigate = async () => {
+    // Prevent multiple simultaneous calls
+    if (isCheckingPaymentStatusRef.current) {
+      console.log("Payment status check already in progress, skipping...");
+      return;
+    }
+
+    try {
+      // Mark as checking to prevent duplicate calls
+      isCheckingPaymentStatusRef.current = true;
+      
+      // Show loading modal while checking payment status
+      setCheckingPaymentStatus(true);
+      
+      // Get stored PayPal order ID
+      const paypalOrderId = await AsyncStorage.getItem("paypalOrderId");
+      
+      if (!paypalOrderId) {
+        setLoadingPayment(false);
+        setCheckingPaymentStatus(false);
+        isCheckingPaymentStatusRef.current = false;
+        Alert.alert(
+          "Payment Status",
+          "Unable to verify payment status. Please check your order history or contact support."
+        );
+        return;
+      }
+
+      // Poll for payment status (with retries)
+      let paymentCompleted = false;
+      let paymentFound = false;
+      let paymentStatus = null;
+      const maxRetries = 5;
+      const retryDelay = 2000; // 2 seconds
+
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          const response = await api.get(`/payment/status-by-order/${paypalOrderId}`);
+          
+          if (response.data?.payload?.found) {
+            paymentFound = true;
+            paymentStatus = response.data.payload.status;
+            
+            // Check if status is COMPLETED
+            if (response.data.payload.status === 'COMPLETED' || response.data.payload.isCompleted) {
+              paymentCompleted = true;
+              break;
+            }
+          }
+
+          // If not completed yet, wait before retrying (except on last attempt)
+          if (attempt < maxRetries - 1) {
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+          }
+        } catch (error) {
+          console.error(`Payment status check attempt ${attempt + 1} failed:`, error);
+          // Continue to next attempt
+        }
+      }
+
+      setLoadingPayment(false);
+      setCheckingPaymentStatus(false);
+      isCheckingPaymentStatusRef.current = false;
+
+      if (paymentCompleted) {
+        // Mark payment as completed to prevent empty cart alert
+        setPaymentCompleted(true);
+        
+        // Clear basket after saving summary
+        try {
+          if (isAuthenticated) {
+            await clearBasket();
+          } else {
+            await AsyncStorage.removeItem("guestBasket");
+          }
+        } catch (basketError) {
+          // Error clearing basket - continue anyway
+        }
+        
+        // Clear stored PayPal order ID
+        await AsyncStorage.removeItem("paypalOrderId");
+        
+        // Navigate to thank you page
+        router.replace("/thank-you");
+      } else {
+        // Payment not completed yet or still processing
+        // Don't clear order ID yet - webhook might still process it
+        Alert.alert(
+          "Payment Processing",
+          "Your payment is being processed. You will be notified once it's complete. You can check your order status in your account.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                // Reset payment state to allow retry if needed
+                setPaymentState((s) => ({ ...s, paymentType: "paypal" }));
+              },
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      setLoadingPayment(false);
+      setCheckingPaymentStatus(false);
+      isCheckingPaymentStatusRef.current = false;
+      console.error("Error checking payment status:", error);
+      Alert.alert(
+        "Payment Status",
+        "Unable to verify payment status. Your payment may still be processing. Please check your order history or contact support if needed.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              // Reset payment state to allow retry
+              setPaymentState((s) => ({ ...s, paymentType: "paypal" }));
+            },
+          },
+        ]
+      );
+    }
+  };
+
   /* ---------- NAVIGATION ---------- */
 
   const handleNext = async () => {
@@ -544,57 +670,18 @@ export default function CheckoutScreen() {
               setLoadingPayment(false);
               
               // Handle all possible result types
-              if (result.type === 'cancel') {
-                // User cancelled or closed the browser without completing payment
-                Alert.alert(
-                  "Payment Cancelled",
-                  "You cancelled the PayPal payment. You can try again when you're ready."
-                );
-                return;
-              }
-              
-              // If browser was dismissed (user closed it after completing payment or redirect happened)
-              // PayPal redirects to the return URL on the web frontend, and when user closes the browser,
-              // we assume payment was completed (webhook will process it in the background)
-              if (result.type === 'dismiss') {
-                // Wait a moment for webhook to process, then navigate to thank-you page
-                setTimeout(async () => {
-                  // Mark payment as completed to prevent empty cart alert
-                  setPaymentCompleted(true);
-                  
-                  // Clear basket after saving summary
-                  try {
-                    if (isAuthenticated) {
-                      await clearBasket();
-                    } else {
-                      await AsyncStorage.removeItem("guestBasket");
-                    }
-                  } catch (basketError) {
-                    // Error clearing basket - continue anyway
-                  }
-                  
-                  // Navigate to thank you page
-                  router.replace("/thank-you");
-                }, 1500);
+              // For both 'cancel' and 'dismiss', check payment status first
+              // because user might have completed payment and then closed the browser
+              if (result.type === 'cancel' || result.type === 'dismiss') {
+                // Check payment status - user might have completed payment before closing
+                await checkPaymentStatusAndNavigate();
                 return;
               }
               
               // Handle any other result types (e.g., 'opened', 'locked', etc.)
               // If we get here, the browser closed but we don't know why
-              // Assume payment might have been completed and let webhook handle it
-              Alert.alert(
-                "Payment Processing",
-                "Your payment is being processed. You will be notified once it's complete.",
-                [
-                  {
-                    text: "OK",
-                    onPress: () => {
-                      // Payment status will be updated via webhook
-                      // User can check their order status later
-                    },
-                  },
-                ]
-              );
+              // Check payment status just in case
+              await checkPaymentStatusAndNavigate();
             } catch (error: any) {
               setLoadingPayment(false);
               
@@ -753,7 +840,10 @@ export default function CheckoutScreen() {
       merchantIdentifier="merchant.au.org.alihsan.www"
     >
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <ProcessingPaymentModal visible={loadingPayment} />
+        <ProcessingPaymentModal 
+          visible={loadingPayment || checkingPaymentStatus} 
+          message={checkingPaymentStatus ? "Checking payment status..." : "Processing your payment"}
+        />
         <CheckoutHeader step={step} setStep={setStep} />
 
         <StepIndicator

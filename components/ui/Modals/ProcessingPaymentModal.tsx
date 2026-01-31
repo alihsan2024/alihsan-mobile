@@ -3,9 +3,10 @@ import { Modal, View, Text, StyleSheet, ActivityIndicator } from "react-native";
 
 type Props = {
   visible: boolean;
+  message?: string;
 };
 
-export default function ProcessingPaymentModal({ visible }: Props) {
+export default function ProcessingPaymentModal({ visible, message = "Processing your payment" }: Props) {
   return (
     <Modal
       transparent
@@ -16,7 +17,7 @@ export default function ProcessingPaymentModal({ visible }: Props) {
       <View style={styles.overlay}>
         <View style={styles.card}>
           <ActivityIndicator size="large" color="#264B8B" />
-          <Text style={styles.text}>Processing your payment</Text>
+          <Text style={styles.text}>{message}</Text>
         </View>
       </View>
     </Modal>
