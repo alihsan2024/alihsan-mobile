@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { View, StyleSheet, ScrollView, Alert, Text, Platform, Linking } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { StripeProvider, useStripe } from "@stripe/stripe-react-native";
+import { StripeProvider, useStripe, isPlatformPaySupported } from "@stripe/stripe-react-native";
 import { useRouter } from "expo-router";
 import { useSelector, useDispatch } from "react-redux";
 import Constants from "expo-constants";
@@ -11,6 +11,7 @@ import {
 } from "@/store/reduxSlice/api/basketApi";
 import { handlePaypalCheckout } from "@/store/reduxSlice/basketSlice";
 import api from "@/utils/api";
+import { useToast } from "@/context/ToastContext";
 
 import CheckoutHeader from "@/components/Checkout/CheckoutHeader";
 import StepIndicator from "@/components/Checkout/StepIndicator";
@@ -52,16 +53,23 @@ export default function CheckoutScreen() {
     fullName: "",
     email: "",
     phone: "",
+    countryCode: "AU",
   });
 
   const insets = useSafeAreaInsets();
   const stripe = useStripe();
   const router = useRouter();
   const dispatch = useDispatch();
+  const { showToast } = useToast();
   
-  // Apple Pay is available on iOS devices
-  // The SDK will handle actual device support when presenting Apple Pay
-  const isApplePaySupported = Platform.OS === "ios";
+  // Check if Apple Pay is supported on the device
+  const [isApplePaySupported, setIsApplePaySupported] = useState(false);
+
+  useEffect(() => {
+    (async function () {
+      setIsApplePaySupported(await isPlatformPaySupported());
+    })();
+  }, []);
 
   // Get Stripe publishable key
   const stripePublishableKey =
@@ -109,6 +117,17 @@ export default function CheckoutScreen() {
     }
     return [];
   }, [isAuthenticated, basketData]);
+
+  /* ---------- CHECK FOR RECURRING ITEMS ---------- */
+
+  const hasRecurringItems = useMemo<boolean>(() => {
+    if (isAuthenticated) {
+      return basketItems.some((item: any) => item.isRecurring === true);
+    } else {
+      // Check guest basket
+      return checkoutSummary?.items?.some((item: any) => item.isRecurring === true) ?? false;
+    }
+  }, [isAuthenticated, basketItems, checkoutSummary]);
 
   /* ---------- LOAD GUEST BASKET ONCE ---------- */
 
@@ -209,17 +228,13 @@ export default function CheckoutScreen() {
     try {
       setLoadingIntent(true);
 
-      console.log("=== ensureClientSecret: RETRIEVING DETAILS ===");
       const stored = await AsyncStorage.getItem("checkoutDetails");
-      console.log("Stored value exists:", !!stored);
       
       if (!stored) {
-        console.error("ERROR: Missing checkoutDetails in AsyncStorage!");
         throw new Error("Missing checkoutDetails");
       }
 
       const checkoutDetails = JSON.parse(stored);
-      console.log("Parsed checkoutDetails in ensureClientSecret:", checkoutDetails);
       
       let secret: string | null = null;
 
@@ -278,7 +293,6 @@ export default function CheckoutScreen() {
       setClientSecret(secret);
       return true;
     } catch (e) {
-      console.log("Failed to prepare payment", e);
       Alert.alert(
         "Payment Error",
         "We couldn't prepare the payment. Please try again."
@@ -364,10 +378,20 @@ export default function CheckoutScreen() {
 
       // Handle PayPal payment
       if (paymentState.paymentType === "paypal") {
+        // Check for recurring items - PayPal is not available for subscriptions
+        if (hasRecurringItems) {
+          setLoadingPayment(false);
+          showToast({
+            message: "PayPal is not available for subscriptions. Please use a credit card to complete your payment.",
+            type: "error",
+            duration: 4000,
+          });
+          setPaymentState((s) => ({ ...s, paymentType: "card" }));
+          return;
+        }
+
         setLoadingPayment(true);
         try {
-          console.log("=== PAYPAL CHECKOUT (STEP 3) ===");
-          
           // Get checkout details
           const stored = await AsyncStorage.getItem("checkoutDetails");
           const checkoutDetails = stored ? JSON.parse(stored) : {};
@@ -436,8 +460,6 @@ export default function CheckoutScreen() {
           }
 
           if (response?.success && !response?.payload?.error && response?.payload?.approvalUrl) {
-            console.log("✅ PayPal checkout successful, opening approval URL");
-            
             // Store PayPal order ID and checkout summary for later verification
             if (response.payload.orderId) {
               await AsyncStorage.setItem("paypalOrderId", response.payload.orderId);
@@ -456,16 +478,15 @@ export default function CheckoutScreen() {
               );
             }
             
-            setLoadingPayment(false);
-            
             // Open PayPal approval URL in Expo Web Browser
+            // Keep loadingPayment true until we know the result
             try {
               // Dynamically import WebBrowser to handle cases where it might not be available
               let WebBrowser: any;
               try {
                 WebBrowser = require("expo-web-browser");
               } catch (importError) {
-                console.log("WebBrowser import failed, using Linking fallback:", importError);
+                setLoadingPayment(false);
                 // Fallback to Linking if WebBrowser is not available
                 const canOpen = await Linking.canOpenURL(response.payload.approvalUrl);
                 if (canOpen) {
@@ -490,6 +511,7 @@ export default function CheckoutScreen() {
               
               // Check if WebBrowser is available and has the method
               if (!WebBrowser || !WebBrowser.openBrowserAsync) {
+                setLoadingPayment(false);
                 // Fallback to Linking
                 const canOpen = await Linking.canOpenURL(response.payload.approvalUrl);
                 if (canOpen) {
@@ -518,9 +540,10 @@ export default function CheckoutScreen() {
                 presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
               });
               
-              console.log("WebBrowser result:", result);
+              // Reset loading state
+              setLoadingPayment(false);
               
-              // Check if user cancelled the payment
+              // Handle all possible result types
               if (result.type === 'cancel') {
                 // User cancelled or closed the browser without completing payment
                 Alert.alert(
@@ -530,7 +553,7 @@ export default function CheckoutScreen() {
                 return;
               }
               
-              // If browser was dismissed (user closed it after completing payment)
+              // If browser was dismissed (user closed it after completing payment or redirect happened)
               // PayPal redirects to the return URL on the web frontend, and when user closes the browser,
               // we assume payment was completed (webhook will process it in the background)
               if (result.type === 'dismiss') {
@@ -547,19 +570,48 @@ export default function CheckoutScreen() {
                       await AsyncStorage.removeItem("guestBasket");
                     }
                   } catch (basketError) {
-                    console.log("Warning: Error clearing basket:", basketError);
+                    // Error clearing basket - continue anyway
                   }
                   
                   // Navigate to thank you page
                   router.replace("/thank-you");
                 }, 1500);
+                return;
               }
+              
+              // Handle any other result types (e.g., 'opened', 'locked', etc.)
+              // If we get here, the browser closed but we don't know why
+              // Assume payment might have been completed and let webhook handle it
+              Alert.alert(
+                "Payment Processing",
+                "Your payment is being processed. You will be notified once it's complete.",
+                [
+                  {
+                    text: "OK",
+                    onPress: () => {
+                      // Payment status will be updated via webhook
+                      // User can check their order status later
+                    },
+                  },
+                ]
+              );
             } catch (error: any) {
               setLoadingPayment(false);
-              console.log("❌ WebBrowser error:", error);
+              
+              // If browser closed immediately or error occurred, reset state
+              // Don't assume payment failed - webhook might still process it
               Alert.alert(
-                "Error",
-                "Could not open PayPal payment page. Please try again."
+                "Payment Status",
+                "The payment window closed unexpectedly. Your payment may still be processing. Please check your order status or try again.",
+                [
+                  {
+                    text: "OK",
+                    onPress: () => {
+                      // Reset payment state to allow retry
+                      setPaymentState((s) => ({ ...s, paymentType: "paypal" }));
+                    },
+                  },
+                ]
               );
             }
           } else {
@@ -571,7 +623,6 @@ export default function CheckoutScreen() {
           }
         } catch (err: any) {
           setLoadingPayment(false);
-          console.log("❌ PayPal checkout exception:", err);
           Alert.alert(
             "PayPal Checkout Failed",
             err?.response?.data?.message || err?.message || "An unexpected error occurred"
@@ -595,11 +646,6 @@ export default function CheckoutScreen() {
       await new Promise((r) => requestAnimationFrame(r));
 
       try {
-        console.log("=== PAYMENT CONFIRMATION (STEP 3) ===");
-        console.log("Platform:", Platform.OS);
-        console.log("Client secret exists:", !!clientSecret);
-        console.log("Card complete:", paymentState.cardComplete);
-
         // Get checkout details for billing
         const stored = await AsyncStorage.getItem("checkoutDetails");
         const checkoutDetails = stored ? JSON.parse(stored) : {};
@@ -620,20 +666,16 @@ export default function CheckoutScreen() {
         });
 
         if (pmError) {
-          console.log("❌ Failed to create payment method:", pmError);
           setLoadingPayment(false);
           Alert.alert("Payment failed", pmError.message);
           return;
         }
 
         if (!paymentMethod) {
-          console.log("❌ Payment method is null");
           setLoadingPayment(false);
           Alert.alert("Payment failed", "Failed to create payment method");
           return;
         }
-
-        console.log("✅ Payment method created:", paymentMethod.id);
 
         // Confirm payment
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -652,26 +694,15 @@ export default function CheckoutScreen() {
         setLoadingPayment(false);
 
         if (result.error) {
-          console.log("❌ Payment error details:", result.error);
           Alert.alert("Payment failed", result.error.message);
           return;
         }
 
         const { paymentIntent } = result;
 
-        console.log("Payment result:", {
-          paymentIntent: !!paymentIntent,
-          status: paymentIntent?.status,
-          checkoutSummary: !!checkoutSummary,
-        });
-
         // Check if payment was successful
         // If paymentIntent exists and there's no error, payment was successful
         if (paymentIntent && checkoutSummary) {
-          console.log("✅ Payment successful!");
-          console.log("Payment Intent ID:", paymentIntent.id);
-          console.log("Payment Intent Status:", paymentIntent.status);
-          
           // Save checkout summary before navigation
           await AsyncStorage.setItem(
             "checkoutSummary",
@@ -694,28 +725,21 @@ export default function CheckoutScreen() {
               await AsyncStorage.removeItem("guestBasket");
             }
           } catch (basketError) {
-            console.log("Warning: Error clearing basket:", basketError);
             // Continue with navigation even if basket clearing fails
           }
 
           // Navigate to thank you page - use replace to prevent going back
-          console.log("Navigating to thank-you page...");
           setTimeout(() => {
             router.replace("/thank-you");
           }, 100);
         } else {
-          console.log("❌ Payment intent or checkout summary missing");
-          console.log("PaymentIntent:", paymentIntent);
-          console.log("CheckoutSummary:", checkoutSummary);
           Alert.alert(
             "Payment Error",
             "There was an issue processing your payment. Please contact support if the payment was deducted."
           );
         }
-        console.log("=== END PAYMENT CONFIRMATION ===");
       } catch (err: any) {
         setLoadingPayment(false);
-        console.log("❌ Payment exception caught:", err);
         Alert.alert("Payment failed", err?.message || "An unexpected error occurred");
       }
     }
@@ -724,7 +748,10 @@ export default function CheckoutScreen() {
   /* ---------- UI ---------- */
 
   return (
-    <StripeProvider publishableKey={stripePublishableKey}>
+    <StripeProvider 
+      publishableKey={stripePublishableKey}
+      merchantIdentifier="merchant.au.org.alihsan.www"
+    >
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <ProcessingPaymentModal visible={loadingPayment} />
         <CheckoutHeader step={step} setStep={setStep} />
@@ -752,6 +779,7 @@ export default function CheckoutScreen() {
               paymentState={paymentState}
               setPaymentState={setPaymentState}
               isApplePaySupported={isApplePaySupported}
+              hasRecurringItems={hasRecurringItems}
             />
           )}
         </ScrollView>
