@@ -44,48 +44,6 @@ import {
   AlbertSans_900Black_Italic,
 } from "@expo-google-fonts/albert-sans";
 import DeviceRegistrationManager from "@/utils/DeviceRegistrationManager";
-
-function DeviceRegistrationManager() {
-  const { user } = useAuth();
-  // useEffect(() => {
-  //   let isMounted = true;
-  //   async function registerDeviceIfNeeded() {
-  //     // const token = await requestUserPermission();
-  //     // if (!token) return;
-  //     const guest_id = await getOrCreateGuestId();
-  //     const user_id = user?.id || null;
-  //     const platform = Platform.OS;
-  //     const lastInfo = await getLastRegisteredDeviceInfo();
-  //     // Only register if any value changed
-  //     if (
-  //       !lastInfo ||
-  //       lastInfo.token !== token ||
-  //       lastInfo.user_id !== user_id ||
-  //       lastInfo.guest_id !== guest_id ||
-  //       lastInfo.platform !== platform
-  //     ) {
-  //       try {
-  //         await registerDeviceToken({ token, user_id, guest_id, platform });
-  //         await setLastRegisteredDeviceInfo({
-  //           token,
-  //           user_id,
-  //           guest_id,
-  //           platform,
-  //         });
-  //       } catch (e) {
-  //         console.log("Device registration failed", e);
-  //       }
-  //     }
-  //   }
-  //   registerDeviceIfNeeded();
-  //   return () => {
-  //     isMounted = false;
-  //   };
-  // }, [user]);
-  return null;
-}
-
-import SplashScreen from "../components/ui/SplashScreen";
 import { DonationAppealModal } from "../components/ui/Modals/DonationAppealModal";
 
 const introSlides = [
