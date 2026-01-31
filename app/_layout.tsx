@@ -1,31 +1,27 @@
 import "react-native-get-random-values";
 import { Stack } from "expo-router";
-// import useNotificationNavigation from "../hooks/useNotificationNavigation";
-import React, { useEffect, useContext } from "react";
-import { Platform } from "react-native";
-import IntroSlide from "../components/ui/sliders/IntroSlide";
-
-// import {
-//   requestUserPermission,
-//   onMessageListener,
-//   setBackgroundMessageHandler,
-// } from "@/utils/notifications";
+import React from "react";
+import { Platform, View, Text, TextInput, Alert } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { AuthProvider, useAuth } from "../context/AuthContext";
-// import {
-//   getOrCreateGuestId,
-//   getLastRegisteredDeviceInfo,
-//   setLastRegisteredDeviceInfo,
-// } from "@/utils/deviceRegistration";
-// import { registerDeviceToken } from "@/utils/api";
+import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import IntroSlide from "../components/ui/sliders/IntroSlide";
+import SplashScreen from "../components/ui/SplashScreen";
+
+import { AuthProvider } from "../context/AuthContext";
 import { BasketProvider } from "../context/BasketContext";
 import { ToastProvider } from "../context/ToastContext";
 import { Provider } from "react-redux";
 import { store } from "@/store/store";
-import { Alert, View, Text, TextInput } from "react-native";
-import Constants from "expo-constants";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import useNotificationNavigation from "../hooks/useNotificationNavigation";
+import {
+  requestUserPermission,
+  onMessageListener,
+} from "@/utils/notifications";
+
 import {
   useFonts,
   AlbertSans_100Thin,
@@ -47,6 +43,7 @@ import {
   AlbertSans_800ExtraBold_Italic,
   AlbertSans_900Black_Italic,
 } from "@expo-google-fonts/albert-sans";
+import DeviceRegistrationManager from "@/utils/DeviceRegistrationManager";
 
 function DeviceRegistrationManager() {
   const { user } = useAuth();
@@ -108,39 +105,28 @@ const INTRO_STORAGE_KEY = "@alihsan:intro_completed";
 const INTRO_VERSION_KEY = "@alihsan:intro_version";
 
 export default function RootLayout() {
-  // Suppress NativeEventEmitter errors during development/web
-  React.useEffect(() => {
-    if (__DEV__ || Platform.OS === "web") {
-      const originalError = console.error.bind(console);
-      console.error = (...args: any[]) => {
-        // Check if any argument contains NativeEventEmitter-related errors
-        const errorString = args.map(arg => 
-          typeof arg === 'string' ? arg : 
-          arg?.toString?.() || 
-          JSON.stringify(arg)
-        ).join(' ');
-        
-        // Suppress only NativeEventEmitter errors that occur during module initialization
-        if (
-          errorString.includes("NativeEventEmitter") ||
-          errorString.includes("PushNotificationIOS") ||
-          (errorString.includes("requires a non-null argument") && 
-           errorString.includes("NativeEventEmitter"))
-        ) {
-          // Silently ignore these specific errors in dev/web environments
-          return;
-        }
-        // Call original error handler for all other errors
-        originalError(...args);
-      };
+  // 🔔 Enable navigation from notification taps
+  useNotificationNavigation();
 
-      return () => {
-        console.error = originalError;
-      };
-    }
+  // 🔔 Ask for push permission + listen for foreground notifications
+  React.useEffect(() => {
+    if (Platform.OS === "web") return;
+
+    requestUserPermission();
+
+    const unsubscribe = onMessageListener((notification: any) => {
+      const title = notification.request.content.title;
+      const body = notification.request.content.body;
+
+      if (title || body) {
+        Alert.alert(title || "Notification", body || "");
+      }
+    });
+
+    return unsubscribe;
   }, []);
 
-  // Load fonts including Guthen
+  // Load fonts
   const [fontsLoaded] = useFonts({
     AlbertSans_100Thin,
     AlbertSans_200ExtraLight,
@@ -163,59 +149,42 @@ export default function RootLayout() {
     "Guthen Bloots": require("../assets/fonts/GuthenBloots.ttf"),
   });
 
-  // Set Albert Sans as the main font for Text and TextInput components
-  // Matching the Next.js app configuration (weights: 300, 400, 500, 600, 700)
+  // Set default font
   React.useEffect(() => {
     if (fontsLoaded) {
-      // Set default font for Text component - Albert Sans Regular (400) as main font
       if (!Text.defaultProps) Text.defaultProps = {};
-      Text.defaultProps.style = { 
+      Text.defaultProps.style = {
         fontFamily: "AlbertSans_400Regular",
-        ...Text.defaultProps.style 
+        ...Text.defaultProps.style,
       };
 
-      // Set default font for TextInput component - Albert Sans Regular (400) as main font
       if (!TextInput.defaultProps) TextInput.defaultProps = {};
-      TextInput.defaultProps.style = { 
+      TextInput.defaultProps.style = {
         fontFamily: "AlbertSans_400Regular",
-        ...TextInput.defaultProps.style 
+        ...TextInput.defaultProps.style,
       };
     }
   }, [fontsLoaded]);
 
-  // useNotificationNavigation();
-  // useEffect(() => {
-  //   const unsubscribe = onMessageListener((message) => {
-  //     Alert.alert("Notification received: " + JSON.stringify(message));
-  //   });
-  //   setBackgroundMessageHandler((message) => {
-  //     console.log("Background notification:", message);
-  //   });
-  //   return unsubscribe;
-  // }, []);
   const [showIntro, setShowIntro] = React.useState<boolean | null>(null);
   const [showSplash, setShowSplash] = React.useState(true);
   const [showGazaModal, setShowGazaModal] = React.useState(false);
   const [splashFinished, setSplashFinished] = React.useState(false);
 
-  // Check if intro has been completed for current app version
+  // Check intro status
   React.useEffect(() => {
     const checkIntroStatus = async () => {
       try {
         const currentVersion = Constants.expoConfig?.version || "1.0.0";
         const storedVersion = await AsyncStorage.getItem(INTRO_VERSION_KEY);
         const introCompleted = await AsyncStorage.getItem(INTRO_STORAGE_KEY);
-        // Show intro if:
-        // 1. It hasn't been completed, OR
-        // 2. The app version has changed (new update)
+
         if (introCompleted !== "true" || storedVersion !== currentVersion) {
           setShowIntro(true);
         } else {
           setShowIntro(false);
         }
-      } catch (error) {
-        console.error("Error checking intro status:", error);
-        // On error, show intro to be safe
+      } catch {
         setShowIntro(true);
       }
     };
@@ -243,25 +212,19 @@ export default function RootLayout() {
     }
   }, [showIntro, splashFinished]);
 
-  // Save intro completion status
   const handleIntroFinish = async () => {
     try {
       const currentVersion = Constants.expoConfig?.version || "1.0.0";
       await AsyncStorage.setItem(INTRO_STORAGE_KEY, "true");
       await AsyncStorage.setItem(INTRO_VERSION_KEY, currentVersion);
       setShowIntro(false);
-    } catch (error) {
-      console.error("Error saving intro status:", error);
+    } catch {
       setShowIntro(false);
     }
   };
 
-  // Wait for fonts to load
-  if (!fontsLoaded) {
-    return null;
-  }
+  if (!fontsLoaded) return null;
 
-  // Wait for intro status check to complete
   if (showIntro === null) {
     return (
       <SafeAreaProvider>
@@ -272,7 +235,6 @@ export default function RootLayout() {
     );
   }
 
-  // Render splash first, then transition to intro
   if (showSplash && showIntro) {
     return (
       <SafeAreaProvider>
@@ -297,7 +259,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <Provider store={store}>
         <AuthProvider>
-          {/* <DeviceRegistrationManager /> */}
+          <DeviceRegistrationManager />
           <BasketProvider>
             <ToastProvider>
               {/* Show splash screen first */}

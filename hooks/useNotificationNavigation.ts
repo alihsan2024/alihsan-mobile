@@ -1,5 +1,9 @@
 import { useEffect } from "react";
 import { useRouter } from "expo-router";
+import * as Notifications from "expo-notifications";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const HANDLED_KEY = "@alihsan:last_handled_notification";
 import { Linking, Platform } from "react-native";
 import type * as Notifications from "expo-notifications";
 
@@ -7,37 +11,44 @@ export default function useNotificationNavigation() {
   const router = useRouter();
 
   useEffect(() => {
-    // Skip on web platform
-    if (Platform.OS === "web") {
-      return;
-    }
+    let isMounted = true;
 
-    console.log("[NotificationNav] Hook mounted");
+    async function handle(response: any, source: "cold" | "tap") {
+      const url = response?.notification?.request?.content?.data?.url;
 
-    let NotificationsModule: typeof import("expo-notifications") | null = null;
-    try {
-      NotificationsModule = require("expo-notifications");
-    } catch (error) {
-      console.warn(
-        "[NotificationNav] expo-notifications unavailable:",
-        error
-      );
-      return;
-    }
+      if (typeof url !== "string") return;
 
-    const handleResponse = (response: Notifications.NotificationResponse) => {
-      const data = response?.notification?.request?.content?.data as {
-        url?: string;
-      };
-      const url = data?.url;
-      if (typeof url === "string") {
-        console.log("[NotificationNav] Redirecting to:", url);
-        Linking.openURL(url).catch((err) => {
-          console.warn("[NotificationNav] Failed to open URL:", url, err);
-        });
-      } else if (data) {
-        console.log("[NotificationNav] No valid url in notification data:", data);
+      const lastHandled = await AsyncStorage.getItem(HANDLED_KEY);
+
+      // Prevent infinite loop for same notification
+      if (lastHandled === url) {
+        return;
       }
+
+      console.log(`[NotificationNav] ${source} ->`, url);
+
+      await AsyncStorage.setItem(HANDLED_KEY, url);
+
+      if (isMounted) {
+        router.replace(url); // 🔥 replace avoids stacking routes
+      }
+    }
+
+    // Cold start
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) handle(response, "cold");
+    });
+
+    // Background / foreground tap
+    const sub = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        handle(response, "tap");
+      },
+    );
+
+    return () => {
+      isMounted = false;
+      sub.remove();
     };
 
     const subscription =
