@@ -52,11 +52,7 @@ const introSlides = [
     description: "Easily calculate and manage your zakat in one place.",
     background: require("../assets/intro-1.png"),
   },
-  {
-    title: "Stay Organized",
-    description: "All your records are safe and accessible anytime.",
-    background: require("../assets/intro-1.png"),
-  },
+
 ];
 
 const INTRO_STORAGE_KEY = "@alihsan:intro_completed";

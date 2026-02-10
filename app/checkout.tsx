@@ -64,12 +64,13 @@ export default function CheckoutScreen() {
   const dispatch = useDispatch();
   const { showToast } = useToast();
   
-  // Check if Apple Pay is supported on the device
-  const [isApplePaySupported, setIsApplePaySupported] = useState(false);
+  // Check if Platform Pay (Apple Pay/Google Pay) is supported on the device
+  const [platformPaySupported, setPlatformPaySupported] = useState(false);
 
   useEffect(() => {
     (async function () {
-      setIsApplePaySupported(await isPlatformPaySupported());
+      const supported = await isPlatformPaySupported();
+      setPlatformPaySupported(supported);
     })();
   }, []);
 
@@ -107,7 +108,7 @@ export default function CheckoutScreen() {
       paymentState.paymentType === "paypal" && 
       loadingPayment) ||
     (step === 3 && 
-      paymentState.paymentType === "applepay" && 
+      (paymentState.paymentType === "applepay" || paymentState.paymentType === "googlepay") && 
       loadingPayment) ||
     loadingPayment;
 
@@ -485,11 +486,30 @@ export default function CheckoutScreen() {
       // Note: Apple Pay API methods may vary by Stripe React Native version
       // For now, we'll show the option but handle it as card payment
       // TODO: Implement proper Apple Pay when SDK version supports it
+      // Handle Apple Pay payment (iOS)
       if (paymentState.paymentType === "applepay" && Platform.OS === "ios") {
         setLoadingPayment(false);
         Alert.alert(
           "Apple Pay",
           "Apple Pay is not yet fully implemented. Please use a credit card or PayPal to complete your payment.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                setPaymentState((s) => ({ ...s, paymentType: "card" }));
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      // Handle Google Pay payment (Android)
+      if (paymentState.paymentType === "googlepay" && Platform.OS === "android") {
+        setLoadingPayment(false);
+        Alert.alert(
+          "Google Pay",
+          "Google Pay is not yet fully implemented. Please use a credit card or PayPal to complete your payment.",
           [
             {
               text: "OK",
@@ -868,7 +888,7 @@ export default function CheckoutScreen() {
             <PaymentStep
               paymentState={paymentState}
               setPaymentState={setPaymentState}
-              isApplePaySupported={isApplePaySupported}
+              isPlatformPaySupported={platformPaySupported}
               hasRecurringItems={hasRecurringItems}
             />
           )}

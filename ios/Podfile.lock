@@ -2426,7 +2426,7 @@ DEPENDENCIES:
   - React-Mapbuffer (from `../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
-  - react-native-google-maps (from `/Users/aniss/Documents/GitHub/Alihsan-Australia/alihsan-mobile/node_modules/react-native-maps`)
+  - react-native-google-maps (from `/Users/aniss/Documents/GitHub/alihsan-mobile/node_modules/react-native-maps`)
   - react-native-maps (from `../node_modules/react-native-maps`)
   - react-native-pager-view (from `../node_modules/react-native-pager-view`)
   - react-native-render-html (from `../node_modules/react-native-render-html`)
@@ -2627,7 +2627,7 @@ EXTERNAL SOURCES:
   react-native-get-random-values:
     :path: "../node_modules/react-native-get-random-values"
   react-native-google-maps:
-    :path: "/Users/aniss/Documents/GitHub/Alihsan-Australia/alihsan-mobile/node_modules/react-native-maps"
+    :path: "/Users/aniss/Documents/GitHub/alihsan-mobile/node_modules/react-native-maps"
   react-native-maps:
     :path: "../node_modules/react-native-maps"
   react-native-pager-view:

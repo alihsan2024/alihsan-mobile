@@ -101,13 +101,13 @@
 //   },
 // });
 import React, { useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { CardField } from "@stripe/stripe-react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useToast } from "@/context/ToastContext";
 
 export type PaymentState = {
-  paymentType: "card" | "paypal" | "applepay";
+  paymentType: "card" | "paypal" | "applepay" | "googlepay";
   cardDetails: any;
   cardComplete: boolean;
 };
@@ -115,12 +115,14 @@ export type PaymentState = {
 type Props = {
   paymentState: PaymentState;
   setPaymentState: React.Dispatch<React.SetStateAction<PaymentState>>;
-  isApplePaySupported?: boolean;
+  isPlatformPaySupported?: boolean;
   hasRecurringItems?: boolean;
 };
 
-export default function PaymentStep({ paymentState, setPaymentState, isApplePaySupported = false, hasRecurringItems = false }: Props) {
+export default function PaymentStep({ paymentState, setPaymentState, isPlatformPaySupported = false, hasRecurringItems = false }: Props) {
   const { showToast } = useToast();
+  const isIOS = Platform.OS === "ios";
+  const isAndroid = Platform.OS === "android";
 
   // Automatically switch from PayPal to card if recurring items are detected
   useEffect(() => {
@@ -156,23 +158,27 @@ export default function PaymentStep({ paymentState, setPaymentState, isApplePayS
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Select Payment Method</Text>
 
-      {/* APPLE PAY */}
-      {isApplePaySupported && (
+      {/* APPLE PAY (iOS only) - Disabled for now */}
+      {isPlatformPaySupported && isIOS && (
         <TouchableOpacity
           style={[
             styles.card,
+            styles.cardDisabled,
             paymentState.paymentType === "applepay" && styles.cardSelected,
           ]}
-          onPress={() =>
-            setPaymentState((s) => ({
-              ...s,
-              paymentType: "applepay",
-            }))
-          }
+          onPress={() => {
+            showToast({
+              message: "Apple Pay will be available when released",
+              type: "info",
+              duration: 3000,
+            });
+          }}
+          activeOpacity={0.7}
+          disabled={true}
         >
           <View style={styles.cardHeader}>
-            <Ionicons name="logo-apple" size={18} color="#010D26" />
-            <Text style={styles.cardTitle}>Apple Pay</Text>
+            <Ionicons name="logo-apple" size={18} color="#9CA3AF" />
+            <Text style={[styles.cardTitle, styles.cardTitleDisabled]}>Apple Pay</Text>
             {paymentState.paymentType === "applepay" && (
               <View style={styles.selectedIndicator}>
                 <Ionicons name="checkmark-circle" size={20} color="#264B8B" />
@@ -180,8 +186,42 @@ export default function PaymentStep({ paymentState, setPaymentState, isApplePayS
             )}
           </View>
 
-          <Text style={styles.checkboxText}>
+          <Text style={[styles.checkboxText, styles.textDisabled]}>
             Pay securely with Touch ID or Face ID
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* GOOGLE PAY (Android only) - Disabled for now */}
+      {isPlatformPaySupported && isAndroid && (
+        <TouchableOpacity
+          style={[
+            styles.card,
+            styles.cardDisabled,
+            paymentState.paymentType === "googlepay" && styles.cardSelected,
+          ]}
+          onPress={() => {
+            showToast({
+              message: "Google Pay will be available when released",
+              type: "info",
+              duration: 3000,
+            });
+          }}
+          activeOpacity={0.7}
+          disabled={true}
+        >
+          <View style={styles.cardHeader}>
+            <Ionicons name="logo-google" size={18} color="#9CA3AF" />
+            <Text style={[styles.cardTitle, styles.cardTitleDisabled]}>Google Pay</Text>
+            {paymentState.paymentType === "googlepay" && (
+              <View style={styles.selectedIndicator}>
+                <Ionicons name="checkmark-circle" size={20} color="#264B8B" />
+              </View>
+            )}
+          </View>
+
+          <Text style={[styles.checkboxText, styles.textDisabled]}>
+            Pay securely with your Google account
           </Text>
         </TouchableOpacity>
       )}

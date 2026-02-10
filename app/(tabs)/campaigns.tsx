@@ -261,7 +261,7 @@ export default function ActiveAppealsScreen() {
         )}
 
         {filteredCampaigns.map((c) => {
-          const displayTitle = c.mobileTitle || c.name;
+          const displayTitle = c.name;
           const rawSubtitle = c.mobileSubtitle || c.description || "";
           const cleanedSubtitle = rawSubtitle
             ? rawSubtitle
