@@ -13,6 +13,8 @@ import SplashScreen from "../components/ui/SplashScreen";
 import { AuthProvider } from "../context/AuthContext";
 import { BasketProvider } from "../context/BasketContext";
 import { ToastProvider } from "../context/ToastContext";
+import { NetworkProvider } from "../context/NetworkContext";
+import OfflineBanner from "../components/ui/OfflineBanner";
 import { Provider } from "react-redux";
 import { store } from "@/store/store";
 
@@ -212,62 +214,69 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <Provider store={store}>
-        <AuthProvider>
-          <DeviceRegistrationManager />
-          <BasketProvider>
-            <ToastProvider>
-              {/* Show splash screen first */}
-              {showSplash && !showIntro && (
-                <View style={{ backgroundColor: "#000", flex: 1, position: "absolute", width: "100%", height: "100%", zIndex: 9999 }}>
-                  <SplashScreen />
+        <NetworkProvider>
+          <AuthProvider>
+            <DeviceRegistrationManager />
+            <BasketProvider>
+              <ToastProvider>
+                {/* Offline Banner - App Wide */}
+                <View style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 99999, pointerEvents: "box-none" }}>
+                  <OfflineBanner />
                 </View>
-              )}
-              
-              {/* Show Gaza modal after splash */}
-              {showGazaModal && (
-                <DonationAppealModal
-                  visible={showGazaModal}
-                  onClose={() => setShowGazaModal(false)}
-                  image={require("../assets/modal-image.png")}
-                  title="Help Children in Need"
-                  raised={109690.51}
-                  goal={150000}
+                
+                {/* Show splash screen first */}
+                {showSplash && !showIntro && (
+                  <View style={{ backgroundColor: "#000", flex: 1, position: "absolute", width: "100%", height: "100%", zIndex: 9999 }}>
+                    <SplashScreen />
+                  </View>
+                )}
+                
+                {/* Show Gaza modal after splash */}
+                {showGazaModal && (
+                  <DonationAppealModal
+                    visible={showGazaModal}
+                    onClose={() => setShowGazaModal(false)}
+                    image={require("../assets/modal-image.png")}
+                    title="Help Children in Need"
+                    raised={109690.51}
+                    goal={150000}
+                  />
+                )}
+                
+                <Stack
+                screenOptions={{
+                  headerShown: false,
+                }}
+              >
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="login" options={{ headerShown: false }} />
+                <Stack.Screen name="signup" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="user-donations"
+                  options={{ headerShown: false }}
                 />
-              )}
-              
-              <Stack
-              screenOptions={{
-                headerShown: false,
-              }}
-            >
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="login" options={{ headerShown: false }} />
-              <Stack.Screen name="signup" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="user-donations"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="project-status"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="zakat-calculator"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="checkout"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="thank-you"
-                options={{ headerShown: false }}
-              />
-            </Stack>
-            <StatusBar style="auto" />
-            </ToastProvider>
-          </BasketProvider>
-        </AuthProvider>
+                <Stack.Screen
+                  name="project-status"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="zakat-calculator"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="checkout"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="thank-you"
+                  options={{ headerShown: false }}
+                />
+              </Stack>
+              <StatusBar style="auto" />
+              </ToastProvider>
+            </BasketProvider>
+          </AuthProvider>
+        </NetworkProvider>
       </Provider>
     </SafeAreaProvider>
   );

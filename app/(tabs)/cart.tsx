@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -68,6 +68,7 @@ export default function BasketScreen() {
   const isAuthenticated = !!user;
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const scrollViewRef = useRef<ScrollView>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [guestBasket, setGuestBasket] = useState<any[]>([]);
@@ -115,6 +116,8 @@ export default function BasketScreen() {
       } else {
         loadGuestBasket();
       }
+      // Scroll to top when screen comes into focus
+      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
     }, [isAuthenticated, refetch, loadGuestBasket])
   );
 
@@ -245,8 +248,12 @@ export default function BasketScreen() {
 
       {/* Scrollable Content */}
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          basketItems.length === 0 && styles.scrollContentCentered,
+        ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -254,21 +261,23 @@ export default function BasketScreen() {
       >
         {basketItems.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <View style={styles.emptyIconContainer}>
-              <Ionicons name="cart-outline" size={64} color="#E5E7EB" />
+            <View style={styles.emptyContent}>
+              <View style={styles.emptyIconContainer}>
+                <Ionicons name="cart-outline" size={72} color="#9CA3AF" />
+              </View>
+              <Text style={styles.emptyTitle}>Your basket is empty</Text>
+              <Text style={styles.emptySubtitle}>
+                Browse our projects and add items to your basket
+              </Text>
+              <TouchableOpacity
+                style={styles.browseButton}
+                onPress={() => router.push("/(tabs)/campaigns")}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.browseButtonText}>Browse Projects</Text>
+                <Ionicons name="arrow-forward" size={18} color="#010D26" />
+              </TouchableOpacity>
             </View>
-            <Text style={styles.emptyTitle}>Your basket is empty</Text>
-            <Text style={styles.emptySubtitle}>
-              Browse our projects and add items to your basket
-            </Text>
-            <TouchableOpacity
-              style={styles.browseButton}
-              onPress={() => router.push("/(tabs)/campaigns")}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.browseButtonText}>Browse Projects</Text>
-              <Ionicons name="arrow-forward" size={18} color="#010D26" />
-            </TouchableOpacity>
           </View>
         ) : (
           <>
@@ -513,46 +522,66 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 16,
   },
+  scrollContentCentered: {
+    flexGrow: 1,
+    justifyContent: "center",
+  },
   emptyContainer: {
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 40,
-    minHeight: 300,
+    paddingVertical: 60,
+  },
+  emptyContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    maxWidth: 320,
   },
   emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#F3F4F6",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#F9FAFB",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 24,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "800",
     color: "#010D26",
-    marginBottom: 6,
+    marginBottom: 8,
     fontFamily: "AlbertSans_800ExtraBold",
+    textAlign: "center",
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#6B7280",
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: 32,
     fontFamily: "AlbertSans_400Regular",
+    lineHeight: 22,
+    paddingHorizontal: 20,
   },
   browseButton: {
     backgroundColor: "#FFD602",
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
+    shadowColor: "#FFD602",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   browseButtonText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",

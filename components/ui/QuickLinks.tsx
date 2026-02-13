@@ -9,7 +9,7 @@ const { width: screenWidth } = Dimensions.get("window");
 const links = [
   {
     id: 1,
-    title: "Found for\nEducation",
+    title: "Education\nSupport",
     link: "/campaign/education-support",
     colors: ["#B9C7FF", "#4066FF"],
   },

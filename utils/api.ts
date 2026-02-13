@@ -73,14 +73,41 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for debugging
+// Import network status setter
+import { setGlobalNetworkStatus } from "@/context/NetworkContext";
+
+// Response interceptor for debugging and network detection
 api.interceptors.response.use(
   (response) => {
     console.log("API Response Status:", response.status);
+    // Update network status on successful response
+    setGlobalNetworkStatus(true);
     return response;
   },
   (error) => {
     console.error("API Response Error:", error.message);
+    
+    // Detect network errors
+    const isNetworkError = 
+      !error.response && (
+        error.message?.includes("Network Error") ||
+        error.message?.includes("network") ||
+        error.message?.includes("timeout") ||
+        error.message?.includes("ECONNREFUSED") ||
+        error.message?.includes("ENOTFOUND") ||
+        error.code === "ERR_NETWORK" ||
+        error.code === "ECONNABORTED" ||
+        error.message?.includes("Network request failed")
+      );
+
+    // Update network status
+    if (isNetworkError) {
+      setGlobalNetworkStatus(false);
+    } else if (error.response) {
+      // If we got a response (even an error), we're online
+      setGlobalNetworkStatus(true);
+    }
+
     if (error.response) {
       console.error("Error Status:", error.response.status);
       console.error("Error Data:", error.response.data);

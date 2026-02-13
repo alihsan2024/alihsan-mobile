@@ -8,6 +8,8 @@ import {
   ScrollView,
   Alert,
   Animated,
+  Linking,
+  ActivityIndicator,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -145,6 +147,7 @@ export type CampaignItem = {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const screenHeight = Dimensions.get("window").height;
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const [selectedIndex, setSelectedIndex] = useState<number | null>(0);
   const [selectedGiving, setSelectedGiving] = useState<number>(0);
@@ -156,6 +159,7 @@ export default function HomeScreen() {
   );
   const [isLoadingFeaturedCampaigns, setIsLoadingFeaturedCampaigns] =
     useState(false);
+  const [featuredCampaignsError, setFeaturedCampaignsError] = useState<string | null>(null);
   const { user } = useSelector((state: any) => state.authentication);
   const isAuthenticated = !!user;
 
@@ -192,6 +196,8 @@ export default function HomeScreen() {
       } else {
         loadGuestBasket();
       }
+      // Scroll to top when screen comes into focus
+      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
     }, [isAuthenticated, refetchBasket, loadGuestBasket])
   );
 
@@ -208,16 +214,23 @@ export default function HomeScreen() {
           slug: campaign.slug,
           image: { uri: campaign.coverImage },
           title: campaign.name,
-          donors: 0, // This would need to come from a separate API call if available
+          donors: Number(campaign.donor_count || campaign.donorCount || 0),
           status: "Ongoing",
           amountRaised: `$${Number(campaign.amountDonated || 0).toLocaleString()}`,
           goal: `$${Number(campaign.mobileGoalAmount || campaign.fundraiserGoal || 0).toLocaleString()}`,
         }));
 
         setFeaturedCampaigns(transformedCampaigns);
-      } catch (error) {
+        setFeaturedCampaignsError(null);
+      } catch (error: any) {
         console.error("Error loading featured campaigns:", error);
         setFeaturedCampaigns([]);
+        const errorMessage = error?.message || "Failed to load campaigns";
+        setFeaturedCampaignsError(
+          errorMessage.includes("Network") || errorMessage.includes("network") || errorMessage.includes("timeout")
+            ? "Unable to load featured campaigns. Please check your internet connection."
+            : "Unable to load featured campaigns. Please try again later."
+        );
       } finally {
         setIsLoadingFeaturedCampaigns(false);
       }
@@ -235,8 +248,28 @@ export default function HomeScreen() {
     router.push(`/campaign/${item.slug}`);
   };
 
+  const handleOpenRamadanCalendar = async (city: "sydney" | "melbourne") => {
+    const urls = {
+      sydney: "https://alihsan.s3.ap-southeast-2.amazonaws.com/ramadan/1770279212586-alihsan-A3_RamadanCal_2026+Sydney+(1).pdf",
+      melbourne: "https://alihsan.s3.ap-southeast-2.amazonaws.com/ramadan/1770283804879-alihsan-A3_RamadanCal+2026+-+Melbourne+(1)_compressed+(1).pdf",
+    };
+
+    const url = urls[city];
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert("Error", "Cannot open this URL");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to open calendar");
+    }
+  };
+
   return (
     <ScrollView
+      ref={scrollViewRef}
       style={{
         flex: 1,
         backgroundColor: "#fff",
@@ -452,7 +485,7 @@ export default function HomeScreen() {
                 flexDirection: "row",
                 justifyContent: "space-between",
                 alignItems: "center",
-                marginBottom: 12,
+                marginBottom: 24,
               }}
             >
               <Text
@@ -460,23 +493,77 @@ export default function HomeScreen() {
                   fontSize: 28,
                   color: "#010D26",
                   fontWeight: "800",
-                  marginBottom: 24,
                   fontFamily: "AlbertSans_800ExtraBold",
                 }}
               >
                 Featured Campaigns
               </Text>
               <TouchableOpacity onPress={() => router.push("/campaigns")}>
-                <Text style={{ color: "#010D26" }}>See All</Text>
+                <Text style={{ color: "#010D26", fontSize: 14, fontWeight: "600" }}>See All</Text>
               </TouchableOpacity>
             </View>
 
-            {featuredCampaigns.length > 0 && (
+            {isLoadingFeaturedCampaigns ? (
+              <View style={{ paddingVertical: 20, alignItems: "center" }}>
+                <ActivityIndicator size="small" color="#246BE1" />
+              </View>
+            ) : featuredCampaignsError ? (
+              <View style={{ paddingVertical: 16, paddingHorizontal: 16, backgroundColor: "#FEF2F2", borderRadius: 8, marginTop: 8 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Ionicons name="alert-circle-outline" size={18} color="#DC2626" />
+                  <Text style={{ fontSize: 13, color: "#DC2626", fontFamily: "AlbertSans_500Medium", flex: 1 }}>
+                    {featuredCampaignsError}
+                  </Text>
+                </View>
+              </View>
+            ) : featuredCampaigns.length > 0 ? (
               <CampaignSlider
                 data={featuredCampaigns}
                 onPress={handleCampaignPress}
               />
-            )}
+            ) : null}
+          </View>
+        </View>
+
+        {/* Ramadan Calendar Section */}
+        <View style={{ paddingHorizontal: PADDING_HORIZONTAL, marginTop: 24, marginBottom: 24 }}>
+          <Text style={styles.ramadanSectionTitle}>Ramadan Calendars</Text>
+          <Text style={styles.ramadanSectionSubtitle}>Download your city's Ramadan calendar</Text>
+          
+          <View style={styles.ramadanButtons}>
+            <TouchableOpacity
+              style={styles.ramadanButton}
+              onPress={() => handleOpenRamadanCalendar("sydney")}
+              activeOpacity={0.7}
+            >
+              <View style={styles.ramadanButtonLeft}>
+                <View style={styles.ramadanButtonIcon}>
+                  <Ionicons name="location" size={20} color="#246BE1" />
+                </View>
+                <View style={styles.ramadanButtonContent}>
+                  <Text style={styles.ramadanButtonText}>Sydney Calendar</Text>
+                  <Text style={styles.ramadanButtonLabel}>Download PDF</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.ramadanButton}
+              onPress={() => handleOpenRamadanCalendar("melbourne")}
+              activeOpacity={0.7}
+            >
+              <View style={styles.ramadanButtonLeft}>
+                <View style={styles.ramadanButtonIcon}>
+                  <Ionicons name="location" size={20} color="#246BE1" />
+                </View>
+                <View style={styles.ramadanButtonContent}>
+                  <Text style={styles.ramadanButtonText}>Melbourne Calendar</Text>
+                  <Text style={styles.ramadanButtonLabel}>Download PDF</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -870,5 +957,65 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontWeight: "700",
+  },
+  ramadanSectionTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#010D26",
+    marginBottom: 16,
+    fontFamily: "AlbertSans_800ExtraBold",
+  },
+  ramadanSectionSubtitle: {
+    fontSize: 14,
+    color: "#6B7280",
+    marginBottom: 16,
+    fontFamily: "AlbertSans_400Regular",
+  },
+  ramadanButtons: {
+    gap: 12,
+  },
+  ramadanButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  ramadanButtonLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  ramadanButtonIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  ramadanButtonContent: {
+    flex: 1,
+  },
+  ramadanButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
+    marginBottom: 2,
+  },
+  ramadanButtonLabel: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
   },
 });

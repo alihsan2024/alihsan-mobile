@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState, useMemo } from "react";
+import React, { useEffect, useCallback, useState, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -28,6 +28,7 @@ import LogoutConfirmationModal from "@/components/ui/Modals/LogoutConfirmationMo
 import { generateInvoice } from "@/store/reduxSlice/myDonationSlice";
 import { getPaymentsList } from "@/store/reduxSlice/paymentDetailsSlice";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
+import { useFocusEffect } from "@react-navigation/native";
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -104,6 +105,8 @@ export default function ProfileScreen() {
   const [expandedOrders, setExpandedOrders] = useState<Set<string | number>>(
     new Set()
   );
+  const scrollViewRef = useRef<ScrollView>(null);
+  const notLoggedInScrollViewRef = useRef<ScrollView>(null);
 
   // Fetch profile data on mount and when user changes
   useEffect(() => {
@@ -157,6 +160,14 @@ export default function ProfileScreen() {
       });
   }, [isAuthenticated, dispatch, appDispatch]);
 
+  // Scroll to top when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+      notLoggedInScrollViewRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
+
   const handleDownloadInvoice = (donationId: string | number) => {
     if (!donationId) return;
     dispatch(generateInvoice({ donationId }) as any);
@@ -195,11 +206,6 @@ export default function ProfileScreen() {
     };
 
     paymentsToGroup.forEach((payment: any) => {
-      // Skip processing fee items
-      if (isProcessingFee(payment)) {
-        return;
-      }
-
       // Get orderId from Donation object (payments API structure)
       const orderId = payment?.Donation?.orderId || payment?.orderId;
       
@@ -210,6 +216,7 @@ export default function ProfileScreen() {
       }
       
       const date = payment?.updatedAt || payment?.createdAt;
+      const isFee = isProcessingFee(payment);
 
       if (!grouped[orderId]) {
         grouped[orderId] = {
@@ -220,8 +227,13 @@ export default function ProfileScreen() {
         };
       }
 
+      // Include all payments (including processing fees) in the items array
       grouped[orderId].items.push(payment);
-      grouped[orderId].totalAmount += Number(payment?.total) || 0;
+      
+      // Only add to totalAmount if it's not a processing fee
+      if (!isFee) {
+        grouped[orderId].totalAmount += Number(payment?.total) || 0;
+      }
 
       if (date) {
         const paymentDate = new Date(date);
@@ -325,6 +337,7 @@ export default function ProfileScreen() {
 
         {/* Content Section */}
         <ScrollView
+          ref={notLoggedInScrollViewRef}
           style={styles.notLoggedInScroll}
           contentContainerStyle={styles.notLoggedInContent}
           showsVerticalScrollIndicator={false}
@@ -432,6 +445,7 @@ export default function ProfileScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -454,6 +468,80 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Donation Summary Card - Credit Card Style */}
+      <View style={styles.creditCardContainer}>
+        <LinearGradient
+          colors={["#5089E7", "#2161CD"]}
+          style={styles.creditCard}
+        >
+          {/* Card Top with Logo */}
+          <View style={styles.cardTop}>
+            <Image
+              source={require("../../assets/logo-white.png")}
+              style={styles.cardLogo}
+              resizeMode="contain"
+            />
+            <View style={styles.cardPattern}>
+              <View style={styles.cardDot} />
+              <View style={styles.cardDot} />
+              <View style={styles.cardDot} />
+              <View style={styles.cardDot} />
+            </View>
+          </View>
+
+          {/* Card Content */}
+          <View style={styles.cardContent}>
+            <View style={styles.cardContentLeft}>
+              <Text style={styles.cardLabel}>Total Donation</Text>
+            </View>
+            <View style={styles.cardContentRight}>
+              {loading ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.cardAmount}>
+                  {formatCurrency(statistics.total || 0)}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {/* Card Footer with Stats */}
+          <View style={styles.cardFooter}>
+            {[
+              {
+                icon: "hand-left-outline",
+                label: "Zakat",
+                value: statistics.zakat || 0,
+              },
+              {
+                icon: "wallet-outline",
+                label: "Sadaqah",
+                value: statistics.sadaqah || 0,
+              },
+              {
+                icon: "people-outline",
+                label: "Orphan",
+                value: statistics.orphan || 0,
+              },
+            ].map((item, index) => (
+              <View key={index} style={styles.cardStatItem}>
+                <View style={styles.cardStatIcon}>
+                  <Ionicons name={item.icon as any} size={14} color="#FFD602" />
+                </View>
+                {loading ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.cardStatValue}>
+                    {formatCurrency(item.value)}
+                  </Text>
+                )}
+                <Text style={styles.cardStatLabel}>{item.label}</Text>
+              </View>
+            ))}
+          </View>
+        </LinearGradient>
+      </View>
+
       {/* Profile */}
       <View style={styles.profileRow}>
         <Image
@@ -472,58 +560,6 @@ export default function ProfileScreen() {
           </Text>
         </View>
       </View>
-
-      {/* Donation Summary */}
-      <LinearGradient
-        colors={["#5089E7", "#2161CD"]}
-        style={styles.summaryCard}
-      >
-        <View style={styles.summaryHeader}>
-          <Text style={styles.summaryLabel}>Total Donation</Text>
-          {loading ? (
-            <ActivityIndicator size="small" color="#FFF" />
-          ) : (
-            <Text style={styles.summaryAmount}>
-              {formatCurrency(statistics.total || 0)}
-            </Text>
-          )}
-        </View>
-        <View style={styles.summaryDivider} />
-
-        <View style={styles.statsRow}>
-          {[
-            {
-              icon: "hand-left-outline",
-              label: "Zakat",
-              value: statistics.zakat || 0,
-            },
-            {
-              icon: "wallet-outline",
-              label: "Sadaqah",
-              value: statistics.sadaqah || 0,
-            },
-            {
-              icon: "people-outline",
-              label: "Orphan",
-              value: statistics.orphan || 0,
-            },
-          ].map((item, index) => (
-            <View key={index} style={styles.statItem}>
-              <View style={styles.statIcon}>
-                <Ionicons name={item.icon as any} size={20} color="#4F5DFB" />
-              </View>
-              {loading ? (
-                <ActivityIndicator size="small" color="#FFF" />
-              ) : (
-                <Text style={styles.statValue}>
-                  {formatCurrency(item.value)}
-                </Text>
-              )}
-              <Text style={styles.statLabel}>{item.label}</Text>
-            </View>
-          ))}
-        </View>
-      </LinearGradient>
 
       {/* Error Message */}
       {error && (
@@ -649,43 +685,63 @@ export default function ProfileScreen() {
 
               {isExpanded && (
                 <View style={styles.orderDetails}>
-                  {order.items.map((item: any, itemIndex: number) => {
-                    const isFee = isProcessingFee(item);
-                    return (
-                      <View
-                        key={item.id}
-                        style={[
-                          styles.paymentRow,
-                          itemIndex === order.items.length - 1 &&
-                            styles.paymentRowLast,
-                        ]}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.paymentName}>
-                            {isFee
-                              ? "Processing Fee"
-                              : item?.Campaign?.name
-                              ? item.Campaign.name
-                              : item?.orphan_id
-                              ? "Orphan Sponsorship"
-                              : "Donation"}
-                          </Text>
-                          <Text style={styles.paymentId}>
-                            Order #: {order.orderId}
+                  <View style={styles.orderDetailsHeader}>
+                    <Text style={styles.orderDetailsTitle}>Order Items</Text>
+                    <Text style={styles.orderDetailsSubtitle}>Order #{order.orderId}</Text>
+                  </View>
+                  <View style={styles.orderDetailsList}>
+                    {order.items.map((item: any, itemIndex: number) => {
+                      const isFee = isProcessingFee(item);
+                      return (
+                        <View
+                          key={item.id}
+                          style={[
+                            styles.paymentRow,
+                            itemIndex === order.items.length - 1 &&
+                              styles.paymentRowLast,
+                          ]}
+                        >
+                          <View style={styles.paymentRowLeft}>
+                            <View style={styles.paymentIconContainer}>
+                              <Ionicons 
+                                name={isFee ? "card-outline" : "gift-outline"} 
+                                size={16} 
+                                color={isFee ? "#9CA3AF" : "#246BE1"} 
+                              />
+                            </View>
+                            <View style={styles.paymentInfo}>
+                              <Text style={styles.paymentName}>
+                                {isFee
+                                  ? "Processing Fee"
+                                  : item?.Campaign?.name
+                                  ? item.Campaign.name
+                                  : item?.orphan_id
+                                  ? "Orphan Sponsorship"
+                                  : "Donation"}
+                              </Text>
+                              {!isFee && (
+                                <Text style={styles.paymentId}>
+                                  {item?.Campaign?.name ? "Campaign" : "Donation"}
+                                </Text>
+                              )}
+                            </View>
+                          </View>
+                          <Text style={[styles.paymentTotal, isFee && styles.paymentTotalFee]}>
+                            ${Number(item?.total || item?.Donation?.total || 0).toFixed(2)}
                           </Text>
                         </View>
-                        <Text style={styles.paymentTotal}>${item?.total || item?.Donation?.total || 0}</Text>
-                      </View>
-                    );
-                  })}
+                      );
+                    })}
+                  </View>
                   <View style={styles.orderDetailsDivider} />
                   <TouchableOpacity
                     style={styles.resendButton}
                     onPress={() => handleResendInvoice(primaryItem?.donationId || primaryItem?.id)}
                     activeOpacity={0.7}
                   >
+                    <Ionicons name="mail-outline" size={16} color="#246BE1" />
                     <Text style={styles.resendButtonText}>
-                      Resend invoice
+                      Resend Invoice
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -713,28 +769,28 @@ export default function ProfileScreen() {
         <Text style={styles.sectionTitle}>Profile Details</Text>
         <View style={styles.detailsCard}>
           <View style={styles.detailRow}>
-            <View style={styles.detailRowHeader}>
-              <View style={styles.detailIconContainer}>
-                <Ionicons name="mail-outline" size={16} color="#2161CD" />
-              </View>
-              <Text style={styles.detailLabel}>Email</Text>
+            <View style={styles.detailIconContainer}>
+              <Ionicons name="mail-outline" size={18} color="#246BE1" />
             </View>
-            <Text style={styles.detailValue}>
-              {profileDetails?.email || currentUser?.email || "—"}
-            </Text>
+            <View style={styles.detailContent}>
+              <Text style={styles.detailLabel}>Email</Text>
+              <Text style={styles.detailValue}>
+                {profileDetails?.email || currentUser?.email || "—"}
+              </Text>
+            </View>
           </View>
           
           {profileDetails?.phone && (
             <>
               <View style={styles.detailDivider} />
               <View style={styles.detailRow}>
-                <View style={styles.detailRowHeader}>
-                  <View style={styles.detailIconContainer}>
-                    <Ionicons name="call-outline" size={16} color="#2161CD" />
-                  </View>
-                  <Text style={styles.detailLabel}>Phone</Text>
+                <View style={styles.detailIconContainer}>
+                  <Ionicons name="call-outline" size={18} color="#246BE1" />
                 </View>
-                <Text style={styles.detailValue}>{profileDetails.phone}</Text>
+                <View style={styles.detailContent}>
+                  <Text style={styles.detailLabel}>Phone</Text>
+                  <Text style={styles.detailValue}>{profileDetails.phone}</Text>
+                </View>
               </View>
             </>
           )}
@@ -743,22 +799,22 @@ export default function ProfileScreen() {
             <>
               <View style={styles.detailDivider} />
               <View style={styles.detailRow}>
-                <View style={styles.detailRowHeader}>
-                  <View style={styles.detailIconContainer}>
-                    <Ionicons name="location-outline" size={16} color="#2161CD" />
-                  </View>
-                  <Text style={styles.detailLabel}>Address</Text>
+                <View style={styles.detailIconContainer}>
+                  <Ionicons name="location-outline" size={18} color="#246BE1" />
                 </View>
-                <Text style={styles.detailValue}>
-                  {[
-                    profileDetails.address,
-                    profileDetails.city,
-                    profileDetails.state,
-                    profileDetails.country,
-                  ]
-                    .filter(Boolean)
-                    .join(", ") || "—"}
-                </Text>
+                <View style={styles.detailContent}>
+                  <Text style={styles.detailLabel}>Address</Text>
+                  <Text style={styles.detailValue}>
+                    {[
+                      profileDetails.address,
+                      profileDetails.city,
+                      profileDetails.state,
+                      profileDetails.country,
+                    ]
+                      .filter(Boolean)
+                      .join(", ") || "—"}
+                  </Text>
+                </View>
               </View>
             </>
           )}
@@ -1008,55 +1064,97 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  summaryCard: {
-    borderRadius: 16,
-    padding: 16,
+  creditCardContainer: {
+    marginTop: 16,
     marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  summaryHeader: {
+  creditCard: {
+    borderRadius: 16,
+    padding: 20,
+    minHeight: 160,
+    justifyContent: "space-between",
+  },
+  cardTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  cardLogo: {
+    width: 120,
+    height: 34,
+  },
+  cardPattern: {
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "center",
+  },
+  cardDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255, 255, 255, 0.4)",
+  },
+  cardContent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
   },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.3)",
-    marginBottom: 16,
+  cardContentLeft: {
+    flex: 1,
   },
-  summaryLabel: {
-    color: "#E0E4FF",
-    fontSize: 13,
+  cardContentRight: {
+    alignItems: "flex-end",
   },
-  summaryAmount: {
+  cardLabel: {
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: 12,
+    fontWeight: "500",
+    fontFamily: "AlbertSans_500Medium",
+    letterSpacing: 0.5,
+  },
+  cardAmount: {
     color: "#FFF",
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 32,
+    fontWeight: "800",
+    fontFamily: "AlbertSans_800ExtraBold",
+    letterSpacing: -0.5,
+    textAlign: "right",
   },
-
-  statsRow: {
+  cardFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.2)",
   },
-  statItem: {
+  cardStatItem: {
     alignItems: "center",
     flex: 1,
   },
-  statIcon: {
-    backgroundColor: "#FFF",
-    padding: 8,
-    borderRadius: 20,
+  cardStatIcon: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    padding: 6,
+    borderRadius: 6,
     marginBottom: 6,
   },
-  statValue: {
+  cardStatValue: {
     color: "#FFF",
     fontWeight: "700",
-    fontSize: 12,
-  },
-  statLabel: {
-    color: "#E0E4FF",
     fontSize: 11,
-    marginTop: 2,
+    fontFamily: "AlbertSans_700Bold",
+    marginBottom: 2,
+  },
+  cardStatLabel: {
+    color: "rgba(255, 255, 255, 0.7)",
+    fontSize: 10,
+    fontFamily: "AlbertSans_400Regular",
   },
 
   sectionTitle: {
@@ -1225,42 +1323,103 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   orderDetails: {
-    marginTop: 10,
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 12,
+    marginTop: 12,
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
-    borderColor: "#EEF2F7",
+    borderColor: "#E5E7EB",
+  },
+  orderDetailsHeader: {
+    marginBottom: 12,
+  },
+  orderDetailsTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
+    marginBottom: 4,
+  },
+  orderDetailsSubtitle: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
+  },
+  orderDetailsList: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 8,
+    marginBottom: 12,
   },
   paymentRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 10,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: "#F3F4F6",
   },
   paymentRowLast: {
     borderBottomWidth: 0,
   },
-  paymentName: { fontWeight: "600", color: "#111" },
-  paymentId: { fontSize: 12, color: "#6B7280" },
-  paymentTotal: { fontWeight: "700", color: "#111", marginHorizontal: 8 },
+  paymentRowLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  paymentIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  paymentInfo: {
+    flex: 1,
+  },
+  paymentName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#010D26",
+    fontFamily: "AlbertSans_600SemiBold",
+    marginBottom: 2,
+  },
+  paymentId: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    fontFamily: "AlbertSans_400Regular",
+  },
+  paymentTotal: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  paymentTotalFee: {
+    color: "#9CA3AF",
+  },
   orderDetailsDivider: {
     height: 1,
-    backgroundColor: "#EEF2F7",
-    marginVertical: 10,
+    backgroundColor: "#E5E7EB",
+    marginVertical: 12,
   },
   resendButton: {
-    alignSelf: "stretch",
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#EEF4FF",
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: "#EFF6FF",
+    gap: 8,
   },
   resendButtonText: {
-    color: "#2161CD",
-    fontSize: 12,
+    color: "#246BE1",
+    fontSize: 14,
     fontWeight: "600",
+    fontFamily: "AlbertSans_600SemiBold",
   },
 
   emptyContainer: {
@@ -1293,58 +1452,56 @@ const styles = StyleSheet.create({
   },
 
   profileDetailsSection: {
-    marginTop: 8,
+    marginTop: 24,
     marginBottom: 20,
   },
   detailsCard: {
     backgroundColor: "#FFF",
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: 3,
     elevation: 2,
   },
   detailRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
     marginBottom: 0,
   },
-  detailRowHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-    gap: 8,
-  },
   detailIconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#F2F6FF",
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#EFF6FF",
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 12,
+  },
+  detailContent: {
+    flex: 1,
   },
   detailLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#6B7280",
     fontWeight: "500",
     fontFamily: "AlbertSans_500Medium",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    marginBottom: 4,
   },
   detailValue: {
-    fontSize: 15,
-    color: "#111",
+    fontSize: 14,
+    color: "#010D26",
     fontWeight: "600",
     fontFamily: "AlbertSans_600SemiBold",
-    lineHeight: 22,
-    paddingLeft: 36,
+    lineHeight: 20,
   },
   detailDivider: {
     height: 1,
     backgroundColor: "#F3F4F6",
-    marginVertical: 16,
-    marginLeft: 36,
+    marginVertical: 12,
+    marginLeft: 48,
   },
 });

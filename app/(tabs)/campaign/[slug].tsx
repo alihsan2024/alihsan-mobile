@@ -33,6 +33,7 @@ import { useCallback } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CampaignLoadingScreen from "@/components/CampaignLoadingScreen";
 import ReplaceOrRemoveModal from "@/components/ui/Modals/ReplaceOrRemoveModal";
+import ShareCampaignModal from "@/components/ui/Modals/ShareCampaignModal";
 
 export default function GazaDonationScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -42,6 +43,7 @@ export default function GazaDonationScreen() {
   const [frequency, setFrequency] = useState<"onetime" | "monthly" | "friday">("onetime");
   const expandAnimation = useRef(new Animated.Value(0)).current;
   const tabIndicatorAnimation = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const [campaign, setCampaign] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -51,6 +53,7 @@ export default function GazaDonationScreen() {
   const [replaceModalVisible, setReplaceModalVisible] = useState(false);
   const [pendingBasketItem, setPendingBasketItem] = useState<any>(null);
   const [existingCartItem, setExistingCartItem] = useState<any>(null);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
 
   const { user } = useSelector((state: any) => state.authentication);
   const isAuthenticated = !!user;
@@ -87,7 +90,17 @@ export default function GazaDonationScreen() {
     tabIndicatorAnimation.setValue(0);
   }, []);
 
+  // Reset to details tab when slug changes (navigating between campaigns)
   useEffect(() => {
+    setActiveTab("details");
+    tabIndicatorAnimation.setValue(0);
+  }, [slug]);
+
+  useEffect(() => {
+    // Clear previous campaign data and set loading when slug changes
+    setCampaign(null);
+    setLoading(true);
+    
     const load = async () => {
       try {
         const data = await getCampaignDetails(slug);
@@ -99,10 +112,30 @@ export default function GazaDonationScreen() {
           amount_donated: campaignData?.amount_donated,
           fundraiserGoal: campaignData?.fundraiserGoal,
           mobileGoalAmount: campaignData?.mobileGoalAmount,
+          donor_count: campaignData?.donor_count,
+          donorCount: campaignData?.donorCount,
         });
         setCampaign(campaignData);
-      } catch (e) {
-        Alert.alert("Error", "Failed to load campaign");
+      } catch (e: any) {
+        const errorMessage = e?.message || "Failed to load campaign";
+        const isNetworkError = 
+          errorMessage.includes("Network") || 
+          errorMessage.includes("network") || 
+          errorMessage.includes("timeout") ||
+          errorMessage.includes("ECONNREFUSED");
+        
+        Alert.alert(
+          "Unable to Load Campaign",
+          isNetworkError 
+            ? "Please check your internet connection and try again."
+            : "Something went wrong. Please try again later.",
+          [
+            {
+              text: "OK",
+              style: "default",
+            },
+          ]
+        );
       } finally {
         setLoading(false);
       }
@@ -130,6 +163,8 @@ export default function GazaDonationScreen() {
       } else {
         loadGuestBasket();
       }
+      // Scroll to top when screen comes into focus
+      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
     }, [isAuthenticated, refetchBasket, loadGuestBasket])
   );
 
@@ -140,21 +175,42 @@ export default function GazaDonationScreen() {
   );
 
   // Handle both camelCase and snake_case, and ensure proper number conversion
+  // Prioritize amount_donated as it's the source of truth from the database
   const raised = Number(
+    campaign?.amount_donated ??
     campaign?.amountDonated ?? 
-    campaign?.amount_donated ?? 
     0
   );
+  
+  // Use only fundraiser_goal for goal
   const goal = Number(
-    campaign?.mobileGoalAmount ??
-      campaign?.mobile_goal_amount ??
-      campaign?.goalAmount ??
-      campaign?.fundraiserGoal ??
-      campaign?.fundraiser_goal ??
-      0
+    campaign?.fundraiserGoal ??
+    campaign?.fundraiser_goal ??
+    0
   );
 
-  console.log("Campaign amounts:", { raised, goal, amountDonated: campaign?.amountDonated, amount_donated: campaign?.amount_donated });
+  // Use only donor_count for donor count
+  const donorCount = Number(
+    campaign?.donor_count ??
+    campaign?.donorCount ??
+    0
+  );
+
+  console.log("Donor count:", { 
+    donor_count: campaign?.donor_count, 
+    donorCount: campaign?.donorCount, 
+    calculated: donorCount 
+  });
+
+  console.log("Campaign amounts for progress bar:", { 
+    raised, 
+    goal, 
+    amountDonated: campaign?.amountDonated, 
+    amount_donated: campaign?.amount_donated,
+    progressPercent: goal > 0 ? `${Math.min((raised / goal) * 100, 100)}%` : "0%",
+    calculatedRaised: raised,
+    calculatedGoal: goal
+  });
 
   const progressPercent = useMemo<DimensionValue>(() => {
     if (!goal) return "0%";
@@ -336,77 +392,111 @@ export default function GazaDonationScreen() {
   return (
     <>
     <ScrollView 
+      ref={scrollViewRef}
       style={styles.container} 
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: donationCardExpanded ? 300 : 120 }}
     >
       {/* ===== HERO ===== */}
-      <HeroBackground
-        source={{ uri: campaign.coverImage }}
-        showBack
-        containerStyle={{ height: 320 }}
-      >
-        <View style={styles.heroText}>
-          {(() => {
-            // Use campaign name at the top
-            const rawTitle = campaign.mobileTitle || "";
+      <View style={{ position: "relative" }}>
+        <HeroBackground
+          source={{ uri: campaign.coverImage }}
+          showBack
+          onBackPress={() => router.push("/(tabs)/campaigns")}
+          containerStyle={{ height: 320 }}
+        >
+          <View style={styles.heroText}>
+            {(() => {
+              // Use campaign name at the top
+              const rawTitle = campaign.mobileTitle || "";
 
-            const words = rawTitle.split(" ");
-            const firstWord = words[0];
-            const restOfTitle = words.slice(1).join(" ");
+              const words = rawTitle.split(" ");
+              const firstWord = words[0];
+              const restOfTitle = words.slice(1).join(" ");
 
-            return (
-              <>
-                <Text style={styles.heroTitle}>{firstWord}</Text>
-                {restOfTitle && (
-                  <Text style={styles.heroSubtitle}>{restOfTitle}</Text>
-                )}
-              </>
-            );
-          })()}
-          
-          {campaign.mobileSubtitle && (
-            <Text
-              style={{
-                fontSize: 14,
-                color: "#fff",
-                marginTop: 8,
-                opacity: 0.9,
-              }}
-            >
-              {campaign.mobileSubtitle}
-            </Text>
-          )}
+              return (
+                <>
+                  <Text style={styles.heroTitle}>{firstWord}</Text>
+                  {restOfTitle && (
+                    <Text style={styles.heroSubtitle}>{restOfTitle}</Text>
+                  )}
+                </>
+              );
+            })()}
+            
+            {campaign.mobileSubtitle && (
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: "#fff",
+                  marginTop: 8,
+                  opacity: 0.9,
+                }}
+              >
+                {campaign.mobileSubtitle}
+              </Text>
+            )}
 
-          {campaign.impactFigure && campaign.impactFigure > 0 && (
-            <Text style={styles.heroMeta}>
-              <Text style={styles.heroMetaBold}>
-                {campaign.impactFigure.toLocaleString()}
-              </Text>{" "}
-              {campaign.problemDesc
-                ? campaign.problemDesc
-                    .replace(/<[^>]*>/g, "")
-                    .split(".")[0] // use first sentence to keep it short
-                : "Lives Changed"}
-            </Text>
-          )}
-        </View>
-      </HeroBackground>
+            {campaign.impactFigure && campaign.impactFigure > 0 && (
+              <Text style={styles.heroMeta}>
+                <Text style={styles.heroMetaBold}>
+                  {campaign.impactFigure.toLocaleString()}
+                </Text>{" "}
+                {campaign.problemDesc
+                  ? campaign.problemDesc
+                      .replace(/<[^>]*>/g, "")
+                      .split(".")[0] // use first sentence to keep it short
+                  : "Lives Changed"}
+              </Text>
+            )}
+          </View>
+        </HeroBackground>
+        
+        {/* Share Icon */}
+        <TouchableOpacity
+          style={styles.shareIcon}
+          onPress={() => setShareModalVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="share-outline" size={20} color="#010D264D" />
+        </TouchableOpacity>
+      </View>
 
       {/* ===== CONTENT ===== */}
       <View style={styles.content}>
         <Text style={styles.campaignTitle}>
           {campaign.name}
         </Text>
-        {goal > 0 && (
+        {goal > 0 ? (
           <>
-            <Text style={styles.raisedAmount}>${raised.toLocaleString()}</Text>
-            <Text style={styles.goalText}>of ${goal.toLocaleString()} goal</Text>
+            <View style={styles.amountGoalRow}>
+              <View style={styles.amountLeft}>
+                <Text style={styles.raisedAmount}>${raised.toLocaleString()}</Text>
+                <Text style={styles.goalText}>of ${goal.toLocaleString()} goal</Text>
+              </View>
+              {donorCount > 0 && (
+                <View style={styles.donorCountContainerTop}>
+                  <Ionicons name="people" size={16} color="#6B7280" />
+                  <Text style={styles.donorCountText}>
+                    {donorCount.toLocaleString()} {donorCount === 1 ? 'donor' : 'donors'}
+                  </Text>
+                </View>
+              )}
+            </View>
 
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: progressPercent }]} />
             </View>
           </>
+        ) : (
+          donorCount > 0 && (
+            <View style={styles.donorCountContainerStandalone}>
+              <Ionicons name="people" size={16} color="#6B7280" />
+              <Text style={styles.donorCountText}>
+                {donorCount.toLocaleString()} {donorCount === 1 ? 'donor' : 'donors'}
+              </Text>
+            </View>
+          )
         )}
 
         {/* ===== TABS ===== */}
@@ -466,6 +556,11 @@ export default function GazaDonationScreen() {
                 <RenderHTML
                   contentWidth={Dimensions.get("window").width - 32}
                   source={{ html: campaign.mobileDescription }}
+                  defaultTextProps={{
+                    style: {
+                      fontFamily: "AlbertSans_400Regular",
+                    },
+                  }}
                   tagsStyles={{
                     p: {
                       ...styles.bodyText,
@@ -482,6 +577,7 @@ export default function GazaDonationScreen() {
                       ...styles.bodyText,
                       fontSize: 20,
                       fontWeight: "700",
+                      fontFamily: "AlbertSans_700Bold",
                       textAlign: "center",
                       marginTop: 12,
                     },
@@ -489,7 +585,45 @@ export default function GazaDonationScreen() {
                       ...styles.bodyText,
                       fontSize: 16,
                       fontWeight: "700",
+                      fontFamily: "AlbertSans_700Bold",
                       marginTop: 12,
+                    },
+                    strong: {
+                      ...styles.bodyText,
+                      fontWeight: "700",
+                      fontFamily: "AlbertSans_700Bold",
+                    },
+                    b: {
+                      ...styles.bodyText,
+                      fontWeight: "700",
+                      fontFamily: "AlbertSans_700Bold",
+                    },
+                    em: {
+                      ...styles.bodyText,
+                      fontStyle: "italic",
+                    },
+                    i: {
+                      ...styles.bodyText,
+                      fontStyle: "italic",
+                    },
+                    ul: {
+                      ...styles.bodyText,
+                      marginTop: 8,
+                      marginBottom: 8,
+                    },
+                    ol: {
+                      ...styles.bodyText,
+                      marginTop: 8,
+                      marginBottom: 8,
+                    },
+                    li: {
+                      ...styles.bodyText,
+                      marginBottom: 4,
+                    },
+                    a: {
+                      ...styles.bodyText,
+                      color: "#246BE1",
+                      textDecorationLine: "underline",
                     },
                   }}
                   classesStyles={{
@@ -581,158 +715,136 @@ export default function GazaDonationScreen() {
               {(() => {
                 // Calculate statistics
                 const totalRaised = raised;
-                const totalDonors = campaign?.donorCount || campaign?.donor_count || 
-                  (Array.isArray(liveDonations) ? liveDonations.length : 0) ||
-                  (Array.isArray(topDonations) ? topDonations.length : 0) ||
-                  0;
+                const totalDonors = donorCount;
                 const averageDonation = totalDonors > 0 ? totalRaised / totalDonors : 0;
                 const impactFigure = campaign?.impactFigure || campaign?.impact_figure || 0;
                 const progressPercentage = goal > 0 ? Math.min((totalRaised / goal) * 100, 100) : 0;
                 const remainingAmount = goal > 0 ? Math.max(goal - totalRaised, 0) : 0;
 
-                // Statistics cards
-                const stats = [
-                  {
-                    label: "Total Raised",
-                    value: `$${totalRaised.toLocaleString()}`,
-                    icon: "cash",
-                    color: "#246BE1",
-                    bgColor: "#EFF6FF",
-                  },
-                  {
-                    label: "Total Donors",
+                // Check if there's any meaningful impact data to show
+                const hasImpactData = totalRaised > 0 || totalDonors > 0 || impactFigure > 0 || goal > 0;
+
+                if (!hasImpactData) {
+                  return (
+                    <View style={styles.impactEmptyState}>
+                      <View style={styles.impactEmptyIconContainer}>
+                        <Ionicons name="stats-chart" size={32} color="#9CA3AF" />
+                      </View>
+                      <Text style={styles.impactEmptyText}>No impact data available</Text>
+                      <Text style={styles.impactEmptySubtext}>
+                        Impact statistics will appear here as the campaign progresses
+                      </Text>
+                    </View>
+                  );
+                }
+
+                // Build compact stats array - only show meaningful data (excluding Total Raised)
+                const stats = [];
+                
+                if (totalDonors > 0) {
+                  stats.push({
+                    label: "Donors",
                     value: totalDonors.toLocaleString(),
                     icon: "people",
                     color: "#10B981",
                     bgColor: "#ECFDF5",
-                  },
-                  {
-                    label: "Average Donation",
+                  });
+                }
+                
+                if (averageDonation > 0 && totalDonors > 0) {
+                  stats.push({
+                    label: "Avg Donation",
                     value: `$${Math.round(averageDonation).toLocaleString()}`,
                     icon: "trending-up",
                     color: "#F59E0B",
                     bgColor: "#FFFBEB",
-                  },
-                  ...(impactFigure > 0 ? [{
+                  });
+                }
+                
+                if (impactFigure > 0) {
+                  stats.push({
                     label: "Lives Impacted",
                     value: impactFigure.toLocaleString(),
                     icon: "heart",
                     color: "#EF4444",
                     bgColor: "#FEF2F2",
-                  }] : []),
-                  ...(goal > 0 ? [{
-                    label: "Progress",
-                    value: `${Math.round(progressPercentage)}%`,
-                    icon: "checkmark-circle",
-                    color: "#8B5CF6",
-                    bgColor: "#F5F3FF",
-                  }] : []),
-                ];
+                  });
+                }
 
                 return (
-                  <>
-                    {/* Main Impact Card with Gradient */}
-                    <LinearGradient
-                      colors={["#5089E7", "#2161CD"]}
-                      style={styles.impactMainCard}
-                    >
-                      <View style={styles.impactMainContent}>
-                        <View style={styles.impactMainHeader}>
-                          <Ionicons name="trophy" size={24} color="#FFD602" />
-                          <Text style={styles.impactMainTitle}>Campaign Impact</Text>
+                  <View style={styles.impactCompactContainer}>
+                    {/* Full Width Total Raised Card */}
+                    {totalRaised > 0 && (
+                      <View style={styles.impactTotalRaisedCard}>
+                        <View style={styles.impactTotalRaisedIconContainer}>
+                          <Ionicons name="cash" size={20} color="#246BE1" />
                         </View>
-                        <Text style={styles.impactMainAmount}>
-                          ${totalRaised.toLocaleString()}
-                        </Text>
-                        <Text style={styles.impactMainSubtext}>Total Raised</Text>
-                        {goal > 0 && (
-                          <View style={styles.impactMainProgress}>
-                            <View style={styles.impactMainProgressBar}>
-                              <View 
-                                style={[
-                                  styles.impactMainProgressFill, 
-                                  { width: `${progressPercentage}%` }
-                                ]} 
-                              />
+                        <View style={styles.impactTotalRaisedContent}>
+                          <Text style={styles.impactTotalRaisedLabel}>Total Raised</Text>
+                          <Text style={styles.impactTotalRaisedValue}>
+                            ${totalRaised.toLocaleString()}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Compact Stats Grid */}
+                    {stats.length > 0 && (
+                      <View style={styles.impactStatsGrid}>
+                        {stats.map((stat, index) => (
+                          <View key={index} style={styles.impactStatCard}>
+                            <View style={[styles.impactStatIconContainer, { backgroundColor: stat.bgColor }]}>
+                              <Ionicons name={stat.icon as any} size={18} color={stat.color} />
                             </View>
-                            <Text style={styles.impactMainProgressText}>
-                              {Math.round(progressPercentage)}% of ${goal.toLocaleString()} goal
+                            <Text style={styles.impactStatValue}>{stat.value}</Text>
+                            <Text style={styles.impactStatLabel}>{stat.label}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
+                    {/* Compact Progress Card - only if fundraiser_goal exists */}
+                    {goal > 0 && (
+                      <View style={styles.impactProgressCard}>
+                        <View style={styles.impactProgressHeader}>
+                          <Text style={styles.impactProgressTitle}>Fundraising Goal</Text>
+                          <Text style={styles.impactProgressPercentage}>
+                            {Math.round(progressPercentage)}%
+                          </Text>
+                        </View>
+                        <View style={styles.impactProgressBar}>
+                          <View 
+                            style={[
+                              styles.impactProgressFill, 
+                              { width: `${progressPercentage}%` }
+                            ]} 
+                          />
+                        </View>
+                        <View style={styles.impactProgressDetails}>
+                          <View style={styles.impactProgressDetailItem}>
+                            <Text style={styles.impactProgressDetailLabel}>Raised</Text>
+                            <Text style={styles.impactProgressDetailValue}>
+                              ${totalRaised.toLocaleString()}
                             </Text>
                           </View>
-                        )}
-                      </View>
-                    </LinearGradient>
-
-                    {/* Statistics Grid */}
-                    <View style={styles.statsGrid}>
-                      {stats.filter(stat => stat.label !== "Total Raised" && stat.label !== "Progress").map((stat, index) => (
-                        <View key={index} style={styles.statCard}>
-                          <View style={[styles.statIconContainer, { backgroundColor: stat.bgColor }]}>
-                            <Ionicons name={stat.icon as any} size={22} color={stat.color} />
-                          </View>
-                          <Text style={styles.statValue}>{stat.value}</Text>
-                          <Text style={styles.statLabel}>{stat.label}</Text>
-                        </View>
-                      ))}
-                    </View>
-
-                    {/* Detailed Progress Card */}
-                    {goal > 0 && (
-                      <View style={styles.progressCard}>
-                        <View style={styles.progressCardHeader}>
-                          <Ionicons name="flag" size={20} color="#246BE1" />
-                          <Text style={styles.progressCardTitle}>Fundraising Progress</Text>
-                        </View>
-                        <View style={styles.progressCardStats}>
-                          <View style={styles.progressCardStat}>
-                            <Text style={styles.progressCardStatValue}>${totalRaised.toLocaleString()}</Text>
-                            <Text style={styles.progressCardStatLabel}>Raised</Text>
-                          </View>
-                          <View style={styles.progressCardDivider} />
-                          <View style={styles.progressCardStat}>
-                            <Text style={styles.progressCardStatValue}>${goal.toLocaleString()}</Text>
-                            <Text style={styles.progressCardStatLabel}>Goal</Text>
+                          <View style={styles.impactProgressDetailItem}>
+                            <Text style={styles.impactProgressDetailLabel}>Goal</Text>
+                            <Text style={styles.impactProgressDetailValue}>
+                              ${goal.toLocaleString()}
+                            </Text>
                           </View>
                           {remainingAmount > 0 && (
-                            <>
-                              <View style={styles.progressCardDivider} />
-                              <View style={styles.progressCardStat}>
-                                <Text style={[styles.progressCardStatValue, { color: "#6B7280" }]}>
-                                  ${remainingAmount.toLocaleString()}
-                                </Text>
-                                <Text style={styles.progressCardStatLabel}>Remaining</Text>
-                              </View>
-                            </>
+                            <View style={styles.impactProgressDetailItem}>
+                              <Text style={styles.impactProgressDetailLabel}>Remaining</Text>
+                              <Text style={[styles.impactProgressDetailValue, styles.impactProgressDetailValueMuted]}>
+                                ${remainingAmount.toLocaleString()}
+                              </Text>
+                            </View>
                           )}
                         </View>
                       </View>
                     )}
-
-                    {/* Lives Impacted Card */}
-                    {impactFigure > 0 && (
-                      <LinearGradient
-                        colors={["#FEF2F2", "#FEE2E2"]}
-                        style={styles.impactHighlightCard}
-                      >
-                        <View style={styles.impactHighlightContent}>
-                          <View style={styles.impactHighlightIcon}>
-                            <Ionicons name="heart" size={28} color="#EF4444" />
-                          </View>
-                          <View style={styles.impactHighlightText}>
-                            <Text style={styles.impactHighlightValue}>
-                              {impactFigure.toLocaleString()}
-                            </Text>
-                            <Text style={styles.impactHighlightLabel}>
-                              Lives Impacted
-                            </Text>
-                            <Text style={styles.impactHighlightSubtext}>
-                              Through this campaign
-                            </Text>
-                          </View>
-                        </View>
-                      </LinearGradient>
-                    )}
-                  </>
+                  </View>
                 );
               })()}
             </View>
@@ -930,6 +1042,13 @@ export default function GazaDonationScreen() {
       onCancel={handleCancelModal}
       onReplace={handleReplace}
     />
+
+    <ShareCampaignModal
+      visible={shareModalVisible}
+      campaignName={campaign?.name || ""}
+      campaignUrl={`https://alihsan.org.au/project/${slug}`}
+      onClose={() => setShareModalVisible(false)}
+    />
   </>
   );
 }
@@ -970,6 +1089,25 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
 
   /* HERO */
+  shareIcon: {
+    position: "absolute",
+    top: 48,
+    right: 16,
+    zIndex: 20,
+    borderWidth: 1,
+    borderColor: "#010D264D",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
   hero: {
     height: 300,
     paddingTop: 54,
@@ -1013,6 +1151,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontFamily: "AlbertSans_700Bold",
   },
+  amountGoalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 14,
+  },
+  amountLeft: {
+    flex: 1,
+  },
   raisedAmount: {
     fontSize: 22,
     fontWeight: "800",
@@ -1035,17 +1182,40 @@ const styles = StyleSheet.create({
     backgroundColor: "#E5E7EB",
     width: "100%",
   },
-
   progressTrack: {
+    width: "100%",
     height: 6,
     backgroundColor: "#eee",
     borderRadius: 3,
-    marginVertical: 14,
+    marginBottom: 4,
   },
   progressFill: {
     height: "100%",
     backgroundColor: "#f4c430",
     borderRadius: 3,
+  },
+  donorCountContainerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+  },
+  donorCountContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  donorCountContainerStandalone: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  donorCountText: {
+    fontSize: 14,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
   },
 
   sectionHeader: {
@@ -1067,6 +1237,7 @@ const styles = StyleSheet.create({
     color: "#555",
     marginTop: 8,
     marginBottom: 0,
+    fontFamily: "AlbertSans_400Regular",
   },
 
   chooseText: {
@@ -1225,206 +1396,170 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontFamily: "AlbertSans_400Regular",
   },
-  /* IMPACT TAB STYLES */
-  impactMainCard: {
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+  /* IMPACT TAB STYLES - Compact Design */
+  impactCompactContainer: {
+    gap: 16,
   },
-  impactMainContent: {
-    alignItems: "center",
-  },
-  impactMainHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    gap: 8,
-  },
-  impactMainTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#fff",
-    fontFamily: "AlbertSans_700Bold",
-  },
-  impactMainAmount: {
-    fontSize: 42,
-    fontWeight: "800",
-    color: "#FFD602",
-    marginBottom: 8,
-    fontFamily: "AlbertSans_800ExtraBold",
-  },
-  impactMainSubtext: {
-    fontSize: 15,
-    color: "#fff",
-    opacity: 0.9,
-    marginBottom: 20,
-    fontFamily: "AlbertSans_400Regular",
-  },
-  impactMainProgress: {
-    width: "100%",
-    marginTop: 8,
-  },
-  impactMainProgressBar: {
-    height: 6,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    borderRadius: 3,
-    overflow: "hidden",
-    marginBottom: 8,
-  },
-  impactMainProgressFill: {
-    height: "100%",
-    backgroundColor: "#FFD602",
-    borderRadius: 3,
-  },
-  impactMainProgressText: {
-    fontSize: 13,
-    color: "#fff",
-    opacity: 0.8,
-    textAlign: "center",
-    fontFamily: "AlbertSans_400Regular",
-  },
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 20,
-  },
-  statCard: {
-    flex: 1,
-    minWidth: (Dimensions.get("window").width - 64) / 2,
-    maxWidth: (Dimensions.get("window").width - 64) / 2,
+  impactTotalRaisedCard: {
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 16,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 3,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
-  statIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+  impactTotalRaisedIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: "#EFF6FF",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 10,
   },
-  statValue: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#010D26",
-    marginBottom: 4,
-    fontFamily: "AlbertSans_700Bold",
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#6B7280",
-    fontFamily: "AlbertSans_400Regular",
-  },
-  progressCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  progressCardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    gap: 8,
-  },
-  progressCardTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#010D26",
-    fontFamily: "AlbertSans_700Bold",
-  },
-  progressCardStats: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-  },
-  progressCardStat: {
-    alignItems: "center",
+  impactTotalRaisedContent: {
     flex: 1,
   },
-  progressCardDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: "#E5E7EB",
+  impactTotalRaisedLabel: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginBottom: 4,
+    fontFamily: "AlbertSans_400Regular",
   },
-  progressCardStatValue: {
+  impactTotalRaisedValue: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  impactEmptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 48,
+    paddingHorizontal: 32,
+  },
+  impactEmptyIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#F9FAFB",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  impactEmptyText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#6B7280",
+    marginBottom: 8,
+    fontFamily: "AlbertSans_600SemiBold",
+  },
+  impactEmptySubtext: {
+    fontSize: 14,
+    color: "#9CA3AF",
+    textAlign: "center",
+    lineHeight: 20,
+    fontFamily: "AlbertSans_400Regular",
+  },
+  impactStatsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 0,
+  },
+  impactStatCard: {
+    flex: 1,
+    minWidth: (Dimensions.get("window").width - 52) / 2,
+    maxWidth: (Dimensions.get("window").width - 52) / 2,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    alignItems: "center",
+  },
+  impactStatIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  impactStatValue: {
     fontSize: 18,
     fontWeight: "700",
     color: "#010D26",
     marginBottom: 4,
     fontFamily: "AlbertSans_700Bold",
   },
-  progressCardStatLabel: {
-    fontSize: 12,
-    color: "#9CA3AF",
+  impactStatLabel: {
+    fontSize: 11,
+    color: "#6B7280",
     fontFamily: "AlbertSans_400Regular",
+    textAlign: "center",
   },
-  impactHighlightCard: {
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#FEE2E2",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  impactHighlightContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  impactHighlightIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  impactProgressCard: {
     backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  impactProgressHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    justifyContent: "center",
-    marginRight: 16,
+    marginBottom: 12,
   },
-  impactHighlightText: {
-    flex: 1,
-  },
-  impactHighlightValue: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#EF4444",
-    marginBottom: 4,
-    fontFamily: "AlbertSans_700Bold",
-  },
-  impactHighlightLabel: {
-    fontSize: 15,
+  impactProgressTitle: {
+    fontSize: 14,
     fontWeight: "600",
-    color: "#DC2626",
-    marginBottom: 2,
+    color: "#010D26",
     fontFamily: "AlbertSans_600SemiBold",
   },
-  impactHighlightSubtext: {
-    fontSize: 13,
-    color: "#991B1B",
+  impactProgressPercentage: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#246BE1",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  impactProgressBar: {
+    height: 6,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 3,
+    overflow: "hidden",
+    marginBottom: 12,
+  },
+  impactProgressFill: {
+    height: "100%",
+    backgroundColor: "#246BE1",
+    borderRadius: 3,
+  },
+  impactProgressDetails: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  impactProgressDetailItem: {
+    flex: 1,
+    alignItems: "flex-start",
+  },
+  impactProgressDetailLabel: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    marginBottom: 4,
     fontFamily: "AlbertSans_400Regular",
+  },
+  impactProgressDetailValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  impactProgressDetailValueMuted: {
+    color: "#6B7280",
   },
 
   /* TABS */

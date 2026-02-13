@@ -362,43 +362,63 @@ const OneTimeUserDonationsScreen = () => {
 
                   {expandedOrders.has(order.orderId) && (
                     <View style={styles.orderDetails}>
-                      {order.payments.map((p: Payment, index: number) => {
-                        const isFee = isProcessingFee(p);
-                        return (
-                          <View
-                            key={p.id}
-                            style={[
-                              styles.paymentRow,
-                              index === order.payments.length - 1 &&
-                                styles.paymentRowLast,
-                            ]}
-                          >
-                            <View style={{ flex: 1 }}>
-                              <Text style={styles.paymentName}>
-                                {isFee
-                                  ? "Processing Fee"
-                                  : p.Campaign?.name
-                                  ? p.Campaign.name
-                                  : p.orphan_id
-                                  ? "Orphan Sponsorship"
-                                  : "Donation"}
-                              </Text>
-                              <Text style={styles.paymentId}>
-                                Order #: {order.orderId}
+                      <View style={styles.orderDetailsHeader}>
+                        <Text style={styles.orderDetailsTitle}>Order Items</Text>
+                        <Text style={styles.orderDetailsSubtitle}>Order #{order.orderId}</Text>
+                      </View>
+                      <View style={styles.orderDetailsList}>
+                        {order.payments.map((p: Payment, index: number) => {
+                          const isFee = isProcessingFee(p);
+                          return (
+                            <View
+                              key={p.id}
+                              style={[
+                                styles.paymentRow,
+                                index === order.payments.length - 1 &&
+                                  styles.paymentRowLast,
+                              ]}
+                            >
+                              <View style={styles.paymentRowLeft}>
+                                <View style={styles.paymentIconContainer}>
+                                  <Ionicons 
+                                    name={isFee ? "card-outline" : "gift-outline"} 
+                                    size={16} 
+                                    color={isFee ? "#9CA3AF" : "#246BE1"} 
+                                  />
+                                </View>
+                                <View style={styles.paymentInfo}>
+                                  <Text style={styles.paymentName}>
+                                    {isFee
+                                      ? "Processing Fee"
+                                      : p.Campaign?.name
+                                      ? p.Campaign.name
+                                      : p.orphan_id
+                                      ? "Orphan Sponsorship"
+                                      : "Donation"}
+                                  </Text>
+                                  {!isFee && (
+                                    <Text style={styles.paymentId}>
+                                      {p.Campaign?.name ? "Campaign" : "Donation"}
+                                    </Text>
+                                  )}
+                                </View>
+                              </View>
+                              <Text style={[styles.paymentTotal, isFee && styles.paymentTotalFee]}>
+                                ${Number(p.total).toFixed(2)}
                               </Text>
                             </View>
-                            <Text style={styles.paymentTotal}>${p.total}</Text>
-                          </View>
-                        );
-                      })}
+                          );
+                        })}
+                      </View>
                       <View style={styles.orderDetailsDivider} />
                       <TouchableOpacity
                         style={styles.resendButton}
                         onPress={() => handleResend(primaryPayment?.donationId)}
                         activeOpacity={0.7}
                       >
+                        <Ionicons name="mail-outline" size={16} color="#246BE1" />
                         <Text style={styles.resendButtonText}>
-                          Resend invoice
+                          Resend Invoice
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -594,42 +614,103 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   orderDetails: {
-    marginTop: 10,
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 12,
+    marginTop: 12,
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
-    borderColor: "#EEF2F7",
+    borderColor: "#E5E7EB",
+  },
+  orderDetailsHeader: {
+    marginBottom: 12,
+  },
+  orderDetailsTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
+    marginBottom: 4,
+  },
+  orderDetailsSubtitle: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
+  },
+  orderDetailsList: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 8,
+    marginBottom: 12,
   },
   paymentRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 10,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: "#F3F4F6",
   },
   paymentRowLast: {
     borderBottomWidth: 0,
   },
-  paymentName: { fontWeight: "600", color: "#111" },
-  paymentId: { fontSize: 12, color: "#6B7280" },
-  paymentTotal: { fontWeight: "700", color: "#111", marginHorizontal: 8 },
+  paymentRowLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  paymentIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  paymentInfo: {
+    flex: 1,
+  },
+  paymentName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#010D26",
+    fontFamily: "AlbertSans_600SemiBold",
+    marginBottom: 2,
+  },
+  paymentId: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    fontFamily: "AlbertSans_400Regular",
+  },
+  paymentTotal: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  paymentTotalFee: {
+    color: "#9CA3AF",
+  },
   orderDetailsDivider: {
     height: 1,
-    backgroundColor: "#EEF2F7",
-    marginVertical: 10,
+    backgroundColor: "#E5E7EB",
+    marginVertical: 12,
   },
   resendButton: {
-    alignSelf: "stretch",
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#EEF4FF",
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: "#EFF6FF",
+    gap: 8,
   },
   resendButtonText: {
-    color: "#2161CD",
-    fontSize: 12,
+    color: "#246BE1",
+    fontSize: 14,
     fontWeight: "600",
+    fontFamily: "AlbertSans_600SemiBold",
   },
   emptyState: {
     flex: 1,
