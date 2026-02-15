@@ -149,10 +149,6 @@ export default function SupportCampaignsBanner({
                 )}
               </View>
             </View>
-            <TouchableOpacity style={styles.notificationButton}>
-              <Ionicons name="notifications" size={18} color="#010D264D" />
-              <View style={styles.notificationDot} />
-            </TouchableOpacity>
           </View>
 
           {/* Dropdown - rendered as sibling to appear on top */}
@@ -332,26 +328,30 @@ const styles = StyleSheet.create({
   container: {
     width: "100%",
     minHeight: 550,
+    position: "relative",
+    overflow: "visible",
   },
   backgroundContainer: {
     width: "100%",
-    height: "100%",
-    position: "absolute",
-    top: 0,
-    left: 0,
+    minHeight: 550,
+    position: "relative",
+    overflow: "hidden",
   },
   backgroundImage: {
     width: "100%",
-    height: "100%",
+    minHeight: 550,
     position: "absolute",
     top: 0,
     left: 0,
   },
   gradient: {
-    flex: 1,
+    width: "100%",
+    minHeight: 550,
     paddingHorizontal: 16,
     paddingTop: 24,
     paddingBottom: 24,
+    position: "relative",
+    zIndex: 1,
   },
   content: {
     flex: 1,
@@ -517,6 +517,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 20,
     gap: 12,
+    zIndex: 10,
   },
   searchWrapper: {
     flex: 1,
@@ -597,25 +598,5 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     fontFamily: "AlbertSans_400Regular",
     lineHeight: 16,
-  },
-  notificationButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,1)",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    borderWidth: 2,
-    borderColor: "#010D261A",
-  },
-  notificationDot: {
-    position: "absolute",
-    top: 1,
-    right: 2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#DD4344",
   },
 });

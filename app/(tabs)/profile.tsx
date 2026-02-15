@@ -309,131 +309,138 @@ export default function ProfileScreen() {
 
   if (!isAuthenticated) {
     return (
-      <View style={styles.container}>
-        {/* Header Banner - Same as Zakat Calculator */}
-        <View style={styles.headerWrapper}>
-          <ExpoImage
-            source={{
-              uri: "https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/1708467963799-alihsan-coverImage.png",
-            }}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-          />
-
-          <LinearGradient
-            colors={["transparent", "rgba(38,75,139,0.6)", "rgba(38,75,139,0.9)"]}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-
-          <View style={styles.headerContent}>
-            <Text style={styles.guthenText}>Welcome</Text>
-            <Text style={[styles.headerTitle, { color: "#fff", textAlign: "left" }]}>Join Our Community</Text>
-            <Text style={styles.headerSubtitle}>
-              Sign in to access your profile, track your donations, and make a lasting impact.
-            </Text>
-          </View>
-        </View>
-
-        {/* Content Section */}
+      <View style={[styles.container, { paddingTop: insets.top }]}>
         <ScrollView
           ref={notLoggedInScrollViewRef}
           style={styles.notLoggedInScroll}
           contentContainerStyle={styles.notLoggedInContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* Action Buttons */}
-          <View style={styles.notLoggedInActions}>
-            <TouchableOpacity
-              style={styles.loginButton}
-              onPress={() => router.push("/login")}
-              activeOpacity={0.8}
+          {/* Main Card */}
+          <View style={styles.authCard}>
+            {/* Top Gradient Section */}
+            <LinearGradient
+              colors={["#EEF4FF", "#FFFFFF"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.authCardTopSection}
             >
-              <LinearGradient
-                colors={["#264B8B", "#4066FF"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.buttonGradient}
-              >
-                <Ionicons name="log-in-outline" size={20} color="#fff" />
-                <Text style={styles.loginButtonText}>Sign In</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.signUpButton}
-              onPress={() => router.push("/signup")}
-              activeOpacity={0.8}
-            >
-              <View style={styles.signUpButtonContent}>
-                <Ionicons name="person-add-outline" size={20} color="#010D26" />
-                <Text style={styles.signUpButtonText}>Create Account</Text>
+              <View style={styles.welcomeIconContainer}>
+                <Ionicons name="person-circle-outline" size={48} color="#246BE1" />
               </View>
-            </TouchableOpacity>
+              <Text style={styles.guthenText}>Welcome</Text>
+              <Text style={styles.authTitle}>Join Our Community</Text>
+              <Text style={styles.authSubtitle}>
+                Sign in to access your profile, track your donations, and make a lasting impact.
+              </Text>
+            </LinearGradient>
+
+            <View style={styles.authCardContent}>
+              {/* Sign In Button */}
+              <TouchableOpacity
+                style={styles.authPrimaryButton}
+                onPress={() => router.push("/login")}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="log-in-outline" size={18} color="#010D26" />
+                <Text style={styles.authPrimaryButtonText}>Sign In</Text>
+                <Ionicons name="chevron-forward" size={16} color="#010D26" />
+              </TouchableOpacity>
+
+              {/* Create Account Button */}
+              <TouchableOpacity
+                style={styles.authSecondaryButton}
+                onPress={() => router.push("/signup")}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="person-add-outline" size={18} color="#010D26" />
+                <Text style={styles.authSecondaryButtonText}>Create Account</Text>
+                <Ionicons name="chevron-forward" size={16} color="#010D26" />
+              </TouchableOpacity>
+            </View>
           </View>
 
-          {/* Benefits Section */}
-          <View style={styles.benefitsSection}>
-            <Text style={styles.benefitsTitle}>Why Join Us?</Text>
-            <View style={styles.benefitsGrid}>
-              <View style={styles.benefitCard}>
+          {/* Features Section */}
+          <View style={styles.featuresSection}>
+            <View style={styles.featuresHeader}>
+              <Text style={styles.featuresTitle}>Why Sign In?</Text>
+              <View style={styles.featuresTitleUnderline} />
+            </View>
+            <View style={styles.featuresList}>
+              <View style={styles.featureItem}>
                 <LinearGradient
-                  colors={["#EEF4FF", "#F8FAFF"]}
-                  style={styles.benefitCardGradient}
+                  colors={["#EFF6FF", "#F0F9FF"]}
+                  style={styles.featureIconGradient}
                 >
-                  <View style={styles.benefitIconContainer}>
-                    <Ionicons name="receipt-outline" size={24} color="#264B8B" />
-                  </View>
-                  <Text style={styles.benefitText}>Track donations</Text>
-                  <Text style={styles.benefitDescription}>
-                    Monitor all your contributions in one place
-                  </Text>
+                  <Ionicons name="receipt-outline" size={22} color="#246BE1" />
                 </LinearGradient>
+                <View style={styles.featureContent}>
+                  <Text style={styles.featureTitle}>Track Your Donations</Text>
+                  <Text style={styles.featureDescription}>
+                    Monitor all your contributions and their impact in one place
+                  </Text>
+                </View>
               </View>
 
-              <View style={styles.benefitCard}>
+              <View style={styles.featureItem}>
                 <LinearGradient
-                  colors={["#EEF4FF", "#F8FAFF"]}
-                  style={styles.benefitCardGradient}
+                  colors={["#EFF6FF", "#F0F9FF"]}
+                  style={styles.featureIconGradient}
                 >
-                  <View style={styles.benefitIconContainer}>
-                    <Ionicons name="repeat-outline" size={24} color="#264B8B" />
-                  </View>
-                  <Text style={styles.benefitText}>Recurring gifts</Text>
-                  <Text style={styles.benefitDescription}>
-                    Set up monthly or weekly donations
-                  </Text>
+                  <Ionicons name="repeat-outline" size={22} color="#246BE1" />
                 </LinearGradient>
+                <View style={styles.featureContent}>
+                  <Text style={styles.featureTitle}>Recurring Donations</Text>
+                  <Text style={styles.featureDescription}>
+                    Set up monthly or weekly donations to support causes you care about
+                  </Text>
+                </View>
               </View>
 
-              <View style={styles.benefitCard}>
+              <View style={styles.featureItem}>
                 <LinearGradient
-                  colors={["#EEF4FF", "#F8FAFF"]}
-                  style={styles.benefitCardGradient}
+                  colors={["#EFF6FF", "#F0F9FF"]}
+                  style={styles.featureIconGradient}
                 >
-                  <View style={styles.benefitIconContainer}>
-                    <Ionicons name="document-text-outline" size={24} color="#264B8B" />
-                  </View>
-                  <Text style={styles.benefitText}>Project updates</Text>
-                  <Text style={styles.benefitDescription}>
-                    Stay informed about your impact
-                  </Text>
+                  <Ionicons name="document-text-outline" size={22} color="#246BE1" />
                 </LinearGradient>
+                <View style={styles.featureContent}>
+                  <Text style={styles.featureTitle}>Download Invoices</Text>
+                  <Text style={styles.featureDescription}>
+                    Access and download receipts for all your donations anytime
+                  </Text>
+                </View>
               </View>
 
-              <View style={styles.benefitCard}>
+              <View style={styles.featureItem}>
                 <LinearGradient
-                  colors={["#EEF4FF", "#F8FAFF"]}
-                  style={styles.benefitCardGradient}
+                  colors={["#EFF6FF", "#F0F9FF"]}
+                  style={styles.featureIconGradient}
                 >
-                  <View style={styles.benefitIconContainer}>
-                    <Ionicons name="settings-outline" size={24} color="#264B8B" />
-                  </View>
-                  <Text style={styles.benefitText}>Manage profile</Text>
-                  <Text style={styles.benefitDescription}>
-                    Update your information anytime
-                  </Text>
+                  <Ionicons name="notifications-outline" size={22} color="#246BE1" />
                 </LinearGradient>
+                <View style={styles.featureContent}>
+                  <Text style={styles.featureTitle}>Project Updates</Text>
+                  <Text style={styles.featureDescription}>
+                    Stay informed about the impact of your contributions
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.featureItem}>
+                <LinearGradient
+                  colors={["#EFF6FF", "#F0F9FF"]}
+                  style={styles.featureIconGradient}
+                >
+                  <Ionicons name="settings-outline" size={22} color="#246BE1" />
+                </LinearGradient>
+                <View style={styles.featureContent}>
+                  <Text style={styles.featureTitle}>Manage Profile</Text>
+                  <Text style={styles.featureDescription}>
+                    Update your information and preferences anytime
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -886,121 +893,183 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   notLoggedInContent: {
-    padding: 20,
-    paddingTop: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 32,
+    paddingBottom: 40,
   },
-  notLoggedInActions: {
+  authCard: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
     width: "100%",
-    gap: 12,
+    maxWidth: 420,
+    alignSelf: "center",
     marginBottom: 32,
   },
-  loginButton: {
-    borderRadius: 14,
-    overflow: "hidden",
-    shadowColor: "#264B8B",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  buttonGradient: {
-    paddingVertical: 16,
-    flexDirection: "row",
+  authCardTopSection: {
+    paddingTop: 32,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
     alignItems: "center",
+  },
+  welcomeIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#EFF6FF",
     justifyContent: "center",
-    gap: 10,
-  },
-  loginButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-    fontFamily: "AlbertSans_700Bold",
-  },
-  signUpButton: {
-    backgroundColor: "#FFD602",
-    borderRadius: 14,
-    overflow: "hidden",
-    shadowColor: "#FFD602",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  signUpButtonContent: {
-    paddingVertical: 16,
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: "#DBEAFE",
   },
-  signUpButtonText: {
-    color: "#010D26",
-    fontSize: 16,
-    fontWeight: "700",
-    fontFamily: "AlbertSans_700Bold",
+  guthenText: {
+    fontSize: 24,
+    fontFamily: "Guthen Bloots",
+    color: "#FFD602",
+    marginBottom: 6,
   },
-  benefitsSection: {
-    width: "100%",
-    marginTop: 8,
-  },
-  benefitsTitle: {
-    fontSize: 20,
+  authTitle: {
+    fontSize: 26,
     fontWeight: "800",
     color: "#010D26",
     fontFamily: "AlbertSans_800ExtraBold",
-    marginBottom: 20,
+    marginBottom: 8,
     textAlign: "center",
   },
-  benefitsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  benefitCard: {
-    width: "48%",
-    borderRadius: 16,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  benefitCardGradient: {
-    padding: 16,
-    alignItems: "center",
-    minHeight: 140,
-    justifyContent: "center",
-  },
-  benefitIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-    shadowColor: "#264B8B",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  benefitText: {
-    fontSize: 15,
-    color: "#010D26",
-    fontFamily: "AlbertSans_700Bold",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  benefitDescription: {
-    fontSize: 12,
+  authSubtitle: {
+    fontSize: 14,
     color: "#6B7280",
     fontFamily: "AlbertSans_400Regular",
     textAlign: "center",
-    lineHeight: 16,
+    lineHeight: 20,
+    paddingHorizontal: 8,
+  },
+  authCardContent: {
+    padding: 20,
+    gap: 10,
+  },
+  authPrimaryButton: {
+    backgroundColor: "#FFD602",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#FFD602",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  authPrimaryButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
+    flex: 1,
+    textAlign: "center",
+    marginLeft: 8,
+  },
+  authSecondaryButton: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  authSecondaryButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
+    flex: 1,
+    textAlign: "center",
+    marginLeft: 8,
+  },
+  featuresSection: {
+    width: "100%",
+    maxWidth: 420,
+    alignSelf: "center",
+  },
+  featuresHeader: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  featuresTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#010D26",
+    fontFamily: "AlbertSans_700Bold",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  featuresTitleUnderline: {
+    width: 40,
+    height: 3,
+    backgroundColor: "#FFD602",
+    borderRadius: 2,
+  },
+  featuresList: {
+    gap: 14,
+  },
+  featureItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  featureIconGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14,
+    flexShrink: 0,
+    borderWidth: 1,
+    borderColor: "#DBEAFE",
+  },
+  featureContent: {
+    flex: 1,
+    paddingTop: 2,
+  },
+  featureTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#010D26",
+    fontFamily: "AlbertSans_600SemiBold",
+    marginBottom: 6,
+    lineHeight: 20,
+  },
+  featureDescription: {
+    fontSize: 13,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
+    lineHeight: 18,
   },
 
   header: {

@@ -28,11 +28,15 @@ export default function IntroSlide({ onFinish }: IntroSlideProps) {
   const router = useRouter();
 
   const handleSignUp = () => {
-    router.push("/signup");
+    // Mark intro as completed and navigate
+    onFinish();
+    router.replace("/signup");
   };
 
   const handleLogin = () => {
-    router.push("/login");
+    // Mark intro as completed and navigate
+    onFinish();
+    router.replace("/login");
   };
 
   const handleContinueAsGuest = () => {

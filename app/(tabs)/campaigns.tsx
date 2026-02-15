@@ -132,10 +132,6 @@ export default function ActiveAppealsScreen() {
               )}
             </View>
           </View>
-          <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons name="notifications" size={18} color="#010D264D" />
-            <View style={styles.notificationDot} />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -144,7 +140,7 @@ export default function ActiveAppealsScreen() {
         ref={scrollViewRef}
         style={styles.scrollContent}
         contentContainerStyle={{
-          paddingTop: 8,
+          paddingTop: insets.top + 72,
           paddingBottom: 24,
         }}
         showsVerticalScrollIndicator={false}
@@ -406,6 +402,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   stickyHeader: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
     backgroundColor: "#fff",
     paddingHorizontal: 20,
     zIndex: 10,
@@ -450,26 +450,6 @@ const styles = StyleSheet.create({
   },
   clearButton: {
     padding: 4,
-  },
-  notificationButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,1)",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    borderWidth: 2,
-    borderColor: "#010D261A",
-  },
-  notificationDot: {
-    position: "absolute",
-    top: 1,
-    right: 2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#DD4344",
   },
 
   headingContainer: {

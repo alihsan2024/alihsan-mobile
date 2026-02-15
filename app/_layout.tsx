@@ -1,5 +1,5 @@
 import "react-native-get-random-values";
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
 import React from "react";
 import { Platform, View, Text, TextInput, Alert } from "react-native";
 import { StatusBar } from "expo-status-bar";
@@ -126,6 +126,18 @@ export default function RootLayout() {
   const [showSplash, setShowSplash] = React.useState(true);
   const [showGazaModal, setShowGazaModal] = React.useState(false);
   const [splashFinished, setSplashFinished] = React.useState(false);
+  const [hasNavigatedToAuth, setHasNavigatedToAuth] = React.useState(false);
+  const pathname = usePathname();
+  
+  // Check if we're on login or signup route
+  const isOnAuthRoute = pathname === "/login" || pathname === "/signup" || hasNavigatedToAuth;
+  
+  // Update hasNavigatedToAuth when pathname changes to auth route
+  React.useEffect(() => {
+    if (pathname === "/login" || pathname === "/signup") {
+      setHasNavigatedToAuth(true);
+    }
+  }, [pathname]);
 
   // Check intro status
   React.useEffect(() => {
@@ -191,7 +203,7 @@ export default function RootLayout() {
     );
   }
 
-  if (showSplash && showIntro) {
+  if (showSplash && showIntro && !isOnAuthRoute) {
     return (
       <SafeAreaProvider>
         <View style={{ backgroundColor: "#000", flex: 1 }}>
@@ -201,7 +213,8 @@ export default function RootLayout() {
     );
   }
 
-  if (showIntro) {
+  // Allow navigation to login/signup even if intro is showing
+  if (showIntro && !isOnAuthRoute) {
     return (
       <SafeAreaProvider>
         <View style={{ backgroundColor: "#000", flex: 1 }}>

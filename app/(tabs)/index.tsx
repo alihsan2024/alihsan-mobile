@@ -10,6 +10,7 @@ import {
   Animated,
   Linking,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -160,6 +161,7 @@ export default function HomeScreen() {
   const [isLoadingFeaturedCampaigns, setIsLoadingFeaturedCampaigns] =
     useState(false);
   const [featuredCampaignsError, setFeaturedCampaignsError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const { user } = useSelector((state: any) => state.authentication);
   const isAuthenticated = !!user;
 
@@ -188,6 +190,40 @@ export default function HomeScreen() {
     loadGuestBasket();
   }, [loadGuestBasket]);
 
+  // Load featured campaigns function
+  const loadFeaturedCampaigns = useCallback(async () => {
+    try {
+      setIsLoadingFeaturedCampaigns(true);
+      const campaigns = await fetchFeaturedCampaigns();
+      
+      // Transform API response to match CampaignItem interface
+      const transformedCampaigns: CampaignItem[] = campaigns.map((campaign: any) => ({
+        id: campaign.id,
+        slug: campaign.slug,
+        image: { uri: campaign.coverImage },
+        title: campaign.name,
+        donors: Number(campaign.donor_count || campaign.donorCount || 0),
+        status: "Ongoing",
+        amountRaised: `$${Number(campaign.amountDonated || 0).toLocaleString()}`,
+        goal: `$${Number(campaign.mobileGoalAmount || campaign.fundraiserGoal || 0).toLocaleString()}`,
+      }));
+
+      setFeaturedCampaigns(transformedCampaigns);
+      setFeaturedCampaignsError(null);
+    } catch (error: any) {
+      console.error("Error loading featured campaigns:", error);
+      setFeaturedCampaigns([]);
+      const errorMessage = error?.message || "Failed to load campaigns";
+      setFeaturedCampaignsError(
+        errorMessage.includes("Network") || errorMessage.includes("network") || errorMessage.includes("timeout")
+          ? "Unable to load featured campaigns. Please check your internet connection."
+          : "Unable to load featured campaigns. Please try again later."
+      );
+    } finally {
+      setIsLoadingFeaturedCampaigns(false);
+    }
+  }, []);
+
   // Reload basket when screen comes into focus
   useFocusEffect(
     useCallback(() => {
@@ -201,43 +237,29 @@ export default function HomeScreen() {
     }, [isAuthenticated, refetchBasket, loadGuestBasket])
   );
 
-
   useEffect(() => {
-    const loadFeaturedCampaigns = async () => {
-      try {
-        setIsLoadingFeaturedCampaigns(true);
-        const campaigns = await fetchFeaturedCampaigns();
-        
-        // Transform API response to match CampaignItem interface
-        const transformedCampaigns: CampaignItem[] = campaigns.map((campaign: any) => ({
-          id: campaign.id,
-          slug: campaign.slug,
-          image: { uri: campaign.coverImage },
-          title: campaign.name,
-          donors: Number(campaign.donor_count || campaign.donorCount || 0),
-          status: "Ongoing",
-          amountRaised: `$${Number(campaign.amountDonated || 0).toLocaleString()}`,
-          goal: `$${Number(campaign.mobileGoalAmount || campaign.fundraiserGoal || 0).toLocaleString()}`,
-        }));
-
-        setFeaturedCampaigns(transformedCampaigns);
-        setFeaturedCampaignsError(null);
-      } catch (error: any) {
-        console.error("Error loading featured campaigns:", error);
-        setFeaturedCampaigns([]);
-        const errorMessage = error?.message || "Failed to load campaigns";
-        setFeaturedCampaignsError(
-          errorMessage.includes("Network") || errorMessage.includes("network") || errorMessage.includes("timeout")
-            ? "Unable to load featured campaigns. Please check your internet connection."
-            : "Unable to load featured campaigns. Please try again later."
-        );
-      } finally {
-        setIsLoadingFeaturedCampaigns(false);
-      }
-    };
-
     loadFeaturedCampaigns();
-  }, []);
+  }, [loadFeaturedCampaigns]);
+
+  // Pull to refresh handler
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      // Add minimum delay to ensure indicator is visible
+      const minDelay = new Promise((resolve) => setTimeout(resolve, 1500));
+      
+      // Refresh featured campaigns and basket in parallel
+      await Promise.all([
+        loadFeaturedCampaigns(),
+        isAuthenticated ? refetchBasket() : loadGuestBasket(),
+        minDelay,
+      ]);
+    } catch (error) {
+      console.error("Error refreshing:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadFeaturedCampaigns, isAuthenticated, refetchBasket, loadGuestBasket]);
 
   const handleAmountPress = (amount: number) => {
     setSelectedAmount(amount);
@@ -273,12 +295,28 @@ export default function HomeScreen() {
       style={{
         flex: 1,
         backgroundColor: "#fff",
-        paddingTop: 0,
       }}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
-      contentContainerStyle={{ paddingBottom: 32 }}
+      contentContainerStyle={{ 
+        paddingBottom: 32,
+        flexGrow: 1,
+      }}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor="#FFFFFF"
+          colors={["#FFFFFF", "#246BE1"]}
+          progressBackgroundColor="rgba(255, 255, 255, 0.9)"
+          progressViewOffset={insets.top}
+        />
+      }
+      bounces={true}
+      alwaysBounceVertical={true}
+      scrollEnabled={true}
+      overScrollMode="auto"
     >
       {/* Top Banner Section - "Making a Difference Together" / "Support Our Campaigns" */}
       <SupportCampaignsBanner
@@ -498,7 +536,7 @@ export default function HomeScreen() {
               >
                 Featured Campaigns
               </Text>
-              <TouchableOpacity onPress={() => router.push("/campaigns")}>
+              <TouchableOpacity onPress={() => router.push("/(tabs)/campaigns")}>
                 <Text style={{ color: "#010D26", fontSize: 14, fontWeight: "600" }}>See All</Text>
               </TouchableOpacity>
             </View>

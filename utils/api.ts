@@ -80,14 +80,14 @@ import { setGlobalNetworkStatus } from "@/context/NetworkContext";
 api.interceptors.response.use(
   (response) => {
     console.log("API Response Status:", response.status);
-    // Update network status on successful response
-    setGlobalNetworkStatus(true);
+    // Don't update network status on every successful response to prevent flickering
+    // The connectivity check will handle setting it to true
     return response;
   },
   (error) => {
     console.error("API Response Error:", error.message);
     
-    // Detect network errors
+    // Detect network errors - only set to false on clear network failures
     const isNetworkError = 
       !error.response && (
         error.message?.includes("Network Error") ||
@@ -97,15 +97,14 @@ api.interceptors.response.use(
         error.message?.includes("ENOTFOUND") ||
         error.code === "ERR_NETWORK" ||
         error.code === "ECONNABORTED" ||
-        error.message?.includes("Network request failed")
+        error.message?.includes("Network request failed") ||
+        error.message?.includes("Failed to fetch")
       );
 
-    // Update network status
+    // Only update network status to false on clear network errors
+    // Don't set to true here - let the connectivity check handle that
     if (isNetworkError) {
       setGlobalNetworkStatus(false);
-    } else if (error.response) {
-      // If we got a response (even an error), we're online
-      setGlobalNetworkStatus(true);
     }
 
     if (error.response) {

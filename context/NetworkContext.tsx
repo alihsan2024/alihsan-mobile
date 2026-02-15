@@ -31,33 +31,64 @@ interface NetworkProviderProps {
 export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) => {
   const [isConnected, setIsConnected] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
-  const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastStatusRef = useRef<boolean>(true);
+  const consecutiveFailuresRef = useRef<number>(0);
 
   const checkConnectivity = async () => {
     try {
-      // Try to fetch a small resource to check connectivity
+      // Use a reliable endpoint with proper CORS
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-      await fetch("https://www.google.com/favicon.ico", {
-        method: "HEAD",
-        mode: "no-cors",
+      const response = await fetch("https://www.google.com/generate_204", {
+        method: "GET",
         signal: controller.signal,
         cache: "no-cache",
       });
 
       clearTimeout(timeoutId);
-      setIsConnected(true);
-      setIsOnline(true);
+      
+      // If we get any response (even 204), we're online
+      if (response.status === 204 || response.ok) {
+        consecutiveFailuresRef.current = 0;
+        updateNetworkStatus(true);
+      } else {
+        throw new Error("Network check failed");
+      }
     } catch (error) {
-      setIsConnected(false);
-      setIsOnline(false);
+      consecutiveFailuresRef.current += 1;
+      // Only mark as offline after 2 consecutive failures to prevent flickering
+      if (consecutiveFailuresRef.current >= 2) {
+        updateNetworkStatus(false);
+      }
     }
   };
 
+  const updateNetworkStatus = (connected: boolean) => {
+    // Only update if status actually changed
+    if (lastStatusRef.current === connected) {
+      return;
+    }
+
+    // Debounce rapid status changes
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
+      lastStatusRef.current = connected;
+      setIsConnected(connected);
+      setIsOnline(connected);
+    }, 500); // 500ms debounce
+  };
+
   const setNetworkStatus = (connected: boolean) => {
-    setIsConnected(connected);
-    setIsOnline(connected);
+    // Reset consecutive failures if we get a positive status from API
+    if (connected) {
+      consecutiveFailuresRef.current = 0;
+    }
+    updateNetworkStatus(connected);
   };
 
   // Set global reference for API interceptor
@@ -69,26 +100,32 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
   }, []);
 
   useEffect(() => {
-    // Initial check
-    checkConnectivity();
+    // Initial check after a short delay to avoid false negatives on app start
+    const initialTimeout = setTimeout(() => {
+      checkConnectivity();
+    }, 1000);
 
     // Check connectivity periodically
     const interval = setInterval(() => {
       checkConnectivity();
-    }, 15000); // Check every 15 seconds
+    }, 30000); // Check every 30 seconds (less frequent to reduce flickering)
 
     // Check when app comes to foreground
     const subscription = AppState.addEventListener("change", (nextAppState: AppStateStatus) => {
       if (nextAppState === "active") {
-        checkConnectivity();
+        // Delay check when app becomes active to avoid false negatives
+        setTimeout(() => {
+          checkConnectivity();
+        }, 500);
       }
     });
 
     return () => {
+      clearTimeout(initialTimeout);
       clearInterval(interval);
       subscription.remove();
-      if (checkTimeoutRef.current) {
-        clearTimeout(checkTimeoutRef.current);
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
       }
     };
   }, []);
