@@ -9,21 +9,24 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_API_URL_DEV": "http://192.168.20.16:4001",
-        "EXPO_PUBLIC_STRIPE_KEY": "pk_test_5178emeJJ6oohcr5ljBoClAZ2tL10lPsY0XVNjPyhnogfrYN649N0EAt5B33Q0jf6QjvpOmqoOgmvmh8o0fn0BHvj00ULR40DFl"
+        "EXPO_PUBLIC_STRIPE_KEY": "pk_test_5178emeJJ6oohcr5ljBoClAZ2tL10lPsY0XVNjPyhnogfrYN649N0EAt5B33Q0jf6QjvpOmqoOgmvmh8o0fn0BHvj00ULR40DFl",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyAr-lr0NLXtT58Q53qE53uvLQU5u8wHa9Y"
       }
     },
     "preview": {
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://deenstream.live",
-        "EXPO_PUBLIC_STRIPE_KEY": "pk_test_5178emeJJ6oohcr5ljBoClAZ2tL10lPsY0XVNjPyhnogfrYN649N0EAt5B33Q0jf6QjvpOmqoOgmvmh8o0fn0BHvj00ULR40DFl"
+        "EXPO_PUBLIC_STRIPE_KEY": "pk_test_5178emeJJ6oohcr5ljBoClAZ2tL10lPsY0XVNjPyhnogfrYN649N0EAt5B33Q0jf6QjvpOmqoOgmvmh8o0fn0BHvj00ULR40DFl",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyAr-lr0NLXtT58Q53qE53uvLQU5u8wHa9Y"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://deenstream.live",
-        "EXPO_PUBLIC_STRIPE_KEY": "pk_test_5178emeJJ6oohcr5ljBoClAZ2tL10lPsY0XVNjPyhnogfrYN649N0EAt5B33Q0jf6QjvpOmqoOgmvmh8o0fn0BHvj00ULR40DFl"
+        "EXPO_PUBLIC_STRIPE_KEY": "${EXPO_PUBLIC_STRIPE_KEY_PRODUCTION}",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "${EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_PRODUCTION}"
       }
     }
   },

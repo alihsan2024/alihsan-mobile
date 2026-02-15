@@ -1,3 +1,6 @@
+// Load environment variables from .env file
+require("dotenv").config();
+
 module.exports = {
   expo: {
     name: "Al-Ihsan Foundation App",
@@ -16,7 +19,7 @@ module.exports = {
       supportsTablet: true,
       bundleIdentifier: "org.alihsan.mobile",
       config: {
-        googleMapsApiKey: "AIzaSyAr-lr0NLXtT58Q53qE53uvLQU5u8wHa9Y",
+        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
       },
       infoPlist: {
         NSCameraUsageDescription: "This app needs access to your camera to allow you to take photos for your profile or upload images.",
@@ -34,7 +37,7 @@ module.exports = {
       package: "org.alihsan.mobile",
       config: {
         googleMaps: {
-          apiKey: "AIzaSyAr-lr0NLXtT58Q53qE53uvLQU5u8wHa9Y",
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
         },
       },
       intentFilters: [
@@ -53,18 +56,17 @@ module.exports = {
       bundler: "metro",
     },
     scheme: "alihsan",
-    plugins: ["expo-router", "expo-font", "expo-web-browser"],
+    plugins: ["expo-router", "expo-font", "expo-web-browser", "expo-secure-store"],
     extra: {
       router: {},
       eas: {
         projectId: "acdb8797-5055-407c-a49f-f5c99516013d",
       },
       // API URL will be set via environment variables during build
-      apiUrl: process.env.EXPO_PUBLIC_API_URL || "https://deenstream.live",
-      apiUrlDev: process.env.EXPO_PUBLIC_API_URL_DEV || "http://192.168.20.16:4001",
+      apiUrl: process.env.EXPO_PUBLIC_API_URL,
+      apiUrlDev: process.env.EXPO_PUBLIC_API_URL_DEV ,
       EXPO_PUBLIC_STRIPE_KEY:
-        process.env.EXPO_PUBLIC_STRIPE_KEY ||
-        "pk_test_5178emeJJ6oohcr5ljBoClAZ2tL10lPsY0XVNjPyhnogfrYN649N0EAt5B33Q0jf6QjvpOmqoOgmvmh8o0fn0BHvj00ULR40DFl",
+        process.env.EXPO_PUBLIC_STRIPE_KEY 
     },
   },
 };

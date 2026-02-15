@@ -122,7 +122,9 @@ const ConfirmScreen = () => {
     );
   }, 0);
 
-  console.log(process.env.EXPO_PUBLIC_STRIPE_KEY);
+  if (__DEV__) {
+    console.log("Stripe key configured:", !!process.env.EXPO_PUBLIC_STRIPE_KEY);
+  }
 
   useEffect(() => {
     const recurringItems = basketItems.filter((item: any) => item.isRecurring);

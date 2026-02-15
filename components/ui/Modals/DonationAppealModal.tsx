@@ -163,13 +163,15 @@ export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
         await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
       }
 
+      // Close modal after adding to cart
+      onClose();
+
       showToast({
         message: "Your donation has been added to the cart",
         type: "success",
         action: {
           label: "View Cart",
           onPress: () => {
-            onClose();
             router.push("/(tabs)/cart");
           },
         },
@@ -376,11 +378,13 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: "700",
     color: "#fff",
+    fontFamily: "Guthen Bloots",
   },
   heroSubtitle: {
     fontSize: 30,
     fontWeight: "500",
     color: "#fff",
+    fontFamily: "AlbertSans_500Medium",
   },
   amount: {
     fontSize: 14,

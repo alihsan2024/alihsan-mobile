@@ -36,7 +36,8 @@ export const basketApi = createApi({
     const [args, apiObj, extraOptions] = baseQueryArgs;
     let token = null;
     try {
-      const userString = await AsyncStorage.getItem("loggedIn");
+      const { secureGetItem } = await import("@/utils/secureStorage");
+      const userString = await secureGetItem("loggedIn");
       token = userString ? JSON.parse(userString).token : null;
     } catch (e) {
       token = null;

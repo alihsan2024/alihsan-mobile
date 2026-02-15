@@ -231,7 +231,8 @@ export default function CheckoutScreen() {
     try {
       setLoadingIntent(true);
 
-      const stored = await AsyncStorage.getItem("checkoutDetails");
+      const { secureGetItem } = await import("@/utils/secureStorage");
+      const stored = await secureGetItem("checkoutDetails");
       
       if (!stored) {
         throw new Error("Missing checkoutDetails");
@@ -539,7 +540,8 @@ export default function CheckoutScreen() {
         setLoadingPayment(true);
         try {
           // Get checkout details
-          const stored = await AsyncStorage.getItem("checkoutDetails");
+          const { secureGetItem } = await import("@/utils/secureStorage");
+      const stored = await secureGetItem("checkoutDetails");
           const checkoutDetails = stored ? JSON.parse(stored) : {};
 
           // Check for orphan items - PayPal is not available for orphan sponsorships
@@ -754,7 +756,8 @@ export default function CheckoutScreen() {
 
       try {
         // Get checkout details for billing
-        const stored = await AsyncStorage.getItem("checkoutDetails");
+        const { secureGetItem } = await import("@/utils/secureStorage");
+      const stored = await secureGetItem("checkoutDetails");
         const checkoutDetails = stored ? JSON.parse(stored) : {};
         const parts = checkoutDetails.firstName?.trim().split(/\s+/) || [];
         const firstName = parts[0] || "";

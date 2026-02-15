@@ -40,7 +40,8 @@ const initialState: AuthState = {
 };
 
 export const initAuth = createAsyncThunk("init/auth", async () => {
-  const data = await AsyncStorage.getItem("loggedIn");
+  const { secureGetItem } = await import("@/utils/secureStorage");
+  const data = await secureGetItem("loggedIn");
   if (!data) return null;
   const authData = JSON.parse(data);
   api.defaults.headers.common.Authorization = `Bearer ${authData.token}`;
@@ -96,7 +97,9 @@ export const loginUser = createAsyncThunk(
     try {
       const response = await api.post("auth/login", body);
       const payload = response.data.payload;
-      await AsyncStorage.setItem(
+      // Use secure storage for sensitive auth data
+      const { secureSetItem } = await import("@/utils/secureStorage");
+      await secureSetItem(
         "loggedIn",
         JSON.stringify({
           token: payload.token,
@@ -129,7 +132,9 @@ export const getProfile = createAsyncThunk(
       return data;
     } catch (e: any) {
       if (e.response?.status == 401) {
-        await AsyncStorage.removeItem("loggedIn");
+        // Use secure storage for sensitive auth data
+        const { secureRemoveItem } = await import("@/utils/secureStorage");
+        await secureRemoveItem("loggedIn");
         // Optionally, you can trigger a navigation to login screen here
         // e.g., using React Navigation
       }
@@ -157,7 +162,8 @@ export const deleteProfile = createAsyncThunk(
       const response = await api.delete("profile", payload);
       let data = response?.data?.payload;
       if (response.status === 200) {
-        await AsyncStorage.removeItem("loggedIn");
+        const { secureRemoveItem } = await import("@/utils/secureStorage");
+        await secureRemoveItem("loggedIn");
         // Optionally, trigger navigation to login screen here
       } else {
         return thunkAPI.rejectWithValue(data);
@@ -197,7 +203,8 @@ export const logoutUser = createAsyncThunk(
   async (_, thunkAPI) => {
     try {
       // Clear auth storage
-      await AsyncStorage.removeItem("loggedIn");
+      const { secureRemoveItem } = await import("@/utils/secureStorage");
+      await secureRemoveItem("loggedIn");
       api.defaults.headers.common.Authorization = "";
 
       // Note: Device re-registration as guest is skipped to avoid native module issues

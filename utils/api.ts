@@ -18,10 +18,12 @@ export const registerDeviceToken = async ({
       platform,
     });
   } catch (error: any) {
-    console.error(
-      "Error registering device token:",
-      error.response?.data || error.message
-    );
+    if (__DEV__) {
+      console.error(
+        "Error registering device token:",
+        error.response?.data || error.message
+      );
+    }
     throw error;
   }
 };
@@ -29,6 +31,7 @@ import axios from "axios";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
+import { secureSetItem, secureGetItem, secureRemoveItem } from "./secureStorage";
 
 // Configure API URLs for different environments
 // Priority: __DEV__ -> dev env/config -> fallback, otherwise prod env/config -> fallback
@@ -50,7 +53,9 @@ const getApiUrl = (): string => {
 
 const API_URL = getApiUrl();
 
-console.log(`Using API URL: ${API_URL}`);
+if (__DEV__) {
+  console.log(`Using API URL: ${API_URL}`);
+}
 
 // Create axios instance
 const api = axios.create({
@@ -64,11 +69,15 @@ const api = axios.create({
 // Request interceptor for debugging
 api.interceptors.request.use(
   (request) => {
-    console.log("API Request:", request.method, request.url);
+    if (__DEV__) {
+      console.log("API Request:", request.method, request.url);
+    }
     return request;
   },
   (error) => {
-    console.error("API Request Error:", error);
+    if (__DEV__) {
+      console.error("API Request Error:", error);
+    }
     return Promise.reject(error);
   }
 );
@@ -79,13 +88,17 @@ import { setGlobalNetworkStatus } from "@/context/NetworkContext";
 // Response interceptor for debugging and network detection
 api.interceptors.response.use(
   (response) => {
-    console.log("API Response Status:", response.status);
+    if (__DEV__) {
+      console.log("API Response Status:", response.status);
+    }
     // Don't update network status on every successful response to prevent flickering
     // The connectivity check will handle setting it to true
     return response;
   },
   (error) => {
-    console.error("API Response Error:", error.message);
+    if (__DEV__) {
+      console.error("API Response Error:", error.message);
+    }
     
     // Detect network errors - only set to false on clear network failures
     const isNetworkError = 
@@ -107,7 +120,7 @@ api.interceptors.response.use(
       setGlobalNetworkStatus(false);
     }
 
-    if (error.response) {
+    if (__DEV__ && error.response) {
       console.error("Error Status:", error.response.status);
       console.error("Error Data:", error.response.data);
     }
@@ -127,14 +140,16 @@ export const setAuthToken = (token: string | null) => {
 // Initialize auth token from storage
 export const initAuth = async () => {
   try {
-    const authData = await AsyncStorage.getItem("authData");
+    const authData = await secureGetItem("authData");
     if (authData) {
       const parsed = JSON.parse(authData);
       setAuthToken(parsed.token);
       return parsed;
     }
   } catch (error) {
-    console.error("Error initializing auth:", error);
+    if (__DEV__) {
+      console.error("Error initializing auth:", error);
+    }
   }
   return null;
 };
@@ -186,7 +201,9 @@ export const fetchCampaigns = async (
     // Return projects.rows which contains the list of campaigns
     return data?.payload?.projects?.rows || [];
   } catch (error) {
-    console.error("Error fetching campaigns:", error);
+    if (__DEV__) {
+      console.error("Error fetching campaigns:", error);
+    }
     throw error;
   }
 };
@@ -199,7 +216,9 @@ export const fetchFeaturedCampaigns = async (): Promise<Campaign[]> => {
     // Return campaigns array from payload
     return data?.payload?.campaigns || [];
   } catch (error) {
-    console.error("Error fetching featured campaigns:", error);
+    if (__DEV__) {
+      console.error("Error fetching featured campaigns:", error);
+    }
     throw error;
   }
 };
@@ -210,7 +229,9 @@ export const getCampaignDetails = async (slug: string): Promise<any> => {
     const response = await api.get(`/project/details/${slug}`);
     return response.data?.payload || {};
   } catch (error) {
-    console.error(`Error fetching campaign details for ${slug}:`, error);
+    if (__DEV__) {
+      console.error(`Error fetching campaign details for ${slug}:`, error);
+    }
     throw error;
   }
 };
@@ -221,7 +242,9 @@ export const getCampaignCategories = async (): Promise<any[]> => {
     const response = await api.get("/project/category");
     return response.data?.payload || [];
   } catch (error) {
-    console.error("Error fetching campaign categories:", error);
+    if (__DEV__) {
+      console.error("Error fetching campaign categories:", error);
+    }
     throw error;
   }
 };
@@ -291,8 +314,8 @@ export const login = async (
       isLoggedIn: true,
     };
 
-    // Save to AsyncStorage
-    await AsyncStorage.setItem("authData", JSON.stringify(authData));
+    // Save to secure storage
+    await secureSetItem("authData", JSON.stringify(authData));
     setAuthToken(payload.token);
 
     return payload;
@@ -343,10 +366,12 @@ export const register = async (userData: RegisterRequest): Promise<void> => {
 // Logout user
 export const logout = async (): Promise<void> => {
   try {
-    await AsyncStorage.removeItem("authData");
+    await secureRemoveItem("authData");
     setAuthToken(null);
   } catch (error) {
-    console.error("Error logging out:", error);
+    if (__DEV__) {
+      console.error("Error logging out:", error);
+    }
     throw error;
   }
 };
@@ -357,7 +382,9 @@ export const getProfile = async (): Promise<any> => {
     const response = await api.get("/auth/profile");
     return response.data?.payload || {};
   } catch (error) {
-    console.error("Error fetching profile:", error);
+    if (__DEV__) {
+      console.error("Error fetching profile:", error);
+    }
     throw error;
   }
 };
@@ -446,7 +473,9 @@ export const getDonationStatistics = async (): Promise<DonationStatistics> => {
 
     return stats;
   } catch (error) {
-    console.error("Error fetching donation statistics:", error);
+    if (__DEV__) {
+      console.error("Error fetching donation statistics:", error);
+    }
     // Return default values on error
     return { total: 0, zakat: 0, sadaqah: 0, orphan: 0 };
   }
@@ -462,7 +491,9 @@ export const getRecentDonations = async (
     );
     return response.data?.payload?.rows || [];
   } catch (error) {
-    console.error("Error fetching recent donations:", error);
+    if (__DEV__) {
+      console.error("Error fetching recent donations:", error);
+    }
     return [];
   }
 };
@@ -512,7 +543,9 @@ export const getBasketItems = async (): Promise<BasketItem[]> => {
       // Not authenticated, return empty array
       return [];
     }
-    console.error("Error fetching basket items:", error);
+    if (__DEV__) {
+      console.error("Error fetching basket items:", error);
+    }
     throw error;
   }
 };
@@ -621,7 +654,9 @@ export const getMetalPrices = async (): Promise<MetalPrices> => {
     const payload = response.data?.payload;
 
     if (!payload) {
-      console.warn("No payload in metal prices response");
+      if (__DEV__) {
+        console.warn("No payload in metal prices response");
+      }
       return {
         goldPriceInUsd: 0,
         goldPriceInAud: 0,
@@ -648,11 +683,15 @@ export const getMetalPrices = async (): Promise<MetalPrices> => {
       updatedAt: payload.price?.updatedAt || new Date().toISOString(),
     };
 
-    console.log("Metal prices fetched:", prices);
+    if (__DEV__) {
+      console.log("Metal prices fetched:", prices);
+    }
     return prices;
   } catch (error: any) {
-    console.error("Error fetching metal prices:", error);
-    console.error("Error details:", error.response?.data || error.message);
+    if (__DEV__) {
+      console.error("Error fetching metal prices:", error);
+      console.error("Error details:", error.response?.data || error.message);
+    }
     // Return default values instead of throwing to prevent app crash
     return {
       goldPriceInUsd: 0,
@@ -676,7 +715,9 @@ export const getAnyZakatCampaign = async (): Promise<Campaign | null> => {
     );
     return zakatCampaign || null;
   } catch (error) {
-    console.error("Error fetching zakat campaign:", error);
+    if (__DEV__) {
+      console.error("Error fetching zakat campaign:", error);
+    }
     return null;
   }
 };

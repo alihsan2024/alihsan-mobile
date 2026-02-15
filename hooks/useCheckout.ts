@@ -84,7 +84,9 @@ export function useCheckout(onSuccess: () => void) {
 
         const resPayload = response.data?.payload;
 
-        await AsyncStorage.setItem(
+        // Use secure storage for sensitive payment data (clientSecret, paymentIntentId)
+        const { secureSetItem } = await import("@/utils/secureStorage");
+        await secureSetItem(
           "checkoutDetails",
           JSON.stringify({
             ...payload,
