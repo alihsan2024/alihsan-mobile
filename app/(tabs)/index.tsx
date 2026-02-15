@@ -162,6 +162,8 @@ export default function HomeScreen() {
     useState(false);
   const [featuredCampaignsError, setFeaturedCampaignsError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const lastRefreshTimeRef = useRef<number>(0);
+  const isRefreshingRef = useRef<boolean>(false);
   const { user } = useSelector((state: any) => state.authentication);
   const isAuthenticated = !!user;
 
@@ -243,7 +245,26 @@ export default function HomeScreen() {
 
   // Pull to refresh handler
   const onRefresh = useCallback(async () => {
+    // Prevent spam: Don't allow refresh if one is already in progress
+    if (isRefreshingRef.current) {
+      return;
+    }
+
+    // Prevent spam: Check if enough time has passed since last refresh (10 seconds cooldown)
+    const now = Date.now();
+    const timeSinceLastRefresh = now - lastRefreshTimeRef.current;
+    const COOLDOWN_PERIOD = 10000; // 10 seconds
+
+    if (timeSinceLastRefresh < COOLDOWN_PERIOD) {
+      // Still in cooldown, ignore the refresh request
+      return;
+    }
+
+    // Update last refresh time and set refreshing state
+    lastRefreshTimeRef.current = now;
+    isRefreshingRef.current = true;
     setRefreshing(true);
+
     try {
       // Add minimum delay to ensure indicator is visible
       const minDelay = new Promise((resolve) => setTimeout(resolve, 1500));
@@ -257,6 +278,7 @@ export default function HomeScreen() {
     } catch (error) {
       console.error("Error refreshing:", error);
     } finally {
+      isRefreshingRef.current = false;
       setRefreshing(false);
     }
   }, [loadFeaturedCampaigns, isAuthenticated, refetchBasket, loadGuestBasket]);
