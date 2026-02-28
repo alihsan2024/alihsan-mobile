@@ -16,44 +16,65 @@ import { useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Button from "../Button";
 import { zakatResetInput, zakatStep } from "@/store/reduxSlice/zakatSlice";
-import { addBasketItem, getBasketItems } from "@/store/reduxSlice/basketSlice";
+import {
+  useAddToBasketMutation,
+  useGetBasketQuery,
+  useRemoveFromBasketMutation,
+} from "@/store/reduxSlice/api/basketApi";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { getAnyZakatCampaign } from "@/utils/api";
 
 type Props = {
   visible: boolean;
   onClose: () => void;
+  /** When set, use this amount instead of calculating from form (for "I already know my zakat amount" flow) */
+  overrideZakatAmount?: number | null;
 };
 
-export default function ZakatSummaryModal({ visible, onClose }: Props) {
+export default function ZakatSummaryModal({ visible, onClose, overrideZakatAmount }: Props) {
   const dispatch = useAppDispatch();
-
   const { amounts, prices, step } = useSelector(
     (state: any) => state.zakatCalculator
   );
-  const isLoggedIn = useSelector(
-    (state: any) => !!state.authentication.auth?.token
-  );
+  const { user } = useSelector((state: any) => state.authentication);
+  const isLoggedIn = !!user;
+
+  const [addToBasket] = useAddToBasketMutation();
+  const [removeFromBasket] = useRemoveFromBasketMutation();
+  const { data: basketData } = useGetBasketQuery(undefined, {
+    skip: !visible || !isLoggedIn,
+  });
 
   const [loading, setLoading] = useState(false);
   const [zakatCampaign, setZakatCampaign] = useState<any>(null);
 
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.88)).current;
+  const isFetchingCampaignRef = useRef(false);
+  const isSubmittingRef = useRef(false);
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
 
-  // Fetch zakat campaign when modal opens
+  // Fetch zakat campaign when modal opens (single call; guard against Strict Mode double-mount)
   useEffect(() => {
-    if (visible) {
-      const fetchZakatCampaign = async () => {
-        try {
-          const campaign = await getAnyZakatCampaign();
-          setZakatCampaign(campaign);
-        } catch (error) {
-          console.error("Error fetching zakat campaign:", error);
-        }
-      };
-      fetchZakatCampaign();
+    if (!visible) {
+      isFetchingCampaignRef.current = false;
+      return;
     }
+    if (isFetchingCampaignRef.current) return;
+    isFetchingCampaignRef.current = true;
+
+    const fetchZakatCampaign = async () => {
+      try {
+        const campaign = await getAnyZakatCampaign();
+        if (visibleRef.current) setZakatCampaign(campaign);
+      } catch (error) {
+        if (__DEV__) console.error("Error fetching zakat campaign:", error);
+      } finally {
+        isFetchingCampaignRef.current = false;
+      }
+    };
+    fetchZakatCampaign();
   }, [visible]);
 
   useEffect(() => {
@@ -128,13 +149,19 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
   const goldNisab = 87.48 * goldPriceAud;
   const silverNisab = 612.36 * silverPriceAud;
 
-  const zakatOwed = zakatableWealth >= silverNisab ? zakatableWealth / 40 : 0;
+  const calculatedZakat = zakatableWealth >= silverNisab ? zakatableWealth / 40 : 0;
+  const zakatOwed = overrideZakatAmount != null && overrideZakatAmount > 0
+    ? overrideZakatAmount
+    : calculatedZakat;
+  const isKnownAmountMode = overrideZakatAmount != null && overrideZakatAmount > 0;
 
   const handlePayZakat = async () => {
     if (zakatOwed <= 0) {
       Alert.alert(
-        "Zakat Not Due",
-        "You are not required to pay Zakat as your wealth is below the Nisab."
+        "Invalid Amount",
+        isKnownAmountMode
+          ? "Please enter an amount greater than 0."
+          : "You are not required to pay Zakat as your wealth is below the Nisab."
       );
       return;
     }
@@ -147,6 +174,8 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
       return;
     }
 
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setLoading(true);
 
     try {
@@ -156,14 +185,29 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
         coverImage: zakatCampaign.coverImage || "",
         amount: Number(zakatOwed.toFixed(2)),
         total: Number(zakatOwed.toFixed(2)),
+        quantity: 1,
         isRecurring: false,
         custom: false,
         checkoutType: "ZAQAT",
       };
 
       if (isLoggedIn) {
-        await dispatch(addBasketItem(zakatItem)).unwrap();
-        dispatch(getBasketItems());
+        // Ensure only one zakat in cart: remove existing zakat item then add
+        const payload = basketData?.payload ?? [];
+        const existingZakat = payload.find(
+          (item: any) => item.campaignId === zakatCampaign.id || item.Campaign?.id === zakatCampaign.id
+        );
+        if (existingZakat) {
+          try {
+            await removeFromBasket({
+              campaignId: zakatCampaign.id,
+              donationItem: existingZakat.donationItem,
+            }).unwrap();
+          } catch {
+            // Item may already be gone; proceed to add
+          }
+        }
+        await addToBasket({ body: zakatItem }).unwrap();
       } else {
         const guestData = await AsyncStorage.getItem("guestBasket");
         const guestBasket = guestData ? JSON.parse(guestData) : [];
@@ -190,12 +234,13 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
       Alert.alert("Success", "Zakat added to basket successfully");
       dispatch(zakatResetInput());
       onClose();
-    } catch {
-      Alert.alert(
-        "Error",
-        "Something went wrong while adding Zakat to basket."
-      );
+    } catch (err: any) {
+      if (__DEV__) console.error("Zakat add to basket failed:", err);
+      const message =
+        err?.data?.message || err?.message || "Something went wrong while adding Zakat to basket.";
+      Alert.alert("Error", message);
     } finally {
+      isSubmittingRef.current = false;
       setLoading(false);
     }
   };
@@ -230,7 +275,9 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
               style={styles.summaryCard}
             >
               <Text style={styles.guthenText}>Zakat Summary</Text>
-              <Text style={styles.summaryTitle}>Your Estimated Zakat Payment</Text>
+              <Text style={styles.summaryTitle}>
+                {isKnownAmountMode ? "Your Zakat Amount" : "Your Estimated Zakat Payment"}
+              </Text>
 
               <View style={styles.amountContainer}>
                 <Text style={styles.amountLabel}>Total Amount</Text>
@@ -239,22 +286,25 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
                 </Text>
               </View>
 
-              <View style={styles.summaryDivider} />
-
-              <View style={styles.summaryDetails}>
-                {[
-                  { label: "Total Assets", value: totalAssets },
-                  { label: "Total Liabilities", value: totalLiabilities },
-                  { label: "Zakatable Wealth", value: zakatableWealth },
-                ].map((item) => (
-                  <View key={item.label} style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>{item.label}</Text>
-                    <Text style={styles.summaryValue}>
-                      {formatCurrency(item.value)}
-                    </Text>
+              {!isKnownAmountMode && (
+                <>
+                  <View style={styles.summaryDivider} />
+                  <View style={styles.summaryDetails}>
+                    {[
+                      { label: "Total Assets", value: totalAssets },
+                      { label: "Total Liabilities", value: totalLiabilities },
+                      { label: "Zakatable Wealth", value: zakatableWealth },
+                    ].map((item) => (
+                      <View key={item.label} style={styles.summaryRow}>
+                        <Text style={styles.summaryLabel}>{item.label}</Text>
+                        <Text style={styles.summaryValue}>
+                          {formatCurrency(item.value)}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
-                ))}
-              </View>
+                </>
+              )}
             </LinearGradient>
 
             {/* Action Buttons */}
@@ -271,21 +321,24 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
                 <Ionicons name="arrow-forward" size={18} color="#010D26" />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => {
-                  dispatch(zakatResetInput());
-                  dispatch(zakatStep(1 - step));
-                  onClose();
-                }}
-                style={styles.resetButton}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="refresh-outline" size={16} color="#6B7280" />
-                <Text style={styles.resetText}>Reset Calculator</Text>
-              </TouchableOpacity>
+              {!isKnownAmountMode && (
+                <TouchableOpacity
+                  onPress={() => {
+                    dispatch(zakatResetInput());
+                    dispatch(zakatStep(1 - step));
+                    onClose();
+                  }}
+                  style={styles.resetButton}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="refresh-outline" size={16} color="#6B7280" />
+                  <Text style={styles.resetText}>Reset Calculator</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
-            {/* Details Card */}
+            {/* Details Card - hide when user entered known amount */}
+            {!isKnownAmountMode && (
             <View style={styles.detailsCard}>
               <Text style={styles.detailsTitle}>
                 Calculation Details
@@ -339,6 +392,7 @@ export default function ZakatSummaryModal({ visible, onClose }: Props) {
                 </View>
               )}
             </View>
+            )}
           </ScrollView>
         </Animated.View>
       </Animated.View>

@@ -5,19 +5,18 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
   Linking,
   Share,
   Alert,
 } from "react-native";
 import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { Image as ExpoImage } from "expo-image";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { formatPrice } from "@/utils/helper";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
+import Button from "@/components/ui/Button";
 
 const COVER_IMAGE_URL =
   "https://www.alihsan.org.au/_next/image?url=https%3A%2F%2Falihsan.s3.ap-southeast-2.amazonaws.com%2Fupdated-photos%2F1753924269927-alihsan-1708467468866-alihsan-coverImage.webp&w=1920&q=75";
@@ -79,7 +78,7 @@ export default function ThankYouScreen() {
     );
   }
 
-  const { subtotal, adminFee, total } = summary;
+  const { total } = summary;
 
   return (
     <View style={styles.container}>
@@ -109,78 +108,42 @@ export default function ThankYouScreen() {
       {/* CONTENT */}
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
-          {/* Success Message */}
-          <View style={styles.successCard}>
-            <View style={styles.successIconContainer}>
-              <Ionicons name="checkmark-circle" size={48} color="#10B981" />
-            </View>
-            <Text style={styles.successTitle}>Transaction Successful!</Text>
-            <Text style={styles.successDescription}>
-              Your donation has been processed successfully. Thank you for your generosity and support.
-            </Text>
+          {/* Confirmation message - simple like AU Next.js */}
+          <Text style={styles.confirmationText}>
+            Your donation has been successfully received.
+          </Text>
+
+          {/* Compact payment summary */}
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Total paid</Text>
+            <Text style={styles.summaryValue}>${formatPrice(total)}</Text>
           </View>
 
-          {/* Price Details */}
-          <View style={styles.priceCard}>
-            <Text style={styles.priceCardTitle}>Payment Summary</Text>
-            <View style={styles.priceDivider} />
-            
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Subtotal</Text>
-              <Text style={styles.priceValue}>${formatPrice(subtotal)}</Text>
-            </View>
-            
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Admin Fee</Text>
-              <Text style={styles.priceValue}>${formatPrice(adminFee)}</Text>
-            </View>
-            
-            <View style={styles.priceDivider} />
-            
-            <View style={styles.priceRow}>
-              <Text style={[styles.priceLabel, styles.priceTotalLabel]}>Total</Text>
-              <Text style={[styles.priceValue, styles.priceTotalValue]}>
-                ${formatPrice(total)}
-              </Text>
-            </View>
-          </View>
+          <Text style={styles.receiptNote}>
+            A receipt has been sent to your email.
+          </Text>
 
-          {/* Share Section */}
-          <View style={styles.shareSection}>
-            <View style={styles.shareHeader}>
-              <View style={styles.shareIconContainer}>
-                <Ionicons name="share-social" size={24} color="#246BE1" />
-              </View>
-              <View style={styles.shareHeaderText}>
-                <Text style={styles.shareTitle}>Share Your Impact</Text>
-                <Text style={styles.shareSubtitle}>
-                  Help spread the word and inspire others to make a difference
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.shareGrid}>
-              <ShareItem 
-                icon="logo-instagram" 
-                label="Instagram" 
-                color="#E4405F"
-                onPress={() => handleShare("instagram")}
-              />
-              <ShareItem 
-                icon="logo-whatsapp" 
-                label="WhatsApp" 
-                color="#25D366"
-                onPress={() => handleShare("whatsapp")}
-              />
-              <ShareItem 
-                icon="logo-facebook" 
-                label="Facebook" 
+          {/* Share your donation - simple row like AU Next.js */}
+          <View style={styles.shareRow}>
+            <Text style={styles.shareLabel}>Share your donation</Text>
+            <View style={styles.shareIcons}>
+              <ShareIcon
+                icon="logo-facebook"
                 color="#1877F2"
                 onPress={() => handleShare("facebook")}
               />
-              <ShareItem 
-                icon="link" 
-                label="Copy Link" 
+              <ShareIcon
+                icon="logo-whatsapp"
+                color="#25D366"
+                onPress={() => handleShare("whatsapp")}
+              />
+              <ShareIcon
+                icon="logo-instagram"
+                color="#E4405F"
+                onPress={() => handleShare("instagram")}
+              />
+              <ShareIcon
+                icon="link"
                 color="#246BE1"
                 onPress={() => handleShare("link")}
               />
@@ -189,48 +152,35 @@ export default function ThankYouScreen() {
         </View>
       </ScrollView>
 
-      {/* RETURN HOME SECTION */}
-      <View style={[styles.returnHomeSection, { paddingBottom: Math.max(insets.bottom, 20) }]}>
-        <TouchableOpacity
-          style={styles.returnHomeButton}
+      {/* RETURN HOME */}
+      <View style={[styles.returnHomeSection, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <Button
+          variant="primary"
+          label="Return to Home"
+          leftIcon={<Ionicons name="home-outline" size={18} color="#FFF" />}
           onPress={() => router.push("/(tabs)/")}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={["#246BE1", "#2161CD"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.returnHomeButtonGradient}
-          >
-            <Ionicons name="home" size={20} color="#FFF" />
-            <Text style={styles.returnHomeButtonText}>Return to Home</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+          style={styles.returnHomeButton}
+        />
       </View>
     </View>
   );
 }
 
-const ShareItem = ({ 
-  icon, 
-  label, 
-  color = "#246BE1",
-  onPress 
-}: { 
-  icon: string; 
-  label: string;
-  color?: string;
+const ShareIcon = ({
+  icon,
+  color,
+  onPress,
+}: {
+  icon: string;
+  color: string;
   onPress: () => void;
 }) => (
-  <TouchableOpacity 
-    style={styles.shareItem} 
+  <TouchableOpacity
+    style={[styles.shareIconButton, { backgroundColor: color }]}
     onPress={onPress}
-    activeOpacity={0.7}
+    activeOpacity={0.8}
   >
-    <View style={[styles.shareIconCircle, { backgroundColor: `${color}15` }]}>
-      <Ionicons name={icon as any} size={22} color={color} />
-    </View>
-    <Text style={styles.shareLabel}>{label}</Text>
+    <Ionicons name={icon as any} size={20} color="#FFF" />
   </TouchableOpacity>
 );
 
@@ -290,196 +240,75 @@ const styles = StyleSheet.create({
 
   // Content
   content: {
-    padding: 20,
-    paddingTop: 24,
-    gap: 20,
-  },
-
-  // Success Card
-  successCard: {
-    backgroundColor: "#F0FDF4",
-    borderRadius: 16,
-    padding: 20,
+    padding: 24,
+    paddingTop: 28,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#D1FAE5",
   },
-  successIconContainer: {
-    marginBottom: 12,
-  },
-  successTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#065F46",
-    marginBottom: 8,
-    fontFamily: "AlbertSans_700Bold",
-    textAlign: "center",
-  },
-  successDescription: {
-    fontSize: 14,
-    color: "#047857",
-    textAlign: "center",
-    lineHeight: 20,
-    fontFamily: "AlbertSans_400Regular",
-  },
-
-  // Price Card
-  priceCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  priceCardTitle: {
+  confirmationText: {
     fontSize: 18,
-    fontWeight: "700",
-    color: "#010D26",
-    marginBottom: 12,
-    fontFamily: "AlbertSans_700Bold",
-  },
-  priceDivider: {
-    height: 1,
-    backgroundColor: "#E5E7EB",
-    marginVertical: 12,
-  },
-  priceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  priceLabel: {
-    fontSize: 15,
-    color: "#6B7280",
-    fontFamily: "AlbertSans_500Medium",
-  },
-  priceValue: {
-    fontSize: 15,
-    color: "#010D26",
-    fontWeight: "600",
     fontFamily: "AlbertSans_600SemiBold",
+    color: "#374151",
+    textAlign: "center",
+    marginBottom: 8,
   },
-  priceTotalLabel: {
-    fontSize: 18,
-    color: "#010D26",
-    fontWeight: "700",
-    fontFamily: "AlbertSans_700Bold",
-  },
-  priceTotalValue: {
-    fontSize: 18,
-    color: "#264B8B",
-    fontWeight: "800",
-    fontFamily: "AlbertSans_800ExtraBold",
-  },
-
-  // Share Section
-  shareSection: {
-    marginTop: 8,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  shareHeader: {
+  summaryRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 20,
-    gap: 12,
-  },
-  shareIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: "#EFF6FF",
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 16,
   },
-  shareHeaderText: {
-    flex: 1,
-  },
-  shareTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#010D26",
-    marginBottom: 4,
-    fontFamily: "AlbertSans_700Bold",
-  },
-  shareSubtitle: {
-    fontSize: 13,
+  summaryLabel: {
+    fontSize: 15,
     color: "#6B7280",
-    lineHeight: 18,
     fontFamily: "AlbertSans_400Regular",
   },
-  shareGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
+  summaryValue: {
+    fontSize: 18,
+    fontFamily: "AlbertSans_700Bold",
+    color: "#264B8B",
   },
-  shareItem: {
-    width: "47%",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+  receiptNote: {
+    fontSize: 14,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_400Regular",
+    marginBottom: 28,
   },
-  shareIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: "center",
+  shareRow: {
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+    paddingTop: 24,
     alignItems: "center",
-    marginBottom: 10,
+    width: "100%",
   },
   shareLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#010D26",
-    textAlign: "center",
+    fontSize: 16,
     fontFamily: "AlbertSans_600SemiBold",
+    color: "#374151",
+    marginBottom: 16,
+  },
+  shareIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+  },
+  shareIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  // Return Home Section
   returnHomeSection: {
-    padding: 20,
-    paddingTop: 16,
+    paddingHorizontal: 20,
+    paddingTop: 12,
     backgroundColor: "#fff",
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 5,
   },
   returnHomeButton: {
-    borderRadius: 12,
-    overflow: "hidden",
-    shadowColor: "#246BE1",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  returnHomeButtonGradient: {
-    paddingVertical: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  returnHomeButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#FFF",
-    fontFamily: "AlbertSans_700Bold",
+    width: "100%",
   },
 });

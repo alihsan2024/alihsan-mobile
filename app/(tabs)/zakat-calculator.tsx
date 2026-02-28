@@ -7,6 +7,7 @@ import {
   ScrollView,
   TextInput,
   Image,
+  Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -41,6 +42,8 @@ const formatPrice = (price: number): string => {
     : "0.00";
 };
 
+let metalPricesFetchedOnce = false;
+
 export default function ZakatCalculatorScreen() {
   const dispatch: AppDispatch = useDispatch();
   const scrollRef = useRef<ScrollView>(null);
@@ -52,13 +55,19 @@ export default function ZakatCalculatorScreen() {
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [goldDropdownOpen, setGoldDropdownOpen] = useState(false);
   const [silverDropdownOpen, setSilverDropdownOpen] = useState(false);
+  const [knownAmountModalVisible, setKnownAmountModalVisible] = useState(false);
+  const [knownAmount, setKnownAmount] = useState("");
+  const [overrideZakatAmount, setOverrideZakatAmount] = useState<number | null>(null);
 
   useEffect(() => {
-    dispatch(getMetalPrices());
+    if (!metalPricesFetchedOnce) {
+      metalPricesFetchedOnce = true;
+      dispatch(getMetalPrices());
+    }
     return () => {
       dispatch(resetZakatInput());
     };
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: true });
@@ -231,12 +240,16 @@ export default function ZakatCalculatorScreen() {
 
             {/* GOLD */}
             <Text style={styles.label}>Zakatable Gold</Text>
-            <View style={[styles.row, { alignItems: "center" }]}>
+            <View style={[styles.row, { alignItems: "stretch" }]}>
               <View
-                style={[styles.inputWithPrefix, { flex: 1, marginBottom: 0 }]}
+                style={[
+                  styles.inputWithPrefix,
+                  styles.metalInputRow,
+                  { flex: 1, marginBottom: 0 },
+                ]}
               >
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, styles.metalInput]}
                   keyboardType="numeric"
                   value={amounts.gold?.[0]?.weight?.toString() || ""}
                   placeholder="0"
@@ -263,7 +276,7 @@ export default function ZakatCalculatorScreen() {
               </View>
               <View style={styles.dropdownContainer}>
                 <TouchableOpacity
-                  style={styles.dropdownButton}
+                  style={[styles.dropdownButton, styles.dropdownButtonMetal]}
                   onPress={() => setGoldDropdownOpen(!goldDropdownOpen)}
                   activeOpacity={0.7}
                 >
@@ -357,12 +370,16 @@ export default function ZakatCalculatorScreen() {
 
             {/* SILVER */}
             <Text style={styles.label}>Zakatable Silver</Text>
-            <View style={[styles.row, { alignItems: "center" }]}>
+            <View style={[styles.row, { alignItems: "stretch" }]}>
               <View
-                style={[styles.inputWithPrefix, { flex: 1, marginBottom: 0 }]}
+                style={[
+                  styles.inputWithPrefix,
+                  styles.metalInputRow,
+                  { flex: 1, marginBottom: 0 },
+                ]}
               >
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, styles.metalInput]}
                   keyboardType="numeric"
                   value={amounts.silver?.[0]?.weight?.toString() || ""}
                   placeholder="0"
@@ -389,7 +406,7 @@ export default function ZakatCalculatorScreen() {
               </View>
               <View style={styles.dropdownContainer}>
                 <TouchableOpacity
-                  style={styles.dropdownButton}
+                  style={[styles.dropdownButton, styles.dropdownButtonMetal]}
                   onPress={() => setSilverDropdownOpen(!silverDropdownOpen)}
                   activeOpacity={0.7}
                 >
@@ -535,8 +552,67 @@ export default function ZakatCalculatorScreen() {
     <View style={styles.container}>
       <ZakatSummaryModal
         visible={summaryOpen}
-        onClose={() => setSummaryOpen(false)}
+        onClose={() => {
+          setSummaryOpen(false);
+          setOverrideZakatAmount(null);
+        }}
+        overrideZakatAmount={overrideZakatAmount}
       />
+
+      {/* Known amount modal */}
+      <Modal
+        visible={knownAmountModalVisible}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.knownAmountModalOverlay}>
+          <View style={styles.knownAmountModalBox}>
+            <Text style={styles.knownAmountModalTitle}>Enter your zakat amount</Text>
+            <View style={styles.knownAmountModalInputWrap}>
+              <Text style={styles.knownAmountModalPrefix}>AUD $</Text>
+              <TextInput
+                style={styles.knownAmountModalInput}
+                placeholder="0.00"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="decimal-pad"
+                value={knownAmount}
+                onChangeText={setKnownAmount}
+              />
+            </View>
+            <View style={styles.knownAmountModalButtons}>
+              <TouchableOpacity
+                style={styles.knownAmountModalCancel}
+                onPress={() => {
+                  setKnownAmountModalVisible(false);
+                  setKnownAmount("");
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.knownAmountModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.knownAmountModalContinue,
+                  (!knownAmount || isNaN(parseFloat(knownAmount.replace(/,/g, "."))) || parseFloat(knownAmount.replace(/,/g, ".")) <= 0) && styles.knownAmountModalContinueDisabled,
+                ]}
+                onPress={() => {
+                  const amount = parseFloat(knownAmount.replace(/,/g, "."));
+                  if (!isNaN(amount) && amount > 0) {
+                    setOverrideZakatAmount(amount);
+                    setKnownAmountModalVisible(false);
+                    setKnownAmount("");
+                    setSummaryOpen(true);
+                  }
+                }}
+                activeOpacity={0.8}
+                disabled={!knownAmount || isNaN(parseFloat(knownAmount.replace(/,/g, "."))) || parseFloat(knownAmount.replace(/,/g, ".")) <= 0}
+              >
+                <Text style={styles.knownAmountModalContinueText}>Continue</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* HEADER */}
       <View style={styles.headerWrapper}>
@@ -586,72 +662,85 @@ export default function ZakatCalculatorScreen() {
         ))}
       </View>
 
-      <ScrollView ref={scrollRef} style={styles.content}>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.contentScroll}
+        contentContainerStyle={styles.contentScrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={true}
+      >
         {renderStep()}
       </ScrollView>
 
-      {/* FOOTER */}
+      {/* FOOTER - compact */}
       <LinearGradient
         colors={["#5089E7", "#2161CD"]}
         style={styles.footer}
       >
-        {/* Row 1 */}
-        <View style={styles.footerRow}>
+        <View style={styles.footerRowCompact}>
           <Text style={styles.footerTitle}>Your estimated Zakat Payment</Text>
           <Text style={styles.footerAmount}>AUD {isNaN(zakat) ? "0.00" : zakat.toFixed(2)}</Text>
         </View>
-
-        {/* Divider */}
-        <View style={styles.footerDivider} />
-
-        {/* Row 2 */}
-        <View style={styles.footerRow}>
-          <Text style={styles.footerSub}>
-            Based on 2.5% of Zakatable Wealth
-          </Text>
-
+        <View style={styles.footerRowCompact}>
+          <Text style={styles.footerSub}>Based on 2.5%</Text>
           <TouchableOpacity
             style={styles.reviewRow}
-            onPress={() => setSummaryOpen(true)}
+            onPress={() => {
+              setOverrideZakatAmount(null);
+              setSummaryOpen(true);
+            }}
           >
             <Text style={styles.reviewText}>Review Summary</Text>
-            <Ionicons name="chevron-forward" size={14} color="#fff" />
+            <Ionicons name="chevron-forward" size={12} color="#fff" />
           </TouchableOpacity>
         </View>
 
-        {/* Navigation Buttons */}
-        <View style={styles.footerDivider} />
-        <View style={styles.navigationButtonsContainer}>
-          {step > 1 && (
+        <View style={styles.navRow}>
+          {step > 1 ? (
+            <>
+              <TouchableOpacity
+                style={styles.navButtonBack}
+                onPress={() => dispatch(zakatStep(-1))}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="chevron-back" size={14} color="#6B7280" />
+                <Text style={styles.navButtonBackText}>Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.navButtonNext}
+                onPress={() => {
+                  if (step < 4) dispatch(zakatStep(1));
+                  else {
+                    setOverrideZakatAmount(null);
+                    setSummaryOpen(true);
+                  }
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.navButtonNextText}>{step < 4 ? "Continue" : "Finish"}</Text>
+                <Ionicons name="chevron-forward" size={14} color="#010D26" />
+              </TouchableOpacity>
+            </>
+          ) : (
             <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => dispatch(zakatStep(-1))}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="chevron-back" size={18} color="#6B7280" />
-              <Text style={styles.backButtonText}>Back</Text>
-            </TouchableOpacity>
-          )}
-          {step < 4 ? (
-            <TouchableOpacity
-              style={styles.nextButton}
+              style={styles.navButtonNextSingle}
               onPress={() => dispatch(zakatStep(1))}
               activeOpacity={0.8}
             >
-              <Text style={styles.nextButtonText}>Continue</Text>
-              <Ionicons name="chevron-forward" size={18} color="#010D26" />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={styles.finishButton}
-              onPress={() => setSummaryOpen(true)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.finishButtonText}>Finish</Text>
-              <Ionicons name="checkmark-circle" size={18} color="#010D26" />
+              <Text style={styles.navButtonNextText}>Continue</Text>
+              <Ionicons name="chevron-forward" size={14} color="#010D26" />
             </TouchableOpacity>
           )}
         </View>
+
+        <TouchableOpacity
+          style={styles.knowAmountLink}
+          onPress={() => setKnownAmountModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.knowAmountLinkText}>I already know my zakat amount</Text>
+          <Ionicons name="arrow-forward" size={12} color="rgba(255,255,255,0.9)" />
+        </TouchableOpacity>
       </LinearGradient>
     </View>
   );
@@ -731,6 +820,8 @@ const styles = StyleSheet.create({
   },
 
   content: { padding: 20, paddingTop: 24 },
+  contentScroll: { flex: 1 },
+  contentScrollContent: { padding: 20, paddingTop: 24, paddingBottom: 24 },
   sectionTitle: {
     fontSize: 24,
     fontWeight: "800",
@@ -823,6 +914,18 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  dropdownButtonMetal: {
+    height: 48,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+  },
+  metalInputRow: {
+    minHeight: 48,
+  },
+  metalInput: {
+    paddingVertical: 14,
+    minHeight: 48,
+  },
   dropdownText: {
     fontSize: 14,
     color: "#264B8B",
@@ -864,116 +967,194 @@ const styles = StyleSheet.create({
   reviewWrap: { alignItems: "flex-end" },
 
   footer: {
-    padding: 20,
-    marginTop: 16,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    padding: 12,
+    paddingBottom: 14,
+    marginTop: 12,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 6,
   },
-
-  footerRow: {
+  footerRowCompact: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 6,
   },
-
-  footerDivider: {
-    height: 1,
-    backgroundColor: "#fff",
-    opacity: 0.2,
-    marginVertical: 12,
-  },
-
   footerTitle: {
-    fontSize: 15,
+    fontSize: 12,
     color: "#fff",
     opacity: 0.9,
     fontFamily: "AlbertSans_500Medium",
   },
-
   footerAmount: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "800",
     color: "#FFD602",
     fontFamily: "AlbertSans_800ExtraBold",
   },
-
   footerSub: {
-    fontSize: 13,
+    fontSize: 11,
     color: "#fff",
     opacity: 0.8,
     fontFamily: "AlbertSans_400Regular",
   },
-
   reviewRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
   },
-
   reviewText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "700",
     color: "#FFD602",
     fontFamily: "AlbertSans_700Bold",
   },
 
-  navigationButtonsContainer: {
-    marginTop: 8,
-    gap: 12,
+  navRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+    marginBottom: 4,
   },
-  backButton: {
-    width: "100%",
+  navButtonBack: {
+    flex: 1,
     backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: 10,
+    paddingVertical: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 4,
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
-  backButtonText: {
-    fontSize: 16,
+  navButtonBackText: {
+    fontSize: 13,
     fontWeight: "700",
     color: "#6B7280",
     fontFamily: "AlbertSans_700Bold",
   },
-  nextButton: {
-    width: "100%",
+  navButtonNext: {
+    flex: 1,
     backgroundColor: "#FFD602",
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: 10,
+    paddingVertical: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 4,
   },
-  nextButtonText: {
-    fontSize: 16,
+  navButtonNextSingle: {
+    flex: 1,
+    backgroundColor: "#FFD602",
+    borderRadius: 10,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  navButtonNextText: {
+    fontSize: 13,
     fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
   },
-  finishButton: {
-    width: "100%",
-    backgroundColor: "#FFD602",
-    borderRadius: 12,
-    paddingVertical: 14,
+
+  knowAmountLink: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 4,
+    paddingVertical: 6,
   },
-  finishButtonText: {
+  knowAmountLinkText: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.9)",
+    fontFamily: "AlbertSans_500Medium",
+  },
+
+  knownAmountModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  knownAmountModalBox: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    width: "100%",
+    maxWidth: 320,
+  },
+  knownAmountModalTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#010D26",
+    color: "#111827",
+    fontFamily: "AlbertSans_700Bold",
+    marginBottom: 14,
+    textAlign: "center",
+  },
+  knownAmountModalInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingLeft: 14,
+    marginBottom: 16,
+  },
+  knownAmountModalPrefix: {
+    fontSize: 14,
+    color: "#6B7280",
+    fontWeight: "600",
+    fontFamily: "AlbertSans_600SemiBold",
+  },
+  knownAmountModalInput: {
+    flex: 1,
+    padding: 12,
+    paddingLeft: 8,
+    fontSize: 15,
+    color: "#111827",
+    fontFamily: "AlbertSans_600SemiBold",
+  },
+  knownAmountModalButtons: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  knownAmountModalCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  knownAmountModalCancelText: {
+    fontSize: 14,
+    color: "#6B7280",
+    fontFamily: "AlbertSans_600SemiBold",
+  },
+  knownAmountModalContinue: {
+    flex: 1,
+    backgroundColor: "#264B8B",
+    paddingVertical: 12,
+    alignItems: "center",
+    borderRadius: 10,
+  },
+  knownAmountModalContinueDisabled: {
+    opacity: 0.5,
+  },
+  knownAmountModalContinueText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#fff",
     fontFamily: "AlbertSans_700Bold",
   },
 });

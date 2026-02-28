@@ -19,7 +19,7 @@ export default function LoadingScreen({
         <View style={styles.content}>
           {/* Loading Indicator */}
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#264B8B" />
+            <ActivityIndicator size="large" color="#2161CD" />
           </View>
 
           {/* Message */}

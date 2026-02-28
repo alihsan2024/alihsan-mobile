@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { fetchOrphanById } from "@/store/reduxSlice/orphansSlice";
 import { calculateAge, formatOrphanName } from "@/utils/helper";
@@ -34,6 +34,7 @@ const OrphanProfileScreen = () => {
   const [subscriptionPeriod, setSubscriptionPeriod] = useState("30");
   const [activeTab, setActiveTab] = useState("about");
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const isSubmittingRef = useRef(false);
   const { orphan, loading, error } = useSelector((state: any) => state.orphans);
   const { basketItems } = useSelector((state: any) => state.basketItem);
   const profileState = useSelector((state: any) => state.profile);
@@ -49,6 +50,7 @@ const OrphanProfileScreen = () => {
   }, [id, dispatch]);
 
   const handleSponsor = () => {
+    if (isSubmittingRef.current) return;
     if (!isAuthenticated) {
       setShowSuccessMessage(false);
       (navigation as any).navigate("login");
@@ -59,6 +61,7 @@ const OrphanProfileScreen = () => {
       (opt) => opt.id === subscriptionPeriod
     );
     if (!selectedOption) return;
+    isSubmittingRef.current = true;
     let periodDays = 30;
     if (subscriptionPeriod === "360") periodDays = 90;
     else if (subscriptionPeriod === "1440") periodDays = 365;
@@ -83,13 +86,15 @@ const OrphanProfileScreen = () => {
       }
       setShowSuccessMessage(true);
       setTimeout(() => setShowSuccessMessage(false), 1500);
+    }).finally(() => {
+      isSubmittingRef.current = false;
     });
   };
 
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#2D7DD2" />
+        <ActivityIndicator size="large" color="#2161CD" />
       </View>
     );
   }

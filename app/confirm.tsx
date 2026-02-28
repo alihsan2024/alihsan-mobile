@@ -186,7 +186,7 @@ const ConfirmScreen = () => {
   return (
     <StripeProvider
       publishableKey={
-        process.env.EXPO_PUBLIC_STRIPE_KEY || "YOUR_STRIPE_PUBLISHABLE_KEY"
+        process.env.EXPO_PUBLIC_STRIPE_KEY
       }
       merchantIdentifier="merchant.au.org.alihsan.www"
     >
@@ -345,7 +345,7 @@ const ConfirmScreen = () => {
                   <View>
                     {loadingIntent ? (
                       <View style={{ marginVertical: 20 }}>
-                        <ActivityIndicator size="large" color="#264B8B" />
+                        <ActivityIndicator size="large" color="#2161CD" />
                       </View>
                     ) : clientSecret ? (
                       <>

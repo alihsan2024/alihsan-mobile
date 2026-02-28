@@ -11,6 +11,7 @@ import {
   Linking,
   ActivityIndicator,
   RefreshControl,
+  Keyboard,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -35,6 +36,9 @@ import { useSelector } from "react-redux";
 import SupportCampaignsBanner from "@/components/ui/SupportCampaignsBanner";
 import QuickLinks from "@/components/ui/QuickLinks";
 import CommunityImpactVideo from "@/components/ui/CommunityImpactVideo";
+import StayConnectedSection, {
+  type StayConnectedSectionRef,
+} from "@/components/ui/StayConnectedSection";
 import { useToast } from "@/context/ToastContext";
 
 const ICON_SIZE = 16;
@@ -149,6 +153,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const screenHeight = Dimensions.get("window").height;
   const scrollViewRef = useRef<ScrollView>(null);
+  const stayConnectedRef = useRef<StayConnectedSectionRef>(null);
 
   const [selectedIndex, setSelectedIndex] = useState<number | null>(0);
   const [selectedGiving, setSelectedGiving] = useState<number>(0);
@@ -226,7 +231,7 @@ export default function HomeScreen() {
     }
   }, []);
 
-  // Reload basket when screen comes into focus
+  // Reload basket when screen comes into focus; blur email input when leaving
   useFocusEffect(
     useCallback(() => {
       if (isAuthenticated) {
@@ -236,6 +241,10 @@ export default function HomeScreen() {
       }
       // Scroll to top when screen comes into focus
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+      return () => {
+        stayConnectedRef.current?.blur();
+        Keyboard.dismiss();
+      };
     }, [isAuthenticated, refetchBasket, loadGuestBasket])
   );
 
@@ -311,6 +320,8 @@ export default function HomeScreen() {
     }
   };
 
+  const { height: windowHeight } = Dimensions.get("window");
+
   return (
     <ScrollView
       ref={scrollViewRef}
@@ -320,25 +331,27 @@ export default function HomeScreen() {
       }}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
-      contentContainerStyle={{ 
-        paddingBottom: 32,
+      contentContainerStyle={{
         flexGrow: 1,
+        paddingBottom: 0,
+        minHeight: windowHeight + 1,
       }}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          tintColor="#FFFFFF"
-          colors={["#FFFFFF", "#246BE1"]}
-          progressBackgroundColor="rgba(255, 255, 255, 0.9)"
+          tintColor="#2161CD"
+          colors={["#2161CD"]}
+          progressBackgroundColor="#FFFFFF"
           progressViewOffset={insets.top}
+          titleColor="#2161CD"
         />
       }
       bounces={true}
       alwaysBounceVertical={true}
       scrollEnabled={true}
-      overScrollMode="auto"
+      overScrollMode="always"
     >
       {/* Top Banner Section - "Making a Difference Together" / "Support Our Campaigns" */}
       <SupportCampaignsBanner
@@ -346,13 +359,16 @@ export default function HomeScreen() {
         onCampaignPress={(campaign) => {
           router.push(`/campaign/${campaign.slug}`);
         }}
-        onDonate={async (amount, frequency, campaignSlug) => {
+        onDonate={async (amount, frequency, campaignSlug, campaignFromList) => {
           try {
             setAddingToCart(true);
 
-            // Fetch campaign details
-            const campaignData = await getCampaignDetails(campaignSlug);
-            const campaign = campaignData?.campaign || campaignData;
+            // Use already-fetched campaign when available (Support Our Campaigns); otherwise fetch details
+            let campaign = campaignFromList ?? null;
+            if (!campaign?.id) {
+              const campaignData = await getCampaignDetails(campaignSlug);
+              campaign = campaignData?.campaign || campaignData;
+            }
 
             if (!campaign?.id) {
               showToast({
@@ -362,9 +378,9 @@ export default function HomeScreen() {
               return;
             }
 
-            // Calculate period days based on frequency
-            const periodDays = frequency === "monthly" ? 30 : frequency === "weekly" ? 7 : 0;
-            const isRecurring = frequency === "monthly" || frequency === "weekly";
+            // Calculate period days based on frequency (9 = every Friday)
+            const periodDays = frequency === "monthly" ? 30 : frequency === "friday" ? 9 : 0;
+            const isRecurring = frequency === "monthly" || frequency === "friday";
 
             // Refresh basket data before checking
             let currentBasketItems: any[] = [];
@@ -494,6 +510,7 @@ export default function HomeScreen() {
           }
         }}
       />
+
       {/* Main content */}
       <View style={{ paddingTop: 10 }}>
         {/* Categories Section - Below Banner */}
@@ -565,7 +582,7 @@ export default function HomeScreen() {
 
             {isLoadingFeaturedCampaigns ? (
               <View style={{ paddingVertical: 20, alignItems: "center" }}>
-                <ActivityIndicator size="small" color="#246BE1" />
+                <ActivityIndicator size="small" color="#2161CD" />
               </View>
             ) : featuredCampaignsError ? (
               <View style={{ paddingVertical: 16, paddingHorizontal: 16, backgroundColor: "#FEF2F2", borderRadius: 8, marginTop: 8 }}>
@@ -586,41 +603,35 @@ export default function HomeScreen() {
         </View>
 
         {/* Ramadan Calendar Section */}
-        <View style={{ paddingHorizontal: PADDING_HORIZONTAL, marginTop: 24, marginBottom: 24 }}>
-          <Text style={styles.ramadanSectionTitle}>Ramadan Calendars</Text>
-          <Text style={styles.ramadanSectionSubtitle}>Download your city's Ramadan calendar</Text>
-          
-          <View style={styles.ramadanButtons}>
+        <View style={styles.ramadanSection}>
+          <View style={styles.ramadanSectionHeader}>
+            <Text style={styles.ramadanSectionTitle}>Ramadan Calendars</Text>
+            <Text style={styles.ramadanSectionSubtitle}>
+              Prayer & iftar times for your city
+            </Text>
+          </View>
+          <View style={styles.ramadanCards}>
             <TouchableOpacity
-              style={styles.ramadanButton}
+              style={styles.ramadanCard}
               onPress={() => handleOpenRamadanCalendar("sydney")}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
-              <View style={styles.ramadanButtonLeft}>
-                <View style={styles.ramadanButtonIcon}>
-                  <Ionicons name="location" size={20} color="#246BE1" />
-                </View>
-                <View style={styles.ramadanButtonContent}>
-                  <Text style={styles.ramadanButtonText}>Sydney Calendar</Text>
-                  <Text style={styles.ramadanButtonLabel}>Download PDF</Text>
-                </View>
+              <Ionicons name="location-outline" size={20} color="#2161CD" style={styles.ramadanCardIcon} />
+              <View style={styles.ramadanCardContent}>
+                <Text style={styles.ramadanCardCity}>Sydney</Text>
+                <Text style={styles.ramadanCardMeta}>PDF</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
             </TouchableOpacity>
-            
             <TouchableOpacity
-              style={styles.ramadanButton}
+              style={styles.ramadanCard}
               onPress={() => handleOpenRamadanCalendar("melbourne")}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
-              <View style={styles.ramadanButtonLeft}>
-                <View style={styles.ramadanButtonIcon}>
-                  <Ionicons name="location" size={20} color="#246BE1" />
-                </View>
-                <View style={styles.ramadanButtonContent}>
-                  <Text style={styles.ramadanButtonText}>Melbourne Calendar</Text>
-                  <Text style={styles.ramadanButtonLabel}>Download PDF</Text>
-                </View>
+              <Ionicons name="location-outline" size={20} color="#2161CD" style={styles.ramadanCardIcon} />
+              <View style={styles.ramadanCardContent}>
+                <Text style={styles.ramadanCardCity}>Melbourne</Text>
+                <Text style={styles.ramadanCardMeta}>PDF</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
             </TouchableOpacity>
@@ -631,7 +642,7 @@ export default function HomeScreen() {
         <QuickLinks />
 
         {/* Community Impact Video Section */}
-        <View style={{ paddingHorizontal: PADDING_HORIZONTAL, marginTop: 24, marginBottom: 32 }}>
+        <View style={{ paddingHorizontal: PADDING_HORIZONTAL, marginTop: 24, marginBottom: 24 }}>
           <CommunityImpactVideo
             videoUrl="https://alihsan.s3.ap-southeast-2.amazonaws.com/homepage-videos/1763512297065-alihsan-winter+appeal+16x9.mp4"
             backgroundImage="https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/dac1a675d19a0d43be37299aebb6dd02.jpg"
@@ -641,6 +652,9 @@ export default function HomeScreen() {
             subheadline="Meet the passionate individuals working together to bring kindness, care, and impact to every community we touch."
           />
         </View>
+
+        {/* Stay connected and inspire change with Al-Ihsan - matches AU Next.js */}
+        <StayConnectedSection ref={stayConnectedRef} />
       </View>
     </ScrollView>
   );
@@ -1018,62 +1032,54 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
   },
+  ramadanSection: {
+    paddingHorizontal: PADDING_HORIZONTAL,
+    marginTop: 28,
+    marginBottom: 24,
+  },
+  ramadanSectionHeader: {
+    marginBottom: 16,
+  },
   ramadanSectionTitle: {
     fontSize: 28,
     fontWeight: "800",
     color: "#010D26",
-    marginBottom: 16,
     fontFamily: "AlbertSans_800ExtraBold",
+    marginBottom: 4,
   },
   ramadanSectionSubtitle: {
     fontSize: 14,
     color: "#6B7280",
-    marginBottom: 16,
     fontFamily: "AlbertSans_400Regular",
+    lineHeight: 20,
   },
-  ramadanButtons: {
+  ramadanCards: {
     gap: 12,
   },
-  ramadanButton: {
+  ramadanCard: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     backgroundColor: "#fff",
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
   },
-  ramadanButtonLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+  ramadanCardIcon: {
+    marginRight: 14,
+  },
+  ramadanCardContent: {
     flex: 1,
   },
-  ramadanButtonIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: "#EFF6FF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  ramadanButtonContent: {
-    flex: 1,
-  },
-  ramadanButtonText: {
+  ramadanCardCity: {
     fontSize: 16,
     fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
     marginBottom: 2,
   },
-  ramadanButtonLabel: {
+  ramadanCardMeta: {
     fontSize: 12,
     color: "#6B7280",
     fontFamily: "AlbertSans_400Regular",

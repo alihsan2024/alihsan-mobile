@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import { useAuth } from "../context/AuthContext";
@@ -12,17 +12,25 @@ import { registerDeviceToken } from "@/utils/api";
 
 export default function DeviceRegistrationManager() {
   const { user } = useAuth();
+  const isRegisteringRef = useRef(false);
+  const lastRegisteredRef = useRef<string | null>(null);
 
   async function tryRegister() {
     if (Platform.OS === "web") return;
+    if (isRegisteringRef.current) return;
 
     try {
+      isRegisteringRef.current = true;
+
       const token = await requestUserPermission();
       if (!token) return;
 
       const guest_id = await getOrCreateGuestId();
-      const user_id = user?.id || null;
+      const user_id = user?.id ?? null;
       const platform = Platform.OS;
+
+      const cacheKey = `${token}|${user_id}|${guest_id}|${platform}`;
+      if (lastRegisteredRef.current === cacheKey) return;
 
       const lastInfo = await getLastRegisteredDeviceInfo();
 
@@ -33,7 +41,10 @@ export default function DeviceRegistrationManager() {
         lastInfo.guest_id !== guest_id ||
         lastInfo.platform !== platform;
 
-      if (!changed) return;
+      if (!changed) {
+        lastRegisteredRef.current = cacheKey;
+        return;
+      }
 
       await registerDeviceToken({
         token,
@@ -48,24 +59,26 @@ export default function DeviceRegistrationManager() {
         guest_id,
         platform,
       });
+      lastRegisteredRef.current = cacheKey;
     } catch (e) {
       console.log("[DeviceReg] Registration failed", e);
+    } finally {
+      isRegisteringRef.current = false;
     }
   }
 
   useEffect(() => {
-    // Run on app start & login change
     tryRegister();
 
-    // Listen for Expo token refresh
     const sub = Notifications.addPushTokenListener(() => {
+      lastRegisteredRef.current = null;
       tryRegister();
     });
 
     return () => {
       sub.remove();
     };
-  }, [user]);
+  }, [user?.id]);
 
   return null;
 }

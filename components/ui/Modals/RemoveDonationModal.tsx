@@ -1,6 +1,13 @@
-import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Modal, View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  Modal,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Pressable,
+} from "react-native";
 
 type Props = {
   visible: boolean;
@@ -12,7 +19,7 @@ type Props = {
 
 export default function RemoveDonationModal({
   visible,
-  title = "Remove Donation?",
+  title = "Remove donation?",
   description,
   onCancel,
   onConfirm,
@@ -24,40 +31,33 @@ export default function RemoveDonationModal({
       animationType="fade"
       statusBarTranslucent
     >
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          <View style={styles.contentContainer}>
-            <Text style={styles.title} numberOfLines={2}>
-              {title}
-            </Text>
-
-            <Text style={styles.description} numberOfLines={4}>
-              {description}
-            </Text>
+      <Pressable style={styles.overlay} onPress={onCancel}>
+        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.iconWrap}>
+            <Ionicons name="trash-outline" size={24} color="#DC2626" />
           </View>
-
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.description} numberOfLines={4}>
+            {description}
+          </Text>
           <View style={styles.actions}>
             <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
+              style={styles.cancelButton}
               onPress={onCancel}
-              activeOpacity={0.8}
+              activeOpacity={0.7}
             >
-              <Text style={styles.cancelText}>No, Keep it</Text>
+              <Text style={styles.cancelText}>Keep it</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
-              style={[styles.button, styles.removeButton]}
+              style={styles.removeButton}
               onPress={onConfirm}
               activeOpacity={0.8}
             >
-              <View style={styles.removeButtonContent}>
-                <Text style={styles.removeText}>Yes, Remove</Text>
-                <Feather name="chevron-right" size={16} color="#FFFFFF" />
-              </View>
+              <Text style={styles.removeText}>Remove</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -65,85 +65,81 @@ export default function RemoveDonationModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
   },
-
   card: {
     width: "100%",
-    maxWidth: 400,
+    maxWidth: 340,
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    padding: 20,
-    minHeight: 180,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 6,
   },
-
-  contentContainer: {
-    width: "100%",
-    marginBottom: 20,
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#FEF2F2",
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
+    marginBottom: 12,
   },
-
   title: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: "700",
     color: "#111827",
     textAlign: "center",
-    marginBottom: 8,
-    width: "100%",
+    marginBottom: 6,
+    fontFamily: "AlbertSans_700Bold",
   },
-
   description: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#6B7280",
     textAlign: "center",
-    lineHeight: 18,
-    width: "100%",
+    lineHeight: 20,
+    marginBottom: 20,
+    fontFamily: "AlbertSans_400Regular",
   },
-
   actions: {
     flexDirection: "row",
-    gap: 12,
+    gap: 10,
   },
-
-  button: {
+  cancelButton: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 44,
   },
-
-  cancelButton: {
-    backgroundColor: "#F9FAFB",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-
-  removeButton: {
-    backgroundColor: "#D14343",
-  },
-
-  removeButtonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-  },
-
   cancelText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
-    color: "#111827",
-    textAlign: "center",
+    color: "#374151",
+    fontFamily: "AlbertSans_600SemiBold",
   },
-
+  removeButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: "#DC2626",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   removeText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
     color: "#FFFFFF",
-    textAlign: "center",
+    fontFamily: "AlbertSans_600SemiBold",
   },
 });

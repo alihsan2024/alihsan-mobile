@@ -151,7 +151,7 @@ export default function BottomBar({
           {/* Spinner overlay */}
           {loading && (
             <View style={styles.loaderOverlay}>
-              <ActivityIndicator color={isLast ? "#010D26" : "#2161CD"} />
+              <ActivityIndicator color="#2161CD" />
             </View>
           )}
         </TouchableOpacity>

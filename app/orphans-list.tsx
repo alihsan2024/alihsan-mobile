@@ -88,7 +88,7 @@ const OrphanListPage = () => {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#2D7DD2" />
+        <ActivityIndicator size="large" color="#2161CD" />
       </View>
     );
   }

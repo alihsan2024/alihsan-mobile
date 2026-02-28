@@ -1,5 +1,9 @@
-// Load environment variables from .env file
-require("dotenv").config();
+// Load environment variables from .env file (optional; Expo also loads .env)
+try {
+  require("dotenv").config();
+} catch {
+  // dotenv not installed or Expo already loaded .env
+}
 
 module.exports = {
   expo: {

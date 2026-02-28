@@ -95,7 +95,7 @@ const DonationList = ({ type }: { type: MyDonationTypes }) => {
 
       {/* Loader */}
       {loading ? (
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#2161CD" />
       ) : data?.rows?.length ? (
         <>
           <FlatList

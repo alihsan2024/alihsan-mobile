@@ -260,7 +260,10 @@ export default function CheckoutScreen() {
           isAnonymous: false,
           isMobile: true,
         });
-        secret = res.data?.payload?.clientSecret;
+        const payload = res.data?.payload;
+        secret =
+          (typeof payload === "object" && payload?.clientSecret) ||
+          (typeof payload === "string" ? payload : null);
       } else {
         // For guest users, need to send basket items with all required fields
         const mappedBasketItems = checkoutSummary.items.map((item) => {
@@ -289,18 +292,32 @@ export default function CheckoutScreen() {
           basketItems: mappedBasketItems,
           isMobile: true,
         });
-        secret = res.data?.payload?.clientSecret;
+        const payloadGuest = res.data?.payload;
+        secret =
+          (typeof payloadGuest === "object" && payloadGuest?.clientSecret) ||
+          (typeof payloadGuest === "string" ? payloadGuest : null);
       }
 
       if (!secret) throw new Error("No client secret");
 
       setClientSecret(secret);
       return true;
-    } catch (e) {
-      Alert.alert(
-        "Payment Error",
-        "We couldn't prepare the payment. Please try again."
-      );
+    } catch (e: any) {
+      const apiMessage =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        e?.message;
+      const isAddressError =
+        apiMessage &&
+        (String(apiMessage).toLowerCase().includes("address") ||
+          String(apiMessage).toLowerCase().includes("profile"));
+      const title = "Payment Error";
+      const message = isAddressError
+        ? "Your profile is missing required address details. Please update your address in Profile, then try again."
+        : apiMessage
+        ? String(apiMessage)
+        : "We couldn't prepare the payment. Please try again.";
+      Alert.alert(title, message);
       return false;
     } finally {
       setLoadingIntent(false);
@@ -455,6 +472,36 @@ export default function CheckoutScreen() {
           "Please fill in your name, email, and phone number to continue."
         );
         return;
+      }
+
+      // Persist checkout details to secure storage so payment step can read them
+      try {
+        const parts = (detailsForm.fullName || "").trim().split(/\s+/);
+        const firstName = parts[0] || "";
+        const lastName = parts.slice(1).join(" ") || firstName;
+        const { getCountryByCode } = await import("@/utils/countries");
+        const country = getCountryByCode(detailsForm.countryCode || "AU");
+        const dialCode = country?.dialCode || "+61";
+        const fullPhone = dialCode + (detailsForm.phone || "");
+        const { secureSetItem } = await import("@/utils/secureStorage");
+        await secureSetItem(
+          "checkoutDetails",
+          JSON.stringify({
+            firstName,
+            lastName,
+            email: detailsForm.email || "",
+            phone: fullPhone,
+            address: "N/A",
+            city: "N/A",
+            state: "N/A",
+            zip: "00000",
+            country: detailsForm.countryCode || "AU",
+            basketItems: [],
+            status: true,
+          })
+        );
+      } catch (e) {
+        // Non-fatal; DetailsStep may have already persisted
       }
 
       // Update summary for step 2

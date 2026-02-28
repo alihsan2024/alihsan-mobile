@@ -47,7 +47,7 @@ const getApiUrl = (): string => {
   return (
     process.env.EXPO_PUBLIC_API_URL ||
     (Constants.expoConfig?.extra?.apiUrl as string | undefined) ||
-    "https://deenstream.live"
+    "https://api.alihsan.org.au"
   );
 };
 
@@ -137,14 +137,16 @@ export const setAuthToken = (token: string | null) => {
   }
 };
 
-// Initialize auth token from storage
+// Initialize auth from SecureStore (same key as Redux: "loggedIn")
 export const initAuth = async () => {
   try {
-    const authData = await secureGetItem("authData");
+    const authData = await secureGetItem("loggedIn");
     if (authData) {
       const parsed = JSON.parse(authData);
-      setAuthToken(parsed.token);
-      return parsed;
+      if (parsed?.token) {
+        setAuthToken(parsed.token);
+        return parsed;
+      }
     }
   } catch (error) {
     if (__DEV__) {
@@ -184,10 +186,28 @@ interface CampaignsResponse {
   };
 }
 
+// In-memory cache for campaigns (reduces slow repeated requests on TestFlight/production)
+const CACHE_TTL_FEATURED_MS = 30 * 60 * 1000; // 30 min
+const CACHE_TTL_CAMPAIGNS_MS = 30 * 60 * 1000; // 30 min
+let featuredCampaignsCache: { data: Campaign[]; ts: number } | null = null;
+const campaignsCacheByKey: Record<string, { data: Campaign[]; ts: number }> = {};
+
+/** Clear campaigns caches (e.g. after pull-to-refresh or when data may be stale). */
+export const invalidateCampaignsCache = () => {
+  featuredCampaignsCache = null;
+  Object.keys(campaignsCacheByKey).forEach((k) => delete campaignsCacheByKey[k]);
+};
+
 // Fetch all campaigns
 export const fetchCampaigns = async (
-  isMobileCampaign?: boolean
+  isMobileCampaign?: boolean,
+  forceRefresh?: boolean
 ): Promise<Campaign[]> => {
+  const cacheKey = `campaigns_${isMobileCampaign === true}`;
+  const cached = campaignsCacheByKey[cacheKey];
+  if (!forceRefresh && cached && Date.now() - cached.ts < CACHE_TTL_CAMPAIGNS_MS) {
+    return cached.data;
+  }
   try {
     const params: any = {};
     if (isMobileCampaign === true) {
@@ -197,9 +217,9 @@ export const fetchCampaigns = async (
       params,
     });
     const data = response.data;
-
-    // Return projects.rows which contains the list of campaigns
-    return data?.payload?.projects?.rows || [];
+    const rows = data?.payload?.projects?.rows || [];
+    campaignsCacheByKey[cacheKey] = { data: rows, ts: Date.now() };
+    return rows;
   } catch (error) {
     if (__DEV__) {
       console.error("Error fetching campaigns:", error);
@@ -207,14 +227,24 @@ export const fetchCampaigns = async (
     throw error;
   }
 };
+
 // Fetch all featured campaigns
-export const fetchFeaturedCampaigns = async (): Promise<Campaign[]> => {
+export const fetchFeaturedCampaigns = async (
+  forceRefresh?: boolean
+): Promise<Campaign[]> => {
+  if (
+    !forceRefresh &&
+    featuredCampaignsCache &&
+    Date.now() - featuredCampaignsCache.ts < CACHE_TTL_FEATURED_MS
+  ) {
+    return featuredCampaignsCache.data;
+  }
   try {
     const response = await api.get("/project/featured-campaigns");
     const data = response.data;
-
-    // Return campaigns array from payload
-    return data?.payload?.campaigns || [];
+    const campaigns = data?.payload?.campaigns || [];
+    featuredCampaignsCache = { data: campaigns, ts: Date.now() };
+    return campaigns;
   } catch (error) {
     if (__DEV__) {
       console.error("Error fetching featured campaigns:", error);
@@ -605,6 +635,14 @@ export const removeFromBasket = async (
   }
 };
 
+
+export const addSubscriber = async (
+  email: string
+): Promise<{ success?: boolean; message?: string }> => {
+  const response = await api.post("/subscriber", { email });
+  return response.data ?? {};
+};
+
 // Bulk add items to basket
 export const bulkAddToBasket = async (
   items: AddToBasketRequest[]
@@ -705,15 +743,14 @@ export const getMetalPrices = async (): Promise<MetalPrices> => {
   }
 };
 
-// Get any zakat campaign
+const ZAKAT_CAMPAIGN_SLUG = "zakat-al-maal";
+
+/** Get the Zakat campaign by slug (zakat-al-maal) for adding to basket. */
 export const getAnyZakatCampaign = async (): Promise<Campaign | null> => {
   try {
-    const campaigns = await fetchCampaigns();
-    const zakatCampaign = campaigns.find(
-      (c) =>
-        c.checkoutType === "ZAQAT" || c.name.toLowerCase().includes("zakat")
-    );
-    return zakatCampaign || null;
+    const payload = await getCampaignDetails(ZAKAT_CAMPAIGN_SLUG);
+    const campaign = payload?.campaign ?? payload;
+    return campaign?.id ? campaign : null;
   } catch (error) {
     if (__DEV__) {
       console.error("Error fetching zakat campaign:", error);

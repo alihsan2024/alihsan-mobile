@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Modal,
   View,
@@ -7,32 +7,15 @@ import {
   StyleSheet,
   Dimensions,
   Animated,
-  Alert,
+  Pressable,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import Button from "../Button";
 import { LinearGradient } from "expo-linear-gradient";
-import { useSelector } from "react-redux";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import {
-  useAddToBasketMutation,
-  useGetBasketQuery,
-  useRemoveFromBasketMutation,
-} from "@/store/reduxSlice/api/basketApi";
-import { useToast } from "@/context/ToastContext";
-import ReplaceOrRemoveModal from "./ReplaceOrRemoveModal";
 
 const { width, height } = Dimensions.get("window");
-
-const GAZA_CAMPAIGN = {
-  id: 188,
-  name: "Gaza",
-  checkoutType: "COMMON",
-  coverImage:
-    "https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/1753249055468-alihsan-coverImage.png",
-};
 
 type DonationAppealModalProps = {
   visible: boolean;
@@ -51,37 +34,11 @@ export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
   raised,
   goal,
 }) => {
-  const progress = Math.min(raised / goal, 1);
+  const progress = goal > 0 ? Math.min(raised / goal, 1) : 0;
 
   // ===== Animation values =====
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.95)).current;
-
-  // ===== Auth & basket =====
-  const { user } = useSelector((state: any) => state.authentication);
-  const isAuthenticated = !!user;
-
-  const [addToBasket] = useAddToBasketMutation();
-  const { data: basketData, refetch: refetchBasket } = useGetBasketQuery(undefined, {
-    skip: !isAuthenticated,
-  });
-
-  const [guestBasket, setGuestBasket] = useState<any[]>([]);
-  const [addingToCart, setAddingToCart] = useState(false);
-  const [replaceModalVisible, setReplaceModalVisible] = useState(false);
-  const [pendingBasketItem, setPendingBasketItem] = useState<any>(null);
-  const [existingCartItem, setExistingCartItem] = useState<any>(null);
-  const { showToast } = useToast();
-  
-  const [removeFromBasket] = useRemoveFromBasketMutation();
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      AsyncStorage.getItem("guestBasket").then((data) => {
-        setGuestBasket(data ? JSON.parse(data) : []);
-      });
-    }
-  }, [isAuthenticated]);
 
   // ===== Animate modal =====
   useEffect(() => {
@@ -114,139 +71,13 @@ export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
     }
   }, [visible]);
 
-  // ===== Donate handler (SAME AS HOME) =====
-  const handleDonate = async () => {
-    const donationAmount = 50; // default Gaza amount (same assumption as Home)
-
-    // Refresh basket data before checking
-    let currentBasketItems: any[] = [];
-    if (isAuthenticated) {
-      const result = await refetchBasket();
-      currentBasketItems = result.data?.payload ?? [];
-    } else {
-      // Load directly from AsyncStorage to get latest data
-      const data = await AsyncStorage.getItem("guestBasket");
-      currentBasketItems = data ? JSON.parse(data) : [];
-      setGuestBasket(currentBasketItems);
-    }
-
-    const existingItem = currentBasketItems.find(
-      (item: any) => item.campaignId === GAZA_CAMPAIGN.id
-    );
-
-    const basketItem = {
-      campaignId: GAZA_CAMPAIGN.id,
-      amount: donationAmount,
-      quantity: 1,
-      name: GAZA_CAMPAIGN.name,
-      coverImage: GAZA_CAMPAIGN.coverImage,
-      checkoutType: GAZA_CAMPAIGN.checkoutType,
-    };
-
-    if (existingItem) {
-      // Show modal to replace or remove
-      setExistingCartItem(existingItem);
-      setPendingBasketItem(basketItem);
-      setReplaceModalVisible(true);
-      return;
-    }
-
-    // Add to cart if not already there
-    try {
-      setAddingToCart(true);
-
-      if (isAuthenticated) {
-        await addToBasket({ body: basketItem });
-      } else {
-        const updated = [...guestBasket, basketItem];
-        setGuestBasket(updated);
-        await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
-      }
-
-      // Close modal after adding to cart
-      onClose();
-
-      showToast({
-        message: "Your donation has been added to the cart",
-        type: "success",
-        action: {
-          label: "View Cart",
-          onPress: () => {
-            router.push("/(tabs)/cart");
-          },
-        },
-      });
-    } catch {
-      showToast({
-        message: "Failed to add to cart",
-        type: "error",
-      });
-    } finally {
-      setAddingToCart(false);
-    }
+  // ===== Donate Now → navigate to Gaza Ramadan 2026 campaign page =====
+  const handleDonate = () => {
+    onClose();
+    router.push("/campaign/gaza-ramadan");
   };
-
-  const handleReplace = async () => {
-    if (!pendingBasketItem || !existingCartItem) return;
-
-    try {
-      setAddingToCart(true);
-      setReplaceModalVisible(false);
-
-      // Remove existing item
-      if (isAuthenticated) {
-        await removeFromBasket({
-          campaignId: existingCartItem.campaignId,
-          orphanId: existingCartItem.orphanId,
-          donationItem: existingCartItem.donationItem,
-        });
-        await refetchBasket();
-      } else {
-        const updated = guestBasket.filter(
-          (item: any) => item.campaignId !== existingCartItem.campaignId
-        );
-        setGuestBasket(updated);
-        await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
-      }
-
-      // Add new item
-      if (isAuthenticated) {
-        await addToBasket({ body: pendingBasketItem });
-        await refetchBasket();
-      } else {
-        const updated = [...guestBasket.filter(
-          (item: any) => item.campaignId !== existingCartItem.campaignId
-        ), pendingBasketItem];
-        setGuestBasket(updated);
-        await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
-      }
-
-      showToast({
-        message: "Campaign replaced in cart",
-        type: "success",
-        action: {
-          label: "View Cart",
-          onPress: () => {
-            onClose();
-            router.push("/(tabs)/cart");
-          },
-        },
-      });
-    } catch (error: any) {
-      showToast({
-        message: error?.message || "Failed to replace item",
-        type: "error",
-      });
-    } finally {
-      setAddingToCart(false);
-      setPendingBasketItem(null);
-      setExistingCartItem(null);
-    }
-  };
-
 
   return (
-    <>
     <Modal
       visible={visible}
       transparent
@@ -254,6 +85,7 @@ export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
       statusBarTranslucent
     >
       <Animated.View style={[styles.overlay, { opacity }]}>
+        <Pressable style={styles.overlayPressable} onPress={onClose} />
         <Animated.View
           style={[
             styles.modalContainer,
@@ -281,7 +113,7 @@ export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
           {/* Bottom Container */}
           <View style={styles.bottomContainer}>
             <View style={styles.heroTextContainer}>
-              <Text style={styles.heroTitle}>Gaza</Text>
+              <Text style={[styles.heroTitle, styles.heroTitleGaza]}>Gaza</Text>
               <Text style={styles.heroSubtitle}>is being Starved</Text>
             </View>
 
@@ -307,26 +139,14 @@ export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
 
             {/* Donate Button */}
             <Button
-              label={addingToCart ? "Adding..." : "Donate Now"}
+              label="Donate Now"
               variant="secondary"
               onPress={handleDonate}
-              disabled={addingToCart}
             />
           </View>
         </Animated.View>
       </Animated.View>
     </Modal>
-    <ReplaceOrRemoveModal
-      visible={replaceModalVisible}
-      campaignName={pendingBasketItem?.name}
-      onCancel={() => {
-        setReplaceModalVisible(false);
-        setPendingBasketItem(null);
-        setExistingCartItem(null);
-      }}
-      onReplace={handleReplace}
-    />
-    </>
   );
 };
 
@@ -380,6 +200,9 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontFamily: "Guthen Bloots",
   },
+  heroTitleGaza: {
+    color: "#FFD602",
+  },
   heroSubtitle: {
     fontSize: 30,
     fontWeight: "500",
@@ -403,5 +226,8 @@ const styles = StyleSheet.create({
     height: "100%",
     backgroundColor: "#FFD602",
     borderRadius: 5,
+  },
+  overlayPressable: {
+    ...StyleSheet.absoluteFillObject,
   },
 });

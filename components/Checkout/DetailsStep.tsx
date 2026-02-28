@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSelector } from "react-redux";
+import { secureSetItem } from "@/utils/secureStorage";
 import { useFormik } from "formik";
 import * as yup from "yup";
 import api from "@/utils/api";
@@ -162,7 +162,7 @@ const DetailsStep = ({ values, onChange, onValidChange }: Props) => {
         status: true,
       };
 
-      await AsyncStorage.setItem(
+      await secureSetItem(
         "checkoutDetails",
         JSON.stringify(checkoutDetails)
       );

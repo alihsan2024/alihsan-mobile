@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import api from "@/utils/api";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export interface AuthUser {
   token: string;
@@ -68,7 +67,8 @@ export const socialMediaLogin = createAsyncThunk(
         }
       );
       const { payload } = response.data;
-      await AsyncStorage.setItem(
+      const { secureSetItem } = await import("@/utils/secureStorage");
+      await secureSetItem(
         "loggedIn",
         JSON.stringify({
           token: payload.token,
@@ -247,6 +247,10 @@ export const authenticationSlice = createSlice({
 
     builder.addCase(initAuth.fulfilled, (state, action) => {
       state.auth = action.payload;
+      state.isReady = true;
+    });
+    builder.addCase(initAuth.rejected, (state) => {
+      state.auth = null;
       state.isReady = true;
     });
 

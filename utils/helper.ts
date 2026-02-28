@@ -158,6 +158,8 @@ export const getRecurringLabel = (periodDays: string | number): string => {
   switch (days) {
     case 7:
       return "Weekly";
+    case 9:
+      return "Friday";
     case 30:
       return "Monthly";
     case 365:

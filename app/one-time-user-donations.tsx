@@ -18,10 +18,6 @@ import { router } from "expo-router";
 import { useSelector } from "react-redux";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { getPaymentsList } from "@/store/reduxSlice/paymentDetailsSlice";
-import {
-  generateInvoice,
-} from "@/store/reduxSlice/myDonationSlice";
-import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView as SafeAreaViewContext } from "react-native-safe-area-context";
 
 // Enable LayoutAnimation on Android
@@ -32,29 +28,11 @@ if (
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const today = new Date();
-const yesterday = new Date(today);
-yesterday.setDate(today.getDate() - 1);
-const last7Days = new Date(today);
-last7Days.setDate(today.getDate() - 7);
-
-const filters = [
-  { label: "Today", value: today.toISOString().split("T")[0] },
-  { label: "Yesterday", value: yesterday.toISOString().split("T")[0] },
-  { label: "Last 7 Days", value: last7Days.toISOString().split("T")[0] },
-];
-
-const initialState = {
-  page: "1",
-  fromdate: today.toISOString().split("T")[0],
-  limit: 10,
-};
-
 const categories = [
-  { label: "All", icon: "globe-outline" },
-  { label: "Zakat", icon: "moon-outline" },
-  { label: "Sadaqah", icon: "heart-outline" },
-  { label: "Sponsorship", icon: "people-outline" },
+  { label: "All", icon: "globe-outline", value: "all" },
+  { label: "Zakat", icon: "moon-outline", value: "zakat" },
+  { label: "Sadaqah", icon: "heart-outline", value: "sadaqah" },
+  { label: "Orphans", icon: "people-outline", value: "sponsorship" },
 ];
 
 // --- Types
@@ -83,11 +61,10 @@ const OneTimeUserDonationsScreen = () => {
   const { rows, loading } = useSelector(
     (state: any) => state.paymentDetails.paymentList
   );
-  const [selectedFilter, setSelectedFilter] = useState(initialState.fromdate);
   const [groupedOrders, setGroupedOrders] = useState<GroupedOrder[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const filteredOrders = useMemo(() => {
     const query = search.trim().toLowerCase();
     const category = selectedCategory.toLowerCase();
@@ -97,16 +74,22 @@ const OneTimeUserDonationsScreen = () => {
         !query ||
         order.orderId.toString().includes(query) ||
         order.payments.some(
-          (payment) =>
-            payment?.Campaign?.name?.toLowerCase().includes(query) ||
-            payment?.donationId?.toString().includes(query)
+          (p) =>
+            p?.Campaign?.name?.toLowerCase().includes(query) ||
+            (p as any)?.donationItem?.toLowerCase().includes(query) ||
+            p?.donationId?.toString().includes(query)
         );
 
       const matchesCategory =
-        selectedCategory === "All" ||
-        order.payments.some((payment) =>
-          payment?.Campaign?.name?.toLowerCase().includes(category)
-        );
+        category === "all" ||
+        order.payments.some((p) => {
+          const name = (p?.Campaign?.name || "").toLowerCase();
+          const item = ((p as any)?.Donation?.donationItem || (p as any)?.donationItem || "").toLowerCase();
+          if (category === "zakat") return name.includes("zakat") || item.includes("zakat");
+          if (category === "sadaqah") return name.includes("sadaqah") || item.includes("sadaqah") || name.includes("sadaqa");
+          if (category === "sponsorship") return !!p?.orphan_id || name.includes("sponsor") || name.includes("orphan");
+          return false;
+        });
 
       return matchesSearch && matchesCategory;
     });
@@ -141,10 +124,6 @@ const OneTimeUserDonationsScreen = () => {
     setExpandedOrders(newSet);
   };
 
-  const handleResend = async (id: number) => {
-    await dispatch(generateInvoice({ donationId: id }) as any);
-  };
-
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat("en-AU", {
       style: "currency",
@@ -170,7 +149,7 @@ const OneTimeUserDonationsScreen = () => {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color="#2161CD" />
       </View>
     );
   }
@@ -178,7 +157,7 @@ const OneTimeUserDonationsScreen = () => {
   return (
     <SafeAreaViewContext style={styles.safeArea}>
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, styles.screenEdgePadding]}>
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => router.push("/(tabs)/profile")}
@@ -190,7 +169,7 @@ const OneTimeUserDonationsScreen = () => {
           <View style={styles.headerSpacer} />
         </View>
         {/* Search */}
-        <View style={styles.headerBar}>
+        <View style={[styles.headerBar, styles.screenEdgePadding]}>
           <View style={styles.searchWrapper}>
             <View style={styles.searchContainer}>
               <Feather name="search" size={16} color="#6B7280" />
@@ -213,57 +192,70 @@ const OneTimeUserDonationsScreen = () => {
           </View>
         </View>
 
-        {/* Categories */}
-        <View style={styles.categoriesSection}>
-          <FlatList
-            data={categories}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item, index) => `${item.label}-${index}`}
-            contentContainerStyle={styles.categoriesHorizontal}
-            renderItem={({ item }) => {
-              const isSelected = selectedCategory === item.label;
-            const activeColor = isSelected ? "#2161CD" : "#6B7280";
-
+        {/* Category tabs */}
+        <View style={[styles.filtersSection, styles.screenEdgePadding]}>
+          <View style={styles.filterPillsRow}>
+            {categories.map((item) => {
+              const isSelected = selectedCategory === item.value;
               return (
                 <TouchableOpacity
-                  style={[
-                    styles.categoryItemHorizontal,
-                    isSelected && styles.categoryItemSelected,
-                  ]}
-                  onPress={() => setSelectedCategory(item.label)}
+                  key={item.value}
+                  style={[styles.filterPillCategory, isSelected && styles.filterPillActive]}
+                  onPress={() => setSelectedCategory(item.value)}
                   activeOpacity={0.7}
                 >
                   <Ionicons
                     name={item.icon as keyof typeof Ionicons.glyphMap}
                     size={12}
-                    color={activeColor}
+                    color={isSelected ? "#2161CD" : "#6B7280"}
                   />
-                  <Text
-                    style={[
-                      styles.categoryText,
-                      isSelected && styles.categoryTextSelected,
-                    ]}
-                  >
+                  <Text style={[styles.filterPillText, isSelected && styles.filterPillTextActive]} numberOfLines={1}>
                     {item.label}
                   </Text>
                 </TouchableOpacity>
               );
-            }}
-          />
+            })}
+          </View>
         </View>
 
         {filteredOrders.length === 0 ? (
           <View style={styles.emptyState}>
-            <MaterialIcons name="payment" size={60} color="#2161CD" />
-            <Text style={styles.emptyTitle}>No Donations Yet</Text>
-            <Text style={styles.emptyDescription}>
-              You haven’t made any payments. Start supporting a project today!
-            </Text>
+            <View style={styles.emptyStateCard}>
+              {groupedOrders.length === 0 ? (
+                <>
+                  <View style={styles.emptyStateIconWrap}>
+                    <Ionicons name="heart-outline" size={40} color="#2161CD" />
+                  </View>
+                  <Text style={styles.emptyTitle}>No donations yet</Text>
+                  <Text style={styles.emptyDescription}>
+                    Your giving history will appear here. Browse campaigns and make your first donation to get started.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.emptyStateButton}
+                    onPress={() => router.push("/(tabs)/campaigns")}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.emptyStateButtonText}>Browse campaigns</Text>
+                    <Ionicons name="arrow-forward" size={18} color="#FFF" />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <View style={styles.emptyStateIconWrap}>
+                    <Ionicons name="filter-outline" size={40} color="#9CA3AF" />
+                  </View>
+                  <Text style={styles.emptyTitle}>No donations match filters</Text>
+                  <Text style={styles.emptyDescription}>
+                    Try a different time range or category to see your donations.
+                  </Text>
+                </>
+              )}
+            </View>
           </View>
         ) : (
           <FlatList
-            contentContainerStyle={{ paddingBottom: 140, paddingTop: 4 }}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={true}
             data={filteredOrders as GroupedOrder[]}
             keyExtractor={(item: GroupedOrder) => item.orderId.toString()}
             renderItem={({ item: order }: { item: GroupedOrder }) => {
@@ -320,6 +312,19 @@ const OneTimeUserDonationsScreen = () => {
                 statusUpper === "COMPLETED" ? "Completed" : statusUpper;
               const amountLabel = `AUD $${Number(order.totalAmount).toFixed(2)}`;
 
+              const statusBg =
+                statusUpper === "COMPLETED" || statusUpper === "DISTRIBUTED"
+                  ? "#E8F7EF"
+                  : statusUpper === "ACTIVE"
+                  ? "#EFF6FF"
+                  : "#FEF3C7";
+              const statusColor =
+                statusUpper === "COMPLETED" || statusUpper === "DISTRIBUTED"
+                  ? "#16A34A"
+                  : statusUpper === "ACTIVE"
+                  ? "#2563EB"
+                  : "#D97706";
+
               return (
                 <View style={styles.orderCard}>
                   <TouchableOpacity
@@ -327,44 +332,34 @@ const OneTimeUserDonationsScreen = () => {
                     onPress={() => toggleOrderExpansion(order.orderId)}
                     activeOpacity={0.7}
                   >
-                    <View style={styles.orderHeaderLeft}>
-                      <Image source={{ uri: coverImage }} style={styles.orderImage} />
-                      <View style={styles.orderInfo}>
-                        <View style={styles.orderTitleRow}>
-                          <Text style={styles.orderTitle} numberOfLines={1}>
-                            {primaryCampaignName}
-                          </Text>
-                          {otherCount > 0 && (
-                            <Text style={styles.orderOtherCampaigns}>
-                              {" "}+ {otherCount} other{otherCount !== 1 ? "s" : ""}
-                            </Text>
-                          )}
-                        </View>
-                        <View style={styles.orderMetaRow}>
-                          <Text style={styles.orderMetaText}>
-                            {formatDate(order.paymentDate)}
-                          </Text>
-                          <Text style={styles.orderMetaDot}>•</Text>
-                          <Text style={styles.orderMetaText}>
-                            {totalItems} item{totalItems !== 1 ? "s" : ""}
-                          </Text>
-                          <Text style={styles.orderMetaDot}>•</Text>
-                          <Text style={styles.orderMetaAmount}>
-                            {amountLabel}
-                          </Text>
-                        </View>
-                      </View>
+                    <Image source={{ uri: coverImage }} style={styles.orderImage} />
+                    <View style={styles.orderInfo}>
+                      <Text style={styles.orderTitle} numberOfLines={1}>
+                        {primaryCampaignName}
+                        {otherCount > 0 && (
+                          <Text style={styles.orderOtherCampaigns}> +{otherCount}</Text>
+                        )}
+                      </Text>
+                      <Text style={styles.orderMetaText}>
+                        {formatDate(order.paymentDate)} · {amountLabel}
+                      </Text>
                     </View>
-                    <View style={styles.orderStatusBadge}>
-                      <Text style={styles.orderStatusText}>{statusLabel}</Text>
+                    <View style={styles.orderRight}>
+                      <View style={[styles.orderStatusBadge, { backgroundColor: statusBg }]}>
+                        <Text style={[styles.orderStatusText, { color: statusColor }]}>{statusLabel}</Text>
+                      </View>
+                      <Ionicons
+                        name={expandedOrders.has(order.orderId) ? "chevron-up" : "chevron-down"}
+                        size={18}
+                        color="#9CA3AF"
+                      />
                     </View>
                   </TouchableOpacity>
 
                   {expandedOrders.has(order.orderId) && (
                     <View style={styles.orderDetails}>
                       <View style={styles.orderDetailsHeader}>
-                        <Text style={styles.orderDetailsTitle}>Order Items</Text>
-                        <Text style={styles.orderDetailsSubtitle}>Order #{order.orderId}</Text>
+                        <Text style={styles.orderDetailsTitle}>Order #{order.orderId}</Text>
                       </View>
                       <View style={styles.orderDetailsList}>
                         {order.payments.map((p: Payment, index: number) => {
@@ -374,35 +369,18 @@ const OneTimeUserDonationsScreen = () => {
                               key={p.id}
                               style={[
                                 styles.paymentRow,
-                                index === order.payments.length - 1 &&
-                                  styles.paymentRowLast,
+                                index === order.payments.length - 1 && styles.paymentRowLast,
                               ]}
                             >
-                              <View style={styles.paymentRowLeft}>
-                                <View style={styles.paymentIconContainer}>
-                                  <Ionicons 
-                                    name={isFee ? "card-outline" : "gift-outline"} 
-                                    size={16} 
-                                    color={isFee ? "#9CA3AF" : "#246BE1"} 
-                                  />
-                                </View>
-                                <View style={styles.paymentInfo}>
-                                  <Text style={styles.paymentName}>
-                                    {isFee
-                                      ? "Processing Fee"
-                                      : p.Campaign?.name
-                                      ? p.Campaign.name
-                                      : p.orphan_id
-                                      ? "Orphan Sponsorship"
-                                      : "Donation"}
-                                  </Text>
-                                  {!isFee && (
-                                    <Text style={styles.paymentId}>
-                                      {p.Campaign?.name ? "Campaign" : "Donation"}
-                                    </Text>
-                                  )}
-                                </View>
-                              </View>
+                              <Text style={[styles.paymentName, isFee && styles.paymentNameFee]} numberOfLines={1}>
+                                {isFee
+                                  ? "Processing fee"
+                                  : p.Campaign?.name
+                                  ? p.Campaign.name
+                                  : p.orphan_id
+                                  ? "Orphan Sponsorship"
+                                  : "Donation"}
+                              </Text>
                               <Text style={[styles.paymentTotal, isFee && styles.paymentTotalFee]}>
                                 ${Number(p.total).toFixed(2)}
                               </Text>
@@ -410,17 +388,6 @@ const OneTimeUserDonationsScreen = () => {
                           );
                         })}
                       </View>
-                      <View style={styles.orderDetailsDivider} />
-                      <TouchableOpacity
-                        style={styles.resendButton}
-                        onPress={() => handleResend(primaryPayment?.donationId)}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="mail-outline" size={16} color="#246BE1" />
-                        <Text style={styles.resendButtonText}>
-                          Resend Invoice
-                        </Text>
-                      </TouchableOpacity>
                     </View>
                   )}
                 </View>
@@ -437,7 +404,9 @@ const OneTimeUserDonationsScreen = () => {
 // --- Styles
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#fff" },
-  container: { flex: 1, paddingHorizontal: 16 },
+  container: { flex: 1 },
+  screenEdgePadding: { paddingHorizontal: 16 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 140, paddingTop: 4 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   headerBar: {
     flexDirection: "row",
@@ -472,39 +441,37 @@ const styles = StyleSheet.create({
   clearButton: {
     paddingLeft: 4,
   },
-  categoriesHorizontal: {
-    paddingBottom: 0,
-    marginBottom: 0,
-    gap: 6,
-  },
-  categoriesSection: {
+  filtersSection: {
+    paddingVertical: 10,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    marginBottom: 10,
   },
-  categoryItemHorizontal: {
+  filterPillsRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  filterPillCategory: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 4,
     paddingVertical: 0,
     paddingHorizontal: 6,
-    borderRadius: 8,
-    justifyContent: "center",
     height: 36,
+    borderRadius: 8,
+    backgroundColor: "#F3F4F6",
   },
-  categoryItemSelected: {
-    backgroundColor: "rgba(242, 246, 255, 1)",
+  filterPillActive: {
+    backgroundColor: "rgba(33, 97, 205, 0.12)",
   },
-  categoryText: {
-    fontSize: 10,
-    lineHeight: 12,
-    color: "#6B7280",
+  filterPillText: {
+    fontSize: 12,
     fontWeight: "600",
+    color: "#374151",
   },
-  categoryTextSelected: {
+  filterPillTextActive: {
     color: "#2161CD",
   },
   header: {
@@ -514,8 +481,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
   },
   backBtn: {
     width: 40,
@@ -539,158 +504,115 @@ const styles = StyleSheet.create({
     height: 40,
   },
   orderCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FAFAFA",
     marginTop: 8,
-    borderRadius: 16,
-    padding: 8,
+    borderRadius: 12,
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#EEEEEE",
   },
   orderHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 2,
-  },
-  orderHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
   orderImage: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 10,
-    marginRight: 8,
+    marginRight: 12,
+    backgroundColor: "#E8E8E8",
   },
   orderInfo: {
     flex: 1,
-    marginRight: 8,
+    minWidth: 0,
+    justifyContent: "center",
   },
-  orderStatusBadge: {
-    backgroundColor: "#E6F7D9",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  orderStatusText: {
-    color: "#3C7A2A",
-    fontWeight: "600",
-    fontSize: 11,
-  },
-  orderTitleRow: {
+  orderRight: {
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
+    gap: 6,
   },
   orderTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#0F172A",
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 2,
   },
   orderOtherCampaigns: {
-    fontSize: 11,
-    fontWeight: "400",
-    color: "#9CA3AF",
-    fontStyle: "italic",
-  },
-  orderMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#6B7280",
   },
   orderMetaText: {
-    fontSize: 11,
-    color: "#9CA3AF",
-  },
-  orderMetaDot: {
-    marginHorizontal: 8,
-    color: "#9CA3AF",
-    fontSize: 11,
-  },
-  orderMetaAmount: {
-    fontSize: 11,
-    color: "#0F172A",
-    fontWeight: "700",
-  },
-  orderDetails: {
-    marginTop: 12,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  orderDetailsHeader: {
-    marginBottom: 12,
-  },
-  orderDetailsTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#010D26",
-    fontFamily: "AlbertSans_700Bold",
-    marginBottom: 4,
-  },
-  orderDetailsSubtitle: {
     fontSize: 12,
     color: "#6B7280",
-    fontFamily: "AlbertSans_400Regular",
+  },
+  orderStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  orderStatusText: {
+    fontWeight: "600",
+    fontSize: 10,
+  },
+  orderDetails: {
+    marginHorizontal: 12,
+    marginBottom: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#EEEEEE",
+  },
+  orderDetailsHeader: {
+    marginBottom: 10,
+  },
+  orderDetailsTitle: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#9CA3AF",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   orderDetailsList: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 8,
-    marginBottom: 12,
+    backgroundColor: "#FFF",
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: "#EEEEEE",
   },
   paymentRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: "#F5F5F5",
   },
   paymentRowLast: {
     borderBottomWidth: 0,
   },
-  paymentRowLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  paymentIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  paymentInfo: {
-    flex: 1,
-  },
   paymentName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#010D26",
-    fontFamily: "AlbertSans_600SemiBold",
-    marginBottom: 2,
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#374151",
+    flex: 1,
+    marginRight: 8,
   },
-  paymentId: {
-    fontSize: 11,
+  paymentNameFee: {
     color: "#9CA3AF",
-    fontFamily: "AlbertSans_400Regular",
   },
   paymentTotal: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#010D26",
-    fontFamily: "AlbertSans_700Bold",
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#111827",
   },
   paymentTotalFee: {
-    color: "#9CA3AF",
+    color: "#6B7280",
+    fontWeight: "500",
   },
   orderDetailsDivider: {
     height: 1,
@@ -716,19 +638,56 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 60,
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+  },
+  emptyStateCard: {
+    backgroundColor: "#FAFAFA",
+    borderRadius: 16,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    maxWidth: 320,
+    borderWidth: 1,
+    borderColor: "#EEEEEE",
+  },
+  emptyStateIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
-    color: "#264B8B",
-    marginTop: 16,
+    color: "#111827",
+    marginBottom: 8,
+    textAlign: "center",
   },
   emptyDescription: {
     fontSize: 14,
     color: "#6B7280",
     textAlign: "center",
-    marginTop: 4,
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  emptyStateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#2161CD",
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  emptyStateButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#FFF",
   },
 });
 
@@ -767,9 +726,9 @@ function groupPayments(payments: Payment[]): GroupedOrder[] {
     }
     // Include all payments (including processing fees) in the payments array
     grouped[orderId].payments.push(p);
-    // Only add to totalAmount and itemCount if it's not a processing fee
+    // Total = sum of all items (donations + fees)
+    grouped[orderId].totalAmount += parseFloat(p.total) || 0;
     if (!isProcessingFee(p)) {
-      grouped[orderId].totalAmount += parseFloat(p.total) || 0;
       grouped[orderId].itemCount += 1;
     }
 

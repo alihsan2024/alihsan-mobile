@@ -136,7 +136,7 @@ const ProjectUpdatesPage = () => {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#6366f1" />
+        <ActivityIndicator size="large" color="#2161CD" />
         <Text>Loading your project...</Text>
       </View>
     );

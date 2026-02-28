@@ -106,7 +106,7 @@ const OrphanSponsorshipsTab: React.FC = () => {
   if (loading)
     return (
       <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#2161CD" />
       </SafeAreaView>
     );
 

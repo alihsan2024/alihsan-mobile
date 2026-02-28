@@ -1,7 +1,13 @@
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Modal, View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import {
+  Modal,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Pressable,
+} from "react-native";
 
 type Props = {
   visible: boolean;
@@ -16,6 +22,10 @@ export default function ReplaceOrRemoveModal({
   onCancel,
   onReplace,
 }: Props) {
+  const message = campaignName
+    ? `"${campaignName}" is already in your cart. Replace with this donation?`
+    : "This campaign is already in your cart. Replace with this donation?";
+
   return (
     <Modal
       visible={visible}
@@ -23,61 +33,33 @@ export default function ReplaceOrRemoveModal({
       animationType="fade"
       statusBarTranslucent
     >
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          {/* Icon Header */}
-          <View style={styles.iconContainer}>
-            <LinearGradient
-              colors={["#246BE1", "#064DC3"]}
-              style={styles.iconGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Ionicons name="cart" size={28} color="#FFD602" />
-            </LinearGradient>
+      <Pressable style={styles.overlay} onPress={onCancel}>
+        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.iconWrap}>
+            <Ionicons name="cart-outline" size={24} color="#2161CD" />
           </View>
-
-          <View style={styles.contentContainer}>
-            <Text style={styles.title} numberOfLines={2}>
-              Campaign Already in Cart
-            </Text>
-
-            <Text style={styles.description} numberOfLines={4}>
-              {campaignName
-                ? `"${campaignName}" is already in your cart. Would you like to replace it with this donation?`
-                : "This campaign is already in your cart. Would you like to replace it with this donation?"}
-            </Text>
-          </View>
-
+          <Text style={styles.title}>Already in cart</Text>
+          <Text style={styles.description} numberOfLines={3}>
+            {message}
+          </Text>
           <View style={styles.actions}>
             <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
+              style={styles.cancelButton}
               onPress={onCancel}
-              activeOpacity={0.8}
+              activeOpacity={0.7}
             >
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>Keep current</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
-              style={[styles.button, styles.replaceButton]}
+              style={styles.replaceButton}
               onPress={onReplace}
               activeOpacity={0.8}
             >
-              <LinearGradient
-                colors={["#246BE1", "#064DC3"]}
-                style={styles.replaceGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <View style={styles.replaceButtonContent}>
-                  <Text style={styles.replaceText}>Replace</Text>
-                  <Feather name="arrow-right" size={18} color="#FFFFFF" />
-                </View>
-              </LinearGradient>
+              <Text style={styles.replaceText}>Replace</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -85,122 +67,81 @@ export default function ReplaceOrRemoveModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
   },
-
   card: {
     width: "100%",
-    maxWidth: 400,
+    maxWidth: 340,
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
     shadowRadius: 16,
-    elevation: 8,
+    elevation: 6,
   },
-
-  iconContainer: {
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#EFF6FF",
     alignItems: "center",
-    marginBottom: 16,
-  },
-
-  iconGradient: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
     justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#246BE1",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    alignSelf: "center",
+    marginBottom: 12,
   },
-
-  contentContainer: {
-    width: "100%",
-    marginBottom: 24,
-    alignItems: "center",
-  },
-
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
     color: "#111827",
     textAlign: "center",
-    marginBottom: 12,
-    width: "100%",
-    letterSpacing: -0.5,
+    marginBottom: 6,
+    fontFamily: "AlbertSans_700Bold",
   },
-
   description: {
     fontSize: 14,
     color: "#6B7280",
     textAlign: "center",
     lineHeight: 20,
-    width: "100%",
+    marginBottom: 20,
+    fontFamily: "AlbertSans_400Regular",
   },
-
   actions: {
     flexDirection: "row",
-    gap: 12,
+    gap: 10,
   },
-
-  button: {
-    flex: 1,
-    borderRadius: 12,
-    overflow: "hidden",
-    minHeight: 52,
-  },
-
   cancelButton: {
-    backgroundColor: "#F9FAFB",
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  replaceButton: {
-    overflow: "hidden",
-  },
-
-  replaceGradient: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 14,
-  },
-
-  replaceButtonContent: {
-    flexDirection: "row",
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
   },
-
   cancelText: {
     fontSize: 15,
     fontWeight: "600",
     color: "#374151",
-    textAlign: "center",
+    fontFamily: "AlbertSans_600SemiBold",
   },
-
+  replaceButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: "#2161CD",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   replaceText: {
     fontSize: 15,
     fontWeight: "600",
     color: "#FFFFFF",
-    textAlign: "center",
+    fontFamily: "AlbertSans_600SemiBold",
   },
 });

@@ -47,6 +47,8 @@ import {
 } from "@expo-google-fonts/albert-sans";
 import DeviceRegistrationManager from "@/utils/DeviceRegistrationManager";
 import { DonationAppealModal } from "../components/ui/Modals/DonationAppealModal";
+import { fetchFeaturedCampaigns } from "@/utils/api";
+import AuthGate from "../components/AuthGate";
 
 const introSlides = [
   {
@@ -126,6 +128,10 @@ export default function RootLayout() {
   const [showSplash, setShowSplash] = React.useState(true);
   const [showGazaModal, setShowGazaModal] = React.useState(false);
   const [splashFinished, setSplashFinished] = React.useState(false);
+  const [gazaCampaignData, setGazaCampaignData] = React.useState<{
+    raised: number;
+    goal: number;
+  } | null>(null);
   const [hasNavigatedToAuth, setHasNavigatedToAuth] = React.useState(false);
   const pathname = usePathname();
   
@@ -160,15 +166,40 @@ export default function RootLayout() {
     checkIntroStatus();
   }, []);
 
-  // Handle splash screen - show it first, then show Gaza modal
+  // Handle splash screen - show it first, then load featured campaigns (same as home) and show Gaza modal when Gaza Ramadan 2026 is in the list
   React.useEffect(() => {
     if (showIntro === false && !splashFinished) {
       // Show splash for 2.8 seconds (matching SplashScreen component duration)
       const timer = setTimeout(() => {
         setSplashFinished(true);
         setShowSplash(false);
-        // Show Gaza modal after splash finishes
-        setShowGazaModal(true);
+        // Use same API as home (featured campaigns) so modal shows when Gaza Ramadan 2026 is loaded
+        fetchFeaturedCampaigns()
+          .then((campaigns) => {
+            const gaza = campaigns.find(
+              (c: any) =>
+                (c.slug && c.slug === "gaza-ramadan") ||
+                (c.name && String(c.name).toLowerCase().includes("gaza") && String(c.name).toLowerCase().includes("ramadan"))
+            );
+            if (gaza) {
+              const raised = Number(
+                (gaza as any).amount_donated ?? (gaza as any).amountDonated ?? 0
+              );
+              const goal = Number(
+                (gaza as any).fundraiserGoal ??
+                  (gaza as any).mobileGoalAmount ??
+                  (gaza as any).fundraiser_goal ??
+                  0
+              );
+              if (goal > 0) {
+                setGazaCampaignData({ raised, goal });
+                setShowGazaModal(true);
+              }
+            }
+          })
+          .catch(() => {
+            // Don't show modal if featured campaigns failed to load
+          });
       }, 2800);
       return () => clearTimeout(timer);
     } else if (showIntro !== null && showIntro) {
@@ -227,6 +258,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <Provider store={store}>
+        <AuthGate>
         <NetworkProvider>
           <AuthProvider>
             <DeviceRegistrationManager />
@@ -244,15 +276,15 @@ export default function RootLayout() {
                   </View>
                 )}
                 
-                {/* Show Gaza modal after splash */}
-                {showGazaModal && (
+                {/* Show Gaza modal only when campaign data is loaded */}
+                {showGazaModal && gazaCampaignData && (
                   <DonationAppealModal
                     visible={showGazaModal}
                     onClose={() => setShowGazaModal(false)}
                     image={require("../assets/modal-image.png")}
                     title="Help Children in Need"
-                    raised={109690.51}
-                    goal={150000}
+                    raised={gazaCampaignData.raised}
+                    goal={gazaCampaignData.goal}
                   />
                 )}
                 
@@ -290,6 +322,7 @@ export default function RootLayout() {
             </BasketProvider>
           </AuthProvider>
         </NetworkProvider>
+        </AuthGate>
       </Provider>
     </SafeAreaProvider>
   );

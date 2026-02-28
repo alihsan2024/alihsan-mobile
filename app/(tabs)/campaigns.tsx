@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import Feather from "@expo/vector-icons/Feather";
 import Earth from "../../assets/earth.svg";
 import BabyCarriage from "../../assets/baby-carriage.svg";
@@ -69,7 +70,7 @@ export default function ActiveAppealsScreen() {
     try {
       setError(null);
       setLoading(true);
-      const data = await fetchCampaigns(true); // Only fetch mobile campaigns for explore page
+      const data = await fetchCampaigns(true, forceRefresh); // Only fetch mobile campaigns for explore page
 
       // ✅ Save to session cache
       campaignsCache = data;
@@ -241,7 +242,7 @@ export default function ActiveAppealsScreen() {
       {/* Loading/Error States */}
       {loading && (
         <View style={{ alignItems: "center", paddingVertical: 40 }}>
-          <ActivityIndicator size="large" color="#4B6BFF" />
+          <ActivityIndicator size="large" color="#2161CD" />
         </View>
       )}
       {error && (
@@ -317,75 +318,36 @@ export default function ActiveAppealsScreen() {
 
           return (
             <Link key={c.id} href={`/campaign/${c.slug}`} asChild>
-              <TouchableOpacity activeOpacity={0.85} style={styles.card}>
-                <View style={styles.cardImageContainer}>
-                  <ExpoImage
-                    source={{ uri: c.coverImage }}
-                    style={styles.cardImage}
-                    contentFit="cover"
-                  />
-                  {hasGoal && (
-                    <View style={styles.cardProgressOverlay}>
-                      <View style={styles.cardProgressBar}>
-                        <View 
-                          style={[
-                            styles.cardProgressFill, 
-                            { width: `${progressPercent}%` }
-                          ]} 
-                        />
-                      </View>
-                    </View>
-                  )}
-                </View>
-                <View style={styles.cardContent}>
-                  <View style={styles.cardTextContainer}>
-                    <Text style={styles.cardTitle} numberOfLines={2}>
-                      {displayTitle}
-                    </Text>
-                    {cleanedSubtitle ? (
-                      <Text style={styles.cardSubtitle} numberOfLines={2}>
-                        {cleanedSubtitle}
+              <TouchableOpacity activeOpacity={0.9} style={styles.card}>
+                <ExpoImage
+                  source={{ uri: c.coverImage }}
+                  style={styles.cardImage}
+                  contentFit="cover"
+                />
+                <LinearGradient
+                  colors={["transparent", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.9)"]}
+                  locations={[0.35, 0.7, 1]}
+                  style={styles.cardGradient}
+                >
+                  <View style={styles.cardOverlayContent}>
+                    <View style={styles.cardOverlayLeft}>
+                      <Text style={styles.cardTitle} numberOfLines={2}>
+                        {displayTitle}
                       </Text>
-                    ) : null}
-                  </View>
-                  
-                  {(hasGoal || donorCount > 0) && (
-                    <View style={styles.cardStats}>
-                      {hasGoal && (
-                        <View style={styles.cardStatItem}>
-                          <Ionicons name="cash-outline" size={12} color="#246BE1" />
-                          <Text style={styles.cardStatText}>
-                            ${raised.toLocaleString()}
-                          </Text>
-                        </View>
-                      )}
-                      {donorCount > 0 && (
-                        <View style={styles.cardStatItem}>
-                          <Ionicons name="people-outline" size={12} color="#10B981" />
-                          <Text style={styles.cardStatText}>
-                            {donorCount.toLocaleString()} {donorCount === 1 ? 'donor' : 'donors'}
-                          </Text>
-                        </View>
-                      )}
+                      {cleanedSubtitle ? (
+                        <Text style={styles.cardDescription} numberOfLines={1}>
+                          {cleanedSubtitle.length > 50
+                            ? `${cleanedSubtitle.slice(0, 50).trim()}…`
+                            : cleanedSubtitle}
+                        </Text>
+                      ) : null}
                     </View>
-                  )}
-
-                  <TouchableOpacity
-                    style={styles.donateButton}
-                    activeOpacity={0.8}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      router.push(`/campaign/${c.slug}`);
-                    }}
-                  >
-                    <Text style={styles.donateButtonText}>Donate</Text>
-                    <Ionicons
-                      name="arrow-forward"
-                      size={14}
-                      color="#010D26"
-                    />
-                  </TouchableOpacity>
-                </View>
+                    <View style={styles.cardCtaRow}>
+                      <Text style={styles.donateButtonText}>Donate</Text>
+                      <Ionicons name="arrow-forward" size={14} color="#010D26" />
+                    </View>
+                  </View>
+                </LinearGradient>
               </TouchableOpacity>
             </Link>
           );
@@ -532,27 +494,16 @@ const styles = StyleSheet.create({
   },
   card: {
     width: "100%",
+    aspectRatio: 2.8,
     borderRadius: 12,
     overflow: "hidden",
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    backgroundColor: "#F3F4F6",
+    position: "relative",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 3,
-    flexDirection: "row",
-    alignItems: "stretch",
-    minHeight: 120,
-  },
-  cardImageContainer: {
-    width: 120,
-    position: "relative",
-    overflow: "hidden",
-    flexShrink: 0,
-    alignSelf: "stretch",
-    minHeight: 120,
   },
   cardImage: {
     position: "absolute",
@@ -563,81 +514,59 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  cardProgressOverlay: {
+  cardGradient: {
     position: "absolute",
-    bottom: 0,
+    top: 0,
     left: 0,
     right: 0,
-    padding: 6,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    bottom: 0,
+    justifyContent: "flex-end",
   },
-  cardProgressBar: {
-    height: 3,
-    backgroundColor: "rgba(255, 255, 255, 0.25)",
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  cardProgressFill: {
-    height: "100%",
-    backgroundColor: "#FFD602",
-    borderRadius: 2,
-  },
-  cardContent: {
-    flex: 1,
-    padding: 12,
+  cardOverlayContent: {
+    flexDirection: "row",
+    alignItems: "flex-end",
     justifyContent: "space-between",
+    padding: 14,
+    gap: 10,
   },
-  cardTextContainer: {
+  cardOverlayLeft: {
     flex: 1,
-    marginBottom: 8,
+    minWidth: 0,
   },
   cardTitle: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 24,
+    color: "#FFD602",
+    lineHeight: 28,
+    fontFamily: "Guthen Bloots",
+    letterSpacing: 1.5,
+    textAlign: "left",
     marginBottom: 4,
-    color: "#010D26",
-    lineHeight: 20,
-    fontFamily: "AlbertSans_700Bold",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
-  cardSubtitle: {
+  cardDescription: {
     fontSize: 12,
-    color: "#6B7280",
+    color: "rgba(255,255,255,0.9)",
     lineHeight: 16,
     fontFamily: "AlbertSans_400Regular",
+    textAlign: "left",
+    textShadowColor: "rgba(0,0,0,0.4)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
-  cardStats: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
-  },
-  cardStatItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  cardStatText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#010D26",
-    fontFamily: "AlbertSans_600SemiBold",
-  },
-  donateButton: {
-    backgroundColor: "#FFD602",
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+  cardCtaRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    alignSelf: "flex-start",
+    backgroundColor: "#FFD602",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
   },
   donateButtonText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",

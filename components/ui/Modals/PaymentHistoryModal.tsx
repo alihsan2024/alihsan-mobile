@@ -60,7 +60,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
           {/* Content */}
           <ScrollView style={styles.content}>
             {loadingPayments ? (
-              <ActivityIndicator size="large" color="#4f46e5" />
+              <ActivityIndicator size="large" color="#2161CD" />
             ) : (
               <View>
                 <Text>

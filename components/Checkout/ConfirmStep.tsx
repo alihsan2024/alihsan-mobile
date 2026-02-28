@@ -1,9 +1,7 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
-import { Image as ExpoImage } from "expo-image";
+import { View, Text, StyleSheet, ScrollView, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { getRecurringLabel } from "@/utils/helper";
 
 const formatPrice = (price: number): string => {
   return !isNaN(price)
@@ -12,6 +10,72 @@ const formatPrice = (price: number): string => {
         maximumFractionDigits: 2,
       })
     : "0.00";
+};
+
+/** Matches cart basket item recurring labels (AU Next.js style). */
+const getRecurringLabel = (periodDays?: number): string => {
+  if (periodDays == null) return "";
+  switch (parseInt(periodDays.toString())) {
+    case 7:
+      return "Weekly";
+    case 30:
+      return "Monthly";
+    case 90:
+      return "Quarterly";
+    case 365:
+      return "Yearly";
+    case 1:
+      return "Daily";
+    case 9:
+      return "Every Friday";
+    case 10:
+      return "Last 10 Ramadan";
+    case 100:
+      return "Ramadan Daily";
+    case 101:
+      return "Ramadan Last 10";
+    case 102:
+      return "Ramadan Odd Nights";
+    case 103:
+      return "Ramadan Even Nights";
+    case 104:
+      return "27th Night";
+    default:
+      return "";
+  }
+};
+
+/** Display text for "per" line under amount: per month, Friday weekly, per week, etc. */
+const getRecurringPerLine = (periodDays?: number): string => {
+  if (periodDays == null) return "";
+  switch (parseInt(periodDays.toString())) {
+    case 7:
+      return "per week";
+    case 30:
+      return "per month";
+    case 90:
+      return "per quarter";
+    case 365:
+      return "per year";
+    case 1:
+      return "per day";
+    case 9:
+      return "Friday weekly";
+    case 10:
+      return "Last 10 Ramadan";
+    case 100:
+      return "Ramadan daily";
+    case 101:
+      return "Ramadan Last 10";
+    case 102:
+      return "Ramadan odd nights";
+    case 103:
+      return "Ramadan even nights";
+    case 104:
+      return "27th night";
+    default:
+      return "";
+  }
 };
 
 type Props = {
@@ -44,96 +108,156 @@ const ConfirmStep = ({ summary }: Props) => {
         </Text>
       </View>
 
-      {/* Items Section */}
+      {/* Items Section - same design/layout as basket cart */}
       <View style={styles.itemsSection}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionLabel}>Donation Items</Text>
-          <Text style={styles.itemCount}>{summary.items.length} {summary.items.length === 1 ? 'item' : 'items'}</Text>
+          <Text style={styles.itemCount}>{summary.items.length} {summary.items.length === 1 ? "item" : "items"}</Text>
         </View>
         <View style={styles.itemsContainer}>
-          {summary.items.map((item, index) => {
+          {summary.items.map((item: any, index: number) => {
             const imageUri =
               item.coverImage ||
               item.Campaign?.coverImage ||
               item.Orphan?.coverImage ||
               "https://via.placeholder.com/64";
-
             const title =
               item.name || item.Campaign?.name || item.Orphan?.name || "Campaign";
-
-            const subtitle =
-              item.donationItem ||
-              item.Campaign?.subtitle ||
-              item.Orphan?.subtitle;
-
             const quantity = parseInt(item.quantity?.toString() || "1");
             const amount = parseFloat(item.amount?.toString() || "0");
             const computedTotal =
               item.total !== undefined && item.total !== null
                 ? parseFloat(item.total?.toString() || "0")
                 : amount * quantity;
-
-            const isRecurring = item.isRecurring || false;
-            const periodDays = item.periodDays;
+            const amountLabel = `$${formatPrice(computedTotal)}`;
+            const isOrphan = !!item.orphanId;
+            const recurringLabel = getRecurringLabel(item.periodDays);
+            const perLine = getRecurringPerLine(item.periodDays);
+            const hasStrip = item.isRecurring || isOrphan;
 
             return (
-              <View key={item.id || index} style={styles.itemCard}>
-                {/* Image with gradient overlay */}
-                <View style={styles.imageContainer}>
-                  <ExpoImage
-                    source={{ uri: imageUri }}
-                    style={styles.itemImage}
-                    contentFit="cover"
-                  />
-                  {isRecurring && (
-                    <View style={styles.recurringBadgeOverlay}>
-                      <Ionicons name="repeat" size={12} color="#FFFFFF" />
-                    </View>
-                  )}
-                </View>
-
-                {/* Content */}
-                <View style={styles.itemContent}>
-                  <View style={styles.itemTextContainer}>
-                    <Text style={styles.itemTitle} numberOfLines={2}>
-                      {title}
-                    </Text>
-                    {subtitle && (
-                      <Text style={styles.itemSubtitle} numberOfLines={1}>
-                        {subtitle}
-                      </Text>
-                    )}
-                    
-                    {/* Recurring badge and quantity */}
-                    <View style={styles.itemMetaRow}>
-                      {isRecurring && periodDays && (
-                        <View style={styles.recurringBadge}>
-                          <Ionicons name="repeat" size={10} color="#2161CD" />
-                          <Text style={styles.recurringText}>
-                            {getRecurringLabel(periodDays)}
-                          </Text>
-                        </View>
-                      )}
-                      {quantity > 1 && (
-                        <View style={styles.quantityBadge}>
-                          <Text style={styles.quantityText}>
-                            Qty: {quantity}
-                          </Text>
-                        </View>
-                      )}
+              <View
+                key={item.id || index}
+                style={[
+                  styles.itemCard,
+                  isOrphan && styles.itemCardOrphan,
+                  item.isRecurring && !isOrphan && styles.itemCardRecurring,
+                ]}
+              >
+                {item.isRecurring && !isOrphan && (
+                  <View style={styles.itemStrip}>
+                    <View style={styles.itemStripRow}>
+                      <View style={styles.itemStripLeft}>
+                        <Ionicons name="repeat" size={14} color="#fff" />
+                        <Text style={styles.itemStripLabel}>RECURRING</Text>
+                      </View>
+                      <View style={styles.itemStripPill}>
+                        <Text style={styles.itemStripPillText}>
+                          {recurringLabel}
+                        </Text>
+                      </View>
                     </View>
                   </View>
+                )}
+                {isOrphan && (
+                  <View style={styles.itemStrip}>
+                    <View style={styles.itemStripRow}>
+                      <View style={styles.itemStripLeft}>
+                        <Ionicons name="person" size={14} color="#fff" />
+                        <Text style={styles.itemStripLabel}>
+                          ORPHAN SPONSORSHIP
+                        </Text>
+                      </View>
+                      {recurringLabel ? (
+                        <View style={styles.itemStripPill}>
+                          <Text style={styles.itemStripPillText}>
+                            {recurringLabel}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+                )}
 
-                  {/* Price */}
-                  <View style={styles.priceContainer}>
-                    <Text style={styles.itemPrice}>
-                      ${formatPrice(computedTotal)}
-                    </Text>
-                    {quantity > 1 && (
-                      <Text style={styles.unitPrice}>
-                        ${formatPrice(amount)} each
-                      </Text>
+                <View
+                  style={[
+                    styles.itemBody,
+                    hasStrip && styles.itemBodyTinted,
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.itemImageWrap,
+                      hasStrip && styles.itemImageWrapRing,
+                    ]}
+                  >
+                    <Image
+                      source={{ uri: imageUri }}
+                      style={styles.itemImage}
+                    />
+                    {hasStrip && (
+                      <LinearGradient
+                        colors={["transparent", "rgba(33,97,205,0.1)"]}
+                        style={StyleSheet.absoluteFillObject}
+                      />
                     )}
+                  </View>
+
+                  <View style={styles.itemContent}>
+                    <Text
+                      style={[
+                        styles.itemTitle,
+                        hasStrip && styles.itemTitlePrimary,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {title}
+                    </Text>
+                    {isOrphan && (
+                      <View style={styles.itemMetaRow}>
+                        <View style={styles.itemOrphanBadge}>
+                          <Text style={styles.itemOrphanBadgeText}>
+                            ID: {item.orphanId || "N/A"}
+                          </Text>
+                        </View>
+                        {item.age != null && (
+                          <>
+                            <Text style={styles.itemMetaDot}>•</Text>
+                            <Text style={styles.itemMetaSecondary}>
+                              {item.age}
+                            </Text>
+                          </>
+                        )}
+                      </View>
+                    )}
+                    {!isOrphan && item.donationItem && (
+                      <View style={styles.itemMetaRow}>
+                        <View style={styles.itemDonationChip}>
+                          <Text style={styles.itemDonationChipText}>
+                            {item.donationItem}
+                          </Text>
+                          {quantity > 1 && (
+                            <Text style={styles.itemDonationChipText}>
+                              {" "}• {quantity}x
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.itemRight}>
+                    <Text
+                      style={[
+                        styles.itemAmount,
+                        hasStrip && styles.itemAmountPrimary,
+                      ]}
+                    >
+                      {amountLabel}
+                    </Text>
+                    {(item.isRecurring || isOrphan) && perLine ? (
+                      <Text style={styles.itemPerLabel}>{perLine}</Text>
+                    ) : null}
                   </View>
                 </View>
               </View>
@@ -274,107 +398,160 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   itemsContainer: {
-    gap: 8,
-  },
-  itemCard: {
-    flexDirection: "row",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: "#010D261A",
-    alignItems: "center",
     gap: 10,
   },
-  imageContainer: {
-    position: "relative",
+  itemCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    overflow: "hidden",
   },
-  itemImage: {
+  itemCardOrphan: {
+    borderColor: "#93C5FD",
+  },
+  itemCardRecurring: {
+    borderColor: "#93C5FD",
+  },
+  itemStrip: {
+    backgroundColor: "#2161CD",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(33,97,205,0.5)",
+  },
+  itemStripRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  itemStripLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  itemStripLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#fff",
+    letterSpacing: 0.5,
+    fontFamily: "AlbertSans_800ExtraBold",
+  },
+  itemStripPill: {
+    backgroundColor: "rgba(255,255,255,0.25)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  itemStripPillText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#fff",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  itemBody: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    padding: 10,
+    gap: 10,
+  },
+  itemBodyTinted: {
+    backgroundColor: "transparent",
+  },
+  itemImageWrap: {
     width: 48,
     height: 48,
-    borderRadius: 8,
-    backgroundColor: "#E5E7EB",
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#F3F4F6",
   },
-  recurringBadgeOverlay: {
-    position: "absolute",
-    top: 2,
-    right: 2,
-    backgroundColor: "#2161CD",
-    borderRadius: 8,
-    width: 14,
-    height: 14,
-    alignItems: "center",
-    justifyContent: "center",
+  itemImageWrapRing: {
+    borderWidth: 2,
+    borderColor: "rgba(33,97,205,0.4)",
+  },
+  itemImage: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#F3F4F6",
   },
   itemContent: {
     flex: 1,
-  },
-  itemTextContainer: {
-    flex: 1,
+    minWidth: 0,
   },
   itemTitle: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 14,
+    fontWeight: "700",
     color: "#111827",
-    marginBottom: 1,
-    fontFamily: "AlbertSans_600SemiBold",
+    marginBottom: 4,
+    fontFamily: "AlbertSans_700Bold",
   },
-  itemSubtitle: {
-    fontSize: 11,
-    color: "#6B7280",
-    fontFamily: "AlbertSans_400Regular",
-    marginTop: 1,
-    marginBottom: 2,
+  itemTitlePrimary: {
+    color: "#0F172A",
   },
   itemMetaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
     flexWrap: "wrap",
-    marginTop: 2,
+    gap: 4,
   },
-  recurringBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#E3F2FD",
-    paddingHorizontal: 6,
+  itemOrphanBadge: {
+    backgroundColor: "#DBEAFE",
+    paddingHorizontal: 4,
     paddingVertical: 2,
     borderRadius: 4,
-    gap: 3,
   },
-  recurringText: {
-    fontSize: 10,
-    fontWeight: "500",
-    color: "#264B8B",
+  itemOrphanBadgeText: {
+    fontSize: 12,
+    color: "#1D4ED8",
     fontFamily: "AlbertSans_500Medium",
   },
-  quantityBadge: {
+  itemMetaDot: {
+    fontSize: 12,
+    color: "#93C5FD",
+    marginHorizontal: 2,
+  },
+  itemMetaSecondary: {
+    fontSize: 12,
+    color: "#1D4ED8",
+    fontFamily: "AlbertSans_500Medium",
+  },
+  itemDonationChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
     backgroundColor: "#F3F4F6",
     paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingVertical: 3,
+    borderRadius: 20,
   },
-  quantityText: {
-    fontSize: 10,
-    fontWeight: "500",
+  itemDonationChipText: {
+    fontSize: 12,
     color: "#6B7280",
     fontFamily: "AlbertSans_500Medium",
   },
-  priceContainer: {
+  itemRight: {
     alignItems: "flex-end",
+    flexShrink: 0,
   },
-  itemPrice: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#111827",
-    fontFamily: "AlbertSans_600SemiBold",
-    marginTop: 2,
+  itemAmount: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#2161CD",
+    fontFamily: "AlbertSans_700Bold",
   },
-  unitPrice: {
+  itemAmountPrimary: {
+    color: "#1D4ED8",
+  },
+  itemPerLabel: {
     fontSize: 10,
-    color: "#9CA3AF",
-    fontFamily: "AlbertSans_400Regular",
-    marginTop: 1,
+    fontWeight: "600",
+    color: "#3B82F6",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginTop: 2,
+    fontFamily: "AlbertSans_600SemiBold",
   },
   summarySection: {
     marginTop: 8,

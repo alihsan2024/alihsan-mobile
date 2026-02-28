@@ -10,6 +10,7 @@ import {
   TextInput,
   Dimensions,
   Animated,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -34,11 +35,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CampaignLoadingScreen from "@/components/CampaignLoadingScreen";
 import ReplaceOrRemoveModal from "@/components/ui/Modals/ReplaceOrRemoveModal";
 import ShareCampaignModal from "@/components/ui/Modals/ShareCampaignModal";
+import AqeeqahDonationOptions from "@/components/campaign/AqeeqahDonationOptions";
 
 export default function GazaDonationScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"details" | "faq" | "impact">("details");
+  const [activeFaqIndex, setActiveFaqIndex] = useState<number | null>(null);
   const [donationCardExpanded, setDonationCardExpanded] = useState(false);
   const [frequency, setFrequency] = useState<"onetime" | "monthly" | "friday">("onetime");
   const expandAnimation = useRef(new Animated.Value(0)).current;
@@ -90,9 +93,11 @@ export default function GazaDonationScreen() {
     tabIndicatorAnimation.setValue(0);
   }, []);
 
-  // Reset to details tab when slug changes (navigating between campaigns)
+  // Reset to details tab and one-time default when slug changes (navigating between campaigns)
   useEffect(() => {
     setActiveTab("details");
+    setActiveFaqIndex(null);
+    setFrequency("onetime");
     tabIndicatorAnimation.setValue(0);
   }, [slug]);
 
@@ -182,18 +187,26 @@ export default function GazaDonationScreen() {
     0
   );
   
-  // Use only fundraiser_goal for goal
+  // Goal: fundraiser goal first, then mobile goal, then raised (so progress bar can show for featured campaigns)
   const goal = Number(
     campaign?.fundraiserGoal ??
     campaign?.fundraiser_goal ??
     0
   );
+  const mobileGoal = Number(
+    campaign?.mobileGoalAmount ?? campaign?.mobile_goal_amount ?? 0
+  );
+  const effectiveGoal = goal > 0 ? goal : (mobileGoal > 0 ? mobileGoal : raised > 0 ? raised : 0);
 
   // Use only donor_count for donor count
   const donorCount = Number(
     campaign?.donor_count ??
     campaign?.donorCount ??
     0
+  );
+
+  const isFeatured = Boolean(
+    campaign?.isFeatured ?? campaign?.is_featured ?? false
   );
 
   console.log("Donor count:", { 
@@ -213,9 +226,9 @@ export default function GazaDonationScreen() {
   });
 
   const progressPercent = useMemo<DimensionValue>(() => {
-    if (!goal) return "0%";
-    return `${Math.min((raised / goal) * 100, 100)}%`;
-  }, [raised, goal]);
+    if (!effectiveGoal) return "0%";
+    return `${Math.min((raised / effectiveGoal) * 100, 100)}%`;
+  }, [raised, effectiveGoal]);
 
   const handleAmountChange = (text: string) => {
     // Remove any non-numeric characters
@@ -246,11 +259,12 @@ export default function GazaDonationScreen() {
       (item: any) => item.campaignId === campaign?.id
     );
 
-    // Calculate period days based on frequency
-    const periodDays = 
-      frequency === "monthly" ? 30 : 
-      frequency === "friday" ? 7 : 
+    // Calculate period days and recurring flag: monthly = 30, Friday = 9
+    const periodDays =
+      frequency === "monthly" ? 30 :
+      frequency === "friday" ? 9 :
       0;
+    const isRecurring = frequency === "monthly" || frequency === "friday";
 
     const basketItem = {
       campaignId: campaign.id,
@@ -259,7 +273,8 @@ export default function GazaDonationScreen() {
       name: campaign.name,
       coverImage: campaign.coverImage,
       checkoutType: campaign.checkoutType,
-      periodDays: periodDays,
+      periodDays,
+      isRecurring,
     };
 
     if (existingItem) {
@@ -359,6 +374,55 @@ export default function GazaDonationScreen() {
     setExistingCartItem(null);
   };
 
+  const isAqeeqah = campaign?.checkoutType === "ADEEQAH_GENERAL_SACRIFICE";
+
+  const openAqeeqahOnWeb = () => {
+    Linking.openURL("https://www.alihsan.org.au/project/aqeeqah");
+  };
+
+  const handleAqeeqahAddToBasket = async (basketItem: any) => {
+    let currentBasketItems: any[] = [];
+    if (isAuthenticated) {
+      const result = await refetchBasket();
+      currentBasketItems = result.data?.payload ?? [];
+    } else {
+      const data = await AsyncStorage.getItem("guestBasket");
+      currentBasketItems = data ? JSON.parse(data) : [];
+      setGuestBasket(currentBasketItems);
+    }
+    const existingItem = currentBasketItems.find(
+      (item: any) => item.campaignId === campaign?.id
+    );
+    if (existingItem) {
+      setExistingCartItem(existingItem);
+      setPendingBasketItem(basketItem);
+      setReplaceModalVisible(true);
+      return;
+    }
+    try {
+      setAddingToCart(true);
+      if (isAuthenticated) {
+        await addToBasket({ body: basketItem });
+      } else {
+        const updated = [...currentBasketItems, basketItem];
+        setGuestBasket(updated);
+        await AsyncStorage.setItem("guestBasket", JSON.stringify(updated));
+      }
+      showToast({
+        message: "Added to cart",
+        type: "success",
+        action: { label: "View Cart", onPress: () => router.push("/(tabs)/cart") },
+      });
+    } catch (err: any) {
+      showToast({
+        message: err?.message || "Failed to add to cart",
+        type: "error",
+      });
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
   const toggleDonationCard = () => {
     const newExpandedState = !donationCardExpanded;
     
@@ -389,13 +453,21 @@ export default function GazaDonationScreen() {
 
   console.log(campaign.name);
 
+  const windowHeight = Dimensions.get("window").height;
+
   return (
-    <>
+    <View style={[styles.screenWrapper, { height: windowHeight }]}>
     <ScrollView 
       ref={scrollViewRef}
       style={styles.container} 
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: donationCardExpanded ? 300 : 120 }}
+      contentContainerStyle={{
+        paddingBottom: donationCardExpanded
+          ? 300
+          : isAqeeqah
+          ? 96
+          : 92,
+      }}
     >
       {/* ===== HERO ===== */}
       <View style={{ position: "relative" }}>
@@ -467,12 +539,32 @@ export default function GazaDonationScreen() {
         <Text style={styles.campaignTitle}>
           {campaign.name}
         </Text>
-        {goal > 0 ? (
-          <>
+        {isFeatured && raised > 0 && (
+          effectiveGoal > 0 ? (
+            <>
+              <View style={styles.amountGoalRow}>
+                <View style={styles.amountLeft}>
+                  <Text style={styles.raisedAmount}>${raised.toLocaleString()}</Text>
+                  <Text style={styles.goalText}>of ${effectiveGoal.toLocaleString()} goal</Text>
+                </View>
+                {donorCount > 0 && (
+                  <View style={styles.donorCountContainerTop}>
+                    <Ionicons name="people" size={16} color="#6B7280" />
+                    <Text style={styles.donorCountText}>
+                      {donorCount.toLocaleString()} {donorCount === 1 ? 'donor' : 'donors'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: progressPercent }]} />
+              </View>
+            </>
+          ) : (
             <View style={styles.amountGoalRow}>
               <View style={styles.amountLeft}>
-                <Text style={styles.raisedAmount}>${raised.toLocaleString()}</Text>
-                <Text style={styles.goalText}>of ${goal.toLocaleString()} goal</Text>
+                <Text style={styles.raisedAmount}>${raised.toLocaleString()} raised</Text>
               </View>
               {donorCount > 0 && (
                 <View style={styles.donorCountContainerTop}>
@@ -483,19 +575,6 @@ export default function GazaDonationScreen() {
                 </View>
               )}
             </View>
-
-            <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: progressPercent }]} />
-            </View>
-          </>
-        ) : (
-          donorCount > 0 && (
-            <View style={styles.donorCountContainerStandalone}>
-              <Ionicons name="people" size={16} color="#6B7280" />
-              <Text style={styles.donorCountText}>
-                {donorCount.toLocaleString()} {donorCount === 1 ? 'donor' : 'donors'}
-              </Text>
-            </View>
           )
         )}
 
@@ -504,14 +583,18 @@ export default function GazaDonationScreen() {
           <View style={styles.tabBar}>
             {(["details", "faq", "impact"] as const).map((tab, index) => {
               const isActive = activeTab === tab;
-              const tabWidth = (Dimensions.get("window").width - 32) / 3;
-              
+              const tabLabels: Record<typeof tab, string> = {
+                details: "Details",
+                faq: "FAQ's",
+                impact: "Impact",
+              };
               return (
                 <TouchableOpacity
                   key={tab}
-                  style={[styles.tab, { width: tabWidth, zIndex: 2 }]}
+                  style={[styles.tab, { zIndex: 2 }]}
                   onPress={() => {
                     setActiveTab(tab);
+                    if (tab !== "faq") setActiveFaqIndex(null);
                     Animated.spring(tabIndicatorAnimation, {
                       toValue: index,
                       useNativeDriver: false,
@@ -522,24 +605,22 @@ export default function GazaDonationScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    {tabLabels[tab]}
                   </Text>
                 </TouchableOpacity>
               );
             })}
           </View>
-          
-          {/* Animated Indicator */}
           <Animated.View
             style={[
               styles.tabIndicator,
               {
-                width: (Dimensions.get("window").width - 32) / 3 - 8,
+                width: Dimensions.get("window").width / 3,
                 transform: [
                   {
                     translateX: tabIndicatorAnimation.interpolate({
                       inputRange: [0, 1, 2],
-                      outputRange: [0, (Dimensions.get("window").width - 32) / 3, ((Dimensions.get("window").width - 32) / 3) * 2],
+                      outputRange: [0, Dimensions.get("window").width / 3, (Dimensions.get("window").width / 3) * 2],
                     }),
                   },
                 ],
@@ -552,6 +633,7 @@ export default function GazaDonationScreen() {
         <View style={styles.tabContent}>
           {activeTab === "details" && (
             <View style={styles.tabPanel}>
+              <View style={styles.detailsPanelInner}>
               {campaign.mobileDescription ? (
                 <RenderHTML
                   contentWidth={Dimensions.get("window").width - 32}
@@ -659,13 +741,13 @@ export default function GazaDonationScreen() {
                     )}
                 </Text>
               )}
+              </View>
             </View>
           )}
 
           {activeTab === "faq" && (
             <View style={styles.tabPanel}>
               {(() => {
-                // Default FAQ content for demonstration
                 const defaultFAQs = [
                   {
                     question: "How will my donation be used?",
@@ -693,19 +775,42 @@ export default function GazaDonationScreen() {
                   ? campaign.faq 
                   : defaultFAQs;
 
-                return faqs.map((item: any, index: number) => (
-                  <View key={index} style={styles.faqItem}>
-                    <View style={styles.faqHeader}>
-                      <View style={styles.faqIconContainer}>
-                        <Ionicons name="help-circle" size={20} color="#246BE1" />
-                      </View>
-                      <Text style={styles.faqQuestion}>{item.question || item.Q}</Text>
-                    </View>
-                    <View style={styles.faqAnswerContainer}>
-                      <Text style={styles.faqAnswer}>{item.answer || item.A}</Text>
-                    </View>
+                return (
+                  <View style={styles.faqAccordionList}>
+                    {faqs.map((item: any, index: number) => {
+                      const isOpen = activeFaqIndex === index;
+                      return (
+                        <View key={index} style={[styles.faqAccordionItem, isOpen && styles.faqAccordionItemOpen]}>
+                          <TouchableOpacity
+                            style={styles.faqAccordionHeader}
+                            onPress={() => setActiveFaqIndex(isOpen ? null : index)}
+                            activeOpacity={0.7}
+                          >
+                            <View style={[styles.faqAccordionNumber, isOpen && styles.faqAccordionNumberActive]}>
+                              <Text style={[styles.faqAccordionNumberText, isOpen && styles.faqAccordionNumberTextActive]}>
+                                {index + 1}
+                              </Text>
+                            </View>
+                            <Text style={styles.faqAccordionQuestion} numberOfLines={isOpen ? 10 : 2}>
+                              {item.question || item.Q}
+                            </Text>
+                            <Ionicons
+                              name="chevron-down"
+                              size={20}
+                              color={isOpen ? "#2161CD" : "#6B7280"}
+                              style={[styles.faqAccordionChevron, isOpen && styles.faqAccordionChevronOpen]}
+                            />
+                          </TouchableOpacity>
+                          {isOpen && (
+                            <View style={styles.faqAccordionBody}>
+                              <Text style={styles.faqAccordionAnswer}>{item.answer || item.A}</Text>
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })}
                   </View>
-                ));
+                );
               })()}
             </View>
           )}
@@ -713,45 +818,41 @@ export default function GazaDonationScreen() {
           {activeTab === "impact" && (
             <View style={styles.tabPanel}>
               {(() => {
-                // Calculate statistics
-                const totalRaised = raised;
-                const totalDonors = donorCount;
-                const averageDonation = totalDonors > 0 ? totalRaised / totalDonors : 0;
+                // Use same raised/effectiveGoal as featured block
+                const averageDonation = donorCount > 0 ? raised / donorCount : 0;
                 const impactFigure = campaign?.impactFigure || campaign?.impact_figure || 0;
-                const progressPercentage = goal > 0 ? Math.min((totalRaised / goal) * 100, 100) : 0;
-                const remainingAmount = goal > 0 ? Math.max(goal - totalRaised, 0) : 0;
+                const progressPercentage = effectiveGoal > 0 ? Math.min((raised / effectiveGoal) * 100, 100) : 0;
+                const remainingAmount = effectiveGoal > 0 ? Math.max(effectiveGoal - raised, 0) : 0;
 
-                // Check if there's any meaningful impact data to show
-                const hasImpactData = totalRaised > 0 || totalDonors > 0 || impactFigure > 0 || goal > 0;
+                const hasImpactData = raised > 0 || donorCount > 0 || impactFigure > 0 || effectiveGoal > 0;
 
                 if (!hasImpactData) {
                   return (
                     <View style={styles.impactEmptyState}>
                       <View style={styles.impactEmptyIconContainer}>
-                        <Ionicons name="stats-chart" size={32} color="#9CA3AF" />
+                        <Ionicons name="trending-up-outline" size={28} color="#9CA3AF" />
                       </View>
-                      <Text style={styles.impactEmptyText}>No impact data available</Text>
+                      <Text style={styles.impactEmptyText}>No impact data yet</Text>
                       <Text style={styles.impactEmptySubtext}>
-                        Impact statistics will appear here as the campaign progresses
+                        Stats will show here as the campaign progresses
                       </Text>
                     </View>
                   );
                 }
 
-                // Build compact stats array - only show meaningful data (excluding Total Raised)
                 const stats = [];
-                
-                if (totalDonors > 0) {
+
+                if (donorCount > 0) {
                   stats.push({
                     label: "Donors",
-                    value: totalDonors.toLocaleString(),
+                    value: donorCount.toLocaleString(),
                     icon: "people",
                     color: "#10B981",
                     bgColor: "#ECFDF5",
                   });
                 }
-                
-                if (averageDonation > 0 && totalDonors > 0) {
+
+                if (averageDonation > 0 && donorCount > 0) {
                   stats.push({
                     label: "Avg Donation",
                     value: `$${Math.round(averageDonation).toLocaleString()}`,
@@ -760,7 +861,7 @@ export default function GazaDonationScreen() {
                     bgColor: "#FFFBEB",
                   });
                 }
-                
+
                 if (impactFigure > 0) {
                   stats.push({
                     label: "Lives Impacted",
@@ -773,28 +874,20 @@ export default function GazaDonationScreen() {
 
                 return (
                   <View style={styles.impactCompactContainer}>
-                    {/* Full Width Total Raised Card */}
-                    {totalRaised > 0 && (
+                    {isFeatured && raised > 0 && (
                       <View style={styles.impactTotalRaisedCard}>
-                        <View style={styles.impactTotalRaisedIconContainer}>
-                          <Ionicons name="cash" size={20} color="#246BE1" />
-                        </View>
-                        <View style={styles.impactTotalRaisedContent}>
-                          <Text style={styles.impactTotalRaisedLabel}>Total Raised</Text>
-                          <Text style={styles.impactTotalRaisedValue}>
-                            ${totalRaised.toLocaleString()}
-                          </Text>
-                        </View>
+                        <Text style={styles.impactTotalRaisedLabel}>Total raised</Text>
+                        <Text style={styles.impactTotalRaisedValue}>
+                          ${raised.toLocaleString()}
+                        </Text>
                       </View>
                     )}
-
-                    {/* Compact Stats Grid */}
                     {stats.length > 0 && (
                       <View style={styles.impactStatsGrid}>
                         {stats.map((stat, index) => (
                           <View key={index} style={styles.impactStatCard}>
                             <View style={[styles.impactStatIconContainer, { backgroundColor: stat.bgColor }]}>
-                              <Ionicons name={stat.icon as any} size={18} color={stat.color} />
+                              <Ionicons name={stat.icon as any} size={16} color={stat.color} />
                             </View>
                             <Text style={styles.impactStatValue}>{stat.value}</Text>
                             <Text style={styles.impactStatLabel}>{stat.label}</Text>
@@ -802,40 +895,35 @@ export default function GazaDonationScreen() {
                         ))}
                       </View>
                     )}
-
-                    {/* Compact Progress Card - only if fundraiser_goal exists */}
-                    {goal > 0 && (
+                    {isFeatured && effectiveGoal > 0 && (
                       <View style={styles.impactProgressCard}>
                         <View style={styles.impactProgressHeader}>
-                          <Text style={styles.impactProgressTitle}>Fundraising Goal</Text>
+                          <Text style={styles.impactProgressTitle}>Goal</Text>
                           <Text style={styles.impactProgressPercentage}>
                             {Math.round(progressPercentage)}%
                           </Text>
                         </View>
                         <View style={styles.impactProgressBar}>
-                          <View 
-                            style={[
-                              styles.impactProgressFill, 
-                              { width: `${progressPercentage}%` }
-                            ]} 
+                          <View
+                            style={[styles.impactProgressFill, { width: `${progressPercentage}%` }]}
                           />
                         </View>
                         <View style={styles.impactProgressDetails}>
                           <View style={styles.impactProgressDetailItem}>
                             <Text style={styles.impactProgressDetailLabel}>Raised</Text>
                             <Text style={styles.impactProgressDetailValue}>
-                              ${totalRaised.toLocaleString()}
+                              ${raised.toLocaleString()}
                             </Text>
                           </View>
                           <View style={styles.impactProgressDetailItem}>
                             <Text style={styles.impactProgressDetailLabel}>Goal</Text>
                             <Text style={styles.impactProgressDetailValue}>
-                              ${goal.toLocaleString()}
+                              ${effectiveGoal.toLocaleString()}
                             </Text>
                           </View>
                           {remainingAmount > 0 && (
                             <View style={styles.impactProgressDetailItem}>
-                              <Text style={styles.impactProgressDetailLabel}>Remaining</Text>
+                              <Text style={styles.impactProgressDetailLabel}>Left</Text>
                               <Text style={[styles.impactProgressDetailValue, styles.impactProgressDetailValueMuted]}>
                                 ${remainingAmount.toLocaleString()}
                               </Text>
@@ -853,73 +941,96 @@ export default function GazaDonationScreen() {
       </View>
     </ScrollView>
 
-    {/* Fixed Bottom Donation Card */}
-    <View style={[styles.bottomDonationCard, donationCardExpanded && { paddingBottom: Math.max(insets.bottom, 8) }]}>
-      {/* Closed State - Amount Buttons + Donate Button */}
+    {/* Fixed Bottom Donation Card - same layout for all: Aqeeqah = "Complete on website", others = amount + Donate */}
+    <View
+      style={[
+        styles.bottomDonationCard,
+        isAqeeqah && !donationCardExpanded && styles.bottomDonationCardAqeeqahOnly,
+        { paddingBottom: 8 },
+      ]}
+    >
+      {/* Closed State - full width: Aqeeqah = single button (minimal height), others = amount row + Donate + expand */}
       {!donationCardExpanded && (
-        <View style={styles.bottomDonationClosed}>
-          <View style={styles.bottomAmountRowClosed}>
-            {["10", "25", "50", "100"].map((v) => (
-              <TouchableOpacity
-                key={v}
-                onPress={() => setAmount(v)}
-                style={[
-                  styles.bottomAmountButtonClosed,
-                  amount === v && styles.bottomAmountButtonClosedActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.bottomAmountButtonTextClosed,
-                    amount === v && styles.bottomAmountButtonTextClosedActive,
-                  ]}
-                >
-                  ${v}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <View style={styles.bottomClosedFooter}>
+        <View style={[styles.bottomDonationClosed, isAqeeqah && styles.bottomDonationClosedAqeeqah]}>
+          {isAqeeqah ? (
             <TouchableOpacity
               style={styles.bottomDonateBtnClosed}
-              onPress={handleDonate}
-              disabled={addingToCart}
+              onPress={openAqeeqahOnWeb}
+              activeOpacity={0.8}
             >
               <Text style={styles.bottomDonateTextClosed}>
-                {isInCart
-                  ? "Update Cart"
-                  : addingToCart
-                  ? "Adding..."
-                  : "Donate Now"}
+                Complete on website
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.bottomExpandButton}
-              onPress={toggleDonationCard}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="chevron-up" size={20} color="#6B7280" />
-            </TouchableOpacity>
-          </View>
+          ) : (
+            <>
+              <View style={styles.bottomAmountRowClosed}>
+                {["10", "25", "50", "100"].map((v) => (
+                  <TouchableOpacity
+                    key={v}
+                    onPress={() => setAmount(v)}
+                    style={[
+                      styles.bottomAmountButtonClosed,
+                      amount === v && styles.bottomAmountButtonClosedActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.bottomAmountButtonTextClosed,
+                        amount === v && styles.bottomAmountButtonTextClosedActive,
+                      ]}
+                    >
+                      ${v}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.bottomClosedFooter}>
+                <TouchableOpacity
+                  style={styles.bottomDonateBtnClosed}
+                  onPress={handleDonate}
+                  disabled={addingToCart}
+                >
+                  <Text style={styles.bottomDonateTextClosed}>
+                    {isInCart
+                      ? "Update Cart"
+                      : addingToCart
+                      ? "Adding..."
+                      : "Donate Now"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.bottomExpandButton}
+                  onPress={toggleDonationCard}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="chevron-up" size={20} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
       )}
 
-      {/* Expanded State - Full Options */}
+      {/* Expanded State - only mount when open so closed card has minimal height */}
+      {donationCardExpanded && (
       <Animated.View
         style={[
           styles.bottomDonationExpanded,
           {
             opacity: animatedOpacity,
-            maxHeight: animatedHeight,
+            maxHeight: isAqeeqah ? 450 : animatedHeight,
             overflow: "hidden",
           },
         ]}
-        pointerEvents={donationCardExpanded ? "auto" : "none"}
+        pointerEvents="auto"
       >
         <View>
             {/* Header with Close Button */}
             <View style={styles.bottomExpandedHeader}>
-              <Text style={styles.bottomExpandedTitle}>Choose Donation</Text>
+              <Text style={styles.bottomExpandedTitle}>
+                {isAqeeqah ? "Aqeeqah donation" : "Choose Donation"}
+              </Text>
               <TouchableOpacity
                 onPress={toggleDonationCard}
                 activeOpacity={0.7}
@@ -929,6 +1040,14 @@ export default function GazaDonationScreen() {
               </TouchableOpacity>
             </View>
 
+          {isAqeeqah ? (
+            <AqeeqahDonationOptions
+              campaign={campaign}
+              onAddToBasket={handleAqeeqahAddToBasket}
+              addingToCart={addingToCart}
+            />
+          ) : (
+            <>
           {/* Frequency Options */}
           <View style={styles.bottomFrequencyRow}>
             <TouchableOpacity
@@ -1032,8 +1151,11 @@ export default function GazaDonationScreen() {
                 : "Donate Now"}
             </Text>
           </TouchableOpacity>
+            </>
+          )}
         </View>
       </Animated.View>
+      )}
     </View>
 
     <ReplaceOrRemoveModal
@@ -1049,7 +1171,7 @@ export default function GazaDonationScreen() {
       campaignUrl={`https://alihsan.org.au/project/${slug}`}
       onClose={() => setShareModalVisible(false)}
     />
-  </>
+    </View>
   );
 }
 
@@ -1086,6 +1208,7 @@ const AmountButton = ({
 
 /* Styles */
 const styles = StyleSheet.create({
+  screenWrapper: { flex: 1 },
   container: { flex: 1, backgroundColor: "#fff" },
 
   /* HERO */
@@ -1396,30 +1519,20 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontFamily: "AlbertSans_400Regular",
   },
-  /* IMPACT TAB STYLES - Compact Design */
+  /* IMPACT TAB STYLES */
   impactCompactContainer: {
-    gap: 16,
+    gap: 12,
+    width: "100%",
+    alignSelf: "stretch",
   },
   impactTotalRaisedCard: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 16,
+    width: "100%",
+    alignSelf: "stretch",
+    backgroundColor: "#FFF",
+    borderRadius: 12,
+    padding: 14,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  impactTotalRaisedIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: "#EFF6FF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  impactTotalRaisedContent: {
-    flex: 1,
   },
   impactTotalRaisedLabel: {
     fontSize: 12,
@@ -1428,70 +1541,70 @@ const styles = StyleSheet.create({
     fontFamily: "AlbertSans_400Regular",
   },
   impactTotalRaisedValue: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "700",
-    color: "#010D26",
+    color: "#111827",
     fontFamily: "AlbertSans_700Bold",
   },
   impactEmptyState: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 48,
-    paddingHorizontal: 32,
+    paddingVertical: 40,
+    paddingHorizontal: 24,
   },
   impactEmptyIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#F9FAFB",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#F5F5F5",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: 14,
   },
   impactEmptyText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     color: "#6B7280",
-    marginBottom: 8,
+    marginBottom: 6,
     fontFamily: "AlbertSans_600SemiBold",
   },
   impactEmptySubtext: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#9CA3AF",
     textAlign: "center",
-    lineHeight: 20,
+    lineHeight: 18,
     fontFamily: "AlbertSans_400Regular",
   },
   impactStatsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
-    marginBottom: 0,
+    gap: 8,
+    width: "100%",
+    alignSelf: "stretch",
   },
   impactStatCard: {
     flex: 1,
-    minWidth: (Dimensions.get("window").width - 52) / 2,
-    maxWidth: (Dimensions.get("window").width - 52) / 2,
-    backgroundColor: "#fff",
+    minWidth: "30%",
+    backgroundColor: "#FFF",
     borderRadius: 10,
-    padding: 14,
+    padding: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     alignItems: "center",
   },
   impactStatIconContainer: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   impactStatValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
-    color: "#010D26",
-    marginBottom: 4,
+    color: "#111827",
+    marginBottom: 2,
     fontFamily: "AlbertSans_700Bold",
   },
   impactStatLabel: {
@@ -1501,9 +1614,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   impactProgressCard: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 16,
+    width: "100%",
+    alignSelf: "stretch",
+    backgroundColor: "#FFF",
+    borderRadius: 12,
+    padding: 14,
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
@@ -1511,52 +1626,55 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   impactProgressTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
-    color: "#010D26",
+    color: "#374151",
     fontFamily: "AlbertSans_600SemiBold",
   },
   impactProgressPercentage: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "700",
-    color: "#246BE1",
+    color: "#2161CD",
     fontFamily: "AlbertSans_700Bold",
   },
   impactProgressBar: {
     height: 6,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#EEEEEE",
     borderRadius: 3,
     overflow: "hidden",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   impactProgressFill: {
     height: "100%",
-    backgroundColor: "#246BE1",
+    backgroundColor: "#2161CD",
     borderRadius: 3,
   },
   impactProgressDetails: {
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 8,
+    width: "100%",
+    alignSelf: "stretch",
   },
   impactProgressDetailItem: {
     flex: 1,
-    alignItems: "flex-start",
+    minWidth: 0,
+    alignItems: "center",
   },
   impactProgressDetailLabel: {
     fontSize: 11,
     color: "#9CA3AF",
-    marginBottom: 4,
+    marginBottom: 2,
     fontFamily: "AlbertSans_400Regular",
   },
   impactProgressDetailValue: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#010D26",
-    fontFamily: "AlbertSans_700Bold",
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#111827",
+    fontFamily: "AlbertSans_600SemiBold",
   },
   impactProgressDetailValueMuted: {
     color: "#6B7280",
@@ -1564,95 +1682,113 @@ const styles = StyleSheet.create({
 
   /* TABS */
   tabContainer: {
-    marginTop: 20,
-    marginBottom: 16,
+    marginTop: 16,
+    marginBottom: 12,
+    marginHorizontal: -16,
   },
   tabBar: {
     flexDirection: "row",
-    backgroundColor: "#F5F5F5",
-    borderRadius: 10,
-    padding: 4,
     position: "relative",
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEEEEE",
   },
   tab: {
-    paddingVertical: 10,
+    flex: 1,
+    paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 8,
   },
   tabLabel: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#6B7280",
-    fontFamily: "AlbertSans_600SemiBold",
+    fontWeight: "500",
+    color: "#9CA3AF",
+    fontFamily: "AlbertSans_500Medium",
   },
   tabLabelActive: {
-    color: "#010D26",
-    fontWeight: "700",
-    fontFamily: "AlbertSans_700Bold",
+    color: "#111827",
+    fontWeight: "600",
+    fontFamily: "AlbertSans_600SemiBold",
   },
   tabIndicator: {
     position: "absolute",
-    bottom: 4,
-    left: 4,
-    height: 36,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    bottom: -1,
+    height: 2,
+    backgroundColor: "#2161CD",
+    borderRadius: 1,
     zIndex: 1,
   },
   tabContent: {
-    minHeight: 200,
+    minHeight: 180,
   },
   tabPanel: {
-    paddingBottom: 8,
+    paddingBottom: 12,
   },
-  faqItem: {
-    backgroundColor: "#fff",
+  detailsPanelInner: {
+    paddingRight: 0,
+    alignSelf: "stretch",
+  },
+  faqAccordionList: {
+    gap: 8,
+  },
+  faqAccordionItem: {
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    overflow: "hidden",
+    backgroundColor: "#FFF",
   },
-  faqHeader: {
+  faqAccordionItemOpen: {
+    borderColor: "#2161CD",
+    backgroundColor: "#FFF",
+  },
+  faqAccordionHeader: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 12,
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    gap: 12,
   },
-  faqIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#EFF6FF",
+  faqAccordionNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
   },
-  faqQuestion: {
-    flex: 1,
-    fontSize: 16,
+  faqAccordionNumberActive: {
+    backgroundColor: "#2161CD",
+  },
+  faqAccordionNumberText: {
+    fontSize: 13,
     fontWeight: "700",
-    color: "#010D26",
-    lineHeight: 22,
+    color: "#6B7280",
     fontFamily: "AlbertSans_700Bold",
   },
-  faqAnswerContainer: {
-    marginLeft: 44,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
+  faqAccordionNumberTextActive: {
+    color: "#FFF",
   },
-  faqAnswer: {
+  faqAccordionQuestion: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+    lineHeight: 20,
+    fontFamily: "AlbertSans_600SemiBold",
+  },
+  faqAccordionChevron: {
+    transform: [{ rotate: "0deg" }],
+  },
+  faqAccordionChevronOpen: {
+    transform: [{ rotate: "180deg" }],
+  },
+  faqAccordionBody: {
+    paddingLeft: 54,
+    paddingRight: 14,
+    paddingBottom: 14,
+    paddingTop: 2,
+  },
+  faqAccordionAnswer: {
     fontSize: 14,
     lineHeight: 20,
     color: "#6B7280",
@@ -1688,7 +1824,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
 
-  /* BOTTOM DONATION CARD */
+  /* BOTTOM DONATION CARD - fixed to bottom of screen */
   bottomDonationCard: {
     position: "absolute",
     bottom: 0,
@@ -1702,22 +1838,55 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 12,
+    zIndex: 100,
+  },
+  /* Closed State - minimal height, compact */
+  bottomDonationClosed: {
+    paddingHorizontal: 16,
+    paddingTop: 6,
     paddingBottom: 0,
   },
-  /* Closed State */
-  bottomDonationClosed: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 0,
+  /* Aqeeqah closed: compact padding around button */
+  bottomDonationClosedAqeeqah: {
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  /* Card when Aqeeqah closed only */
+  bottomDonationCardAqeeqahOnly: {
+    paddingHorizontal: 16,
+  },
+  bottomAqeeqahClosed: {
+    paddingVertical: 4,
+  },
+  bottomAqeeqahClosedText: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  bottomExpandButtonAqeeqah: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#264B8B",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+  bottomExpandButtonAqeeqahText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#fff",
   },
   bottomAmountRowClosed: {
     flexDirection: "row",
     gap: 6,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   bottomAmountButtonClosed: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderRadius: 8,
     backgroundColor: "#fff",
     alignItems: "center",
@@ -1742,13 +1911,13 @@ const styles = StyleSheet.create({
   bottomClosedFooter: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     marginTop: 0,
   },
   bottomDonateBtnClosed: {
     flex: 1,
     backgroundColor: "#FFD602",
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 10,
     alignItems: "center",
     shadowColor: "#FFD602",
@@ -1764,7 +1933,7 @@ const styles = StyleSheet.create({
     fontFamily: "AlbertSans_700Bold",
   },
   bottomExpandButton: {
-    padding: 10,
+    padding: 8,
     borderRadius: 8,
     backgroundColor: "#fff",
     alignItems: "center",
@@ -1772,17 +1941,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
-  /* Expanded State */
+  /* Expanded State - compact */
   bottomDonationExpanded: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 6,
   },
   bottomExpandedHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   bottomExpandedTitle: {
     fontSize: 16,
@@ -1795,13 +1964,13 @@ const styles = StyleSheet.create({
   },
   bottomFrequencyRow: {
     flexDirection: "row",
-    gap: 8,
-    marginBottom: 10,
+    gap: 6,
+    marginBottom: 6,
   },
   bottomFrequencyButton: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     borderRadius: 8,
     backgroundColor: "#fff",
     alignItems: "center",
@@ -1825,12 +1994,12 @@ const styles = StyleSheet.create({
   },
   bottomAmountRow: {
     flexDirection: "row",
-    gap: 8,
-    marginBottom: 12,
+    gap: 6,
+    marginBottom: 8,
   },
   bottomAmountButton: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderRadius: 8,
     backgroundColor: "#fff",
     alignItems: "center",
@@ -1856,12 +2025,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#E5E7EB",
     borderRadius: 8,
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   bottomCurrencyPrefix: {
     fontSize: 14,
@@ -1886,17 +2055,17 @@ const styles = StyleSheet.create({
   },
   bottomDonateBtn: {
     backgroundColor: "#FFD602",
-    paddingVertical: 14,
+    paddingVertical: 10,
     borderRadius: 10,
     alignItems: "center",
     shadowColor: "#FFD602",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowRadius: 6,
+    elevation: 4,
   },
   bottomDonateText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",

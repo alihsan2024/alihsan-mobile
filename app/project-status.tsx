@@ -195,7 +195,7 @@ const ProjectStatusScreen = () => {
   if (loading)
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#2161CD" />
       </View>
     );
 

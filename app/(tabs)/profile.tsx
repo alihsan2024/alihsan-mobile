@@ -25,7 +25,6 @@ import {
 } from "@/store/reduxSlice/profileStatisticsSlice";
 import { getProfile, logoutUser } from "@/store/reduxSlice/authenticationSlice";
 import LogoutConfirmationModal from "@/components/ui/Modals/LogoutConfirmationModal";
-import { generateInvoice } from "@/store/reduxSlice/myDonationSlice";
 import { getPaymentsList } from "@/store/reduxSlice/paymentDetailsSlice";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useFocusEffect } from "@react-navigation/native";
@@ -168,16 +167,6 @@ export default function ProfileScreen() {
     }, [])
   );
 
-  const handleDownloadInvoice = (donationId: string | number) => {
-    if (!donationId) return;
-    dispatch(generateInvoice({ donationId }) as any);
-  };
-
-  const handleResendInvoice = (donationId: string | number) => {
-    if (!donationId) return;
-    dispatch(generateInvoice({ donationId }) as any);
-  };
-
   const groupedOrders = useMemo(() => {
     const grouped: Record<
       string,
@@ -229,11 +218,8 @@ export default function ProfileScreen() {
 
       // Include all payments (including processing fees) in the items array
       grouped[orderId].items.push(payment);
-      
-      // Only add to totalAmount if it's not a processing fee
-      if (!isFee) {
-        grouped[orderId].totalAmount += Number(payment?.total) || 0;
-      }
+      // Total = sum of all items (donations + fees)
+      grouped[orderId].totalAmount += Number(payment?.total) || 0;
 
       if (date) {
         const paymentDate = new Date(date);
@@ -455,14 +441,19 @@ export default function ProfileScreen() {
         ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+      <View style={styles.scrollContentInner}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.push("/(tabs)/")}
+          activeOpacity={0.7}
+        >
           <Ionicons name="chevron-back" size={22} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
@@ -581,23 +572,28 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      {/* Recent History */}
-      <View style={styles.historyHeader}>
-        <Text style={styles.sectionTitle}>Payment History</Text>
-        <TouchableOpacity
-          onPress={() => router.push("/(tabs)/one-time-user-donations")}
-        >
-          <Text style={styles.link}>See All</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Payment History Section */}
+      <View style={styles.paymentHistorySection}>
+        <View style={styles.paymentHistoryHeader}>
+          <Text style={styles.paymentHistoryTitle}>Payment History</Text>
+          <TouchableOpacity
+            style={styles.seeAllButton}
+            onPress={() => router.push("/(tabs)/one-time-user-donations")}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.seeAllText}>See all</Text>
+            <Ionicons name="chevron-forward" size={14} color="#2161CD" />
+          </TouchableOpacity>
+        </View>
 
       {(loading || paymentsLoading) && groupedOrders.length === 0 ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6A7BFF" />
+          <ActivityIndicator size="large" color="#2161CD" />
           <Text style={styles.loadingText}>Loading donations...</Text>
         </View>
       ) : groupedOrders.length > 0 ? (
-        groupedOrders.map((order, index) => {
+        <View style={styles.orderList}>
+        {groupedOrders.map((order, index) => {
           const isExpanded = expandedOrders.has(order.orderId);
           // Helper function to check if payment is a processing fee
           const isProcessingFee = (item: any) => {
@@ -648,6 +644,7 @@ export default function ProfileScreen() {
           const statusUpper = String(orderStatus).toUpperCase();
           const statusLabel =
             statusUpper === "COMPLETED" ? "Completed" : statusUpper;
+          const statusStyle = getStatusBadgeStyle(orderStatus);
           const amountLabel = `AUD $${Number(order.totalAmount).toFixed(2)}`;
 
           return (
@@ -657,44 +654,34 @@ export default function ProfileScreen() {
                 onPress={() => toggleOrderExpansion(order.orderId)}
                 activeOpacity={0.7}
               >
-                    <View style={styles.orderHeaderLeft}>
-                  <Image source={{ uri: coverImage }} style={styles.orderImage} />
-                  <View style={styles.orderInfo}>
-                    <View style={styles.orderTitleRow}>
-                      <Text style={styles.orderTitle} numberOfLines={1}>
-                        {primaryCampaignName}
-                      </Text>
-                      {otherCount > 0 && (
-                        <Text style={styles.orderOtherCampaigns}>
-                          {" "}+ {otherCount} other{otherCount !== 1 ? "s" : ""}
-                        </Text>
-                      )}
-                    </View>
-                    <View style={styles.orderMetaRow}>
-                      <Text style={styles.orderMetaText}>
-                        {formatDate(order.paymentDate)}
-                      </Text>
-                      <Text style={styles.orderMetaDot}>•</Text>
-                      <Text style={styles.orderMetaText}>
-                        {totalItems} item{totalItems !== 1 ? "s" : ""}
-                      </Text>
-                      <Text style={styles.orderMetaDot}>•</Text>
-                      <Text style={styles.orderMetaAmount}>
-                        {amountLabel}
-                      </Text>
-                    </View>
-                  </View>
+                <Image source={{ uri: coverImage }} style={styles.orderImage} />
+                <View style={styles.orderInfo}>
+                  <Text style={styles.orderTitle} numberOfLines={1}>
+                    {primaryCampaignName}
+                    {otherCount > 0 && (
+                      <Text style={styles.orderOtherCampaigns}> +{otherCount}</Text>
+                    )}
+                  </Text>
+                  <Text style={styles.orderMetaText}>
+                    {formatDate(order.paymentDate)} · {amountLabel}
+                  </Text>
                 </View>
-                <View style={styles.orderStatusBadge}>
-                  <Text style={styles.orderStatusText}>{statusLabel}</Text>
+                <View style={styles.orderRight}>
+                  <View style={[styles.orderStatusBadge, { backgroundColor: statusStyle.backgroundColor }]}>
+                    <Text style={[styles.orderStatusText, { color: statusStyle.color }]}>{statusLabel}</Text>
+                  </View>
+                  <Ionicons
+                    name={isExpanded ? "chevron-up" : "chevron-down"}
+                    size={18}
+                    color="#9CA3AF"
+                  />
                 </View>
               </TouchableOpacity>
 
               {isExpanded && (
                 <View style={styles.orderDetails}>
                   <View style={styles.orderDetailsHeader}>
-                    <Text style={styles.orderDetailsTitle}>Order Items</Text>
-                    <Text style={styles.orderDetailsSubtitle}>Order #{order.orderId}</Text>
+                    <Text style={styles.orderDetailsTitle}>Order #{order.orderId}</Text>
                   </View>
                   <View style={styles.orderDetailsList}>
                     {order.items.map((item: any, itemIndex: number) => {
@@ -704,35 +691,18 @@ export default function ProfileScreen() {
                           key={item.id}
                           style={[
                             styles.paymentRow,
-                            itemIndex === order.items.length - 1 &&
-                              styles.paymentRowLast,
+                            itemIndex === order.items.length - 1 && styles.paymentRowLast,
                           ]}
                         >
-                          <View style={styles.paymentRowLeft}>
-                            <View style={styles.paymentIconContainer}>
-                              <Ionicons 
-                                name={isFee ? "card-outline" : "gift-outline"} 
-                                size={16} 
-                                color={isFee ? "#9CA3AF" : "#246BE1"} 
-                              />
-                            </View>
-                            <View style={styles.paymentInfo}>
-                              <Text style={styles.paymentName}>
-                                {isFee
-                                  ? "Processing Fee"
-                                  : item?.Campaign?.name
-                                  ? item.Campaign.name
-                                  : item?.orphan_id
-                                  ? "Orphan Sponsorship"
-                                  : "Donation"}
-                              </Text>
-                              {!isFee && (
-                                <Text style={styles.paymentId}>
-                                  {item?.Campaign?.name ? "Campaign" : "Donation"}
-                                </Text>
-                              )}
-                            </View>
-                          </View>
+                          <Text style={[styles.paymentName, isFee && styles.paymentNameFee]} numberOfLines={1}>
+                            {isFee
+                              ? "Processing fee"
+                              : item?.Campaign?.name
+                              ? item.Campaign.name
+                              : item?.orphan_id
+                              ? "Orphan Sponsorship"
+                              : "Donation"}
+                          </Text>
                           <Text style={[styles.paymentTotal, isFee && styles.paymentTotalFee]}>
                             ${Number(item?.total || item?.Donation?.total || 0).toFixed(2)}
                           </Text>
@@ -740,22 +710,12 @@ export default function ProfileScreen() {
                       );
                     })}
                   </View>
-                  <View style={styles.orderDetailsDivider} />
-                  <TouchableOpacity
-                    style={styles.resendButton}
-                    onPress={() => handleResendInvoice(primaryItem?.donationId || primaryItem?.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="mail-outline" size={16} color="#246BE1" />
-                    <Text style={styles.resendButtonText}>
-                      Resend Invoice
-                    </Text>
-                  </TouchableOpacity>
                 </View>
               )}
             </View>
           );
-        })
+        })}
+        </View>
       ) : (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No donations yet</Text>
@@ -770,61 +730,49 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       )}
+      </View>
 
       {/* Profile Details Section */}
       <View style={styles.profileDetailsSection}>
-        <Text style={styles.sectionTitle}>Profile Details</Text>
+        <Text style={styles.profileDetailsSectionTitle}>Profile Details</Text>
         <View style={styles.detailsCard}>
-          <View style={styles.detailRow}>
-            <View style={styles.detailIconContainer}>
-              <Ionicons name="mail-outline" size={18} color="#246BE1" />
+          <View
+            style={[
+              styles.detailRow,
+              !profileDetails?.phone && !(profileDetails?.address || profileDetails?.city) && styles.detailRowLast,
+            ]}
+          >
+            <Text style={styles.detailLabel}>Email</Text>
+            <Text style={styles.detailValue} numberOfLines={1}>
+              {profileDetails?.email || currentUser?.email || "—"}
+            </Text>
+          </View>
+          {profileDetails?.phone ? (
+            <View
+              style={[
+                styles.detailRow,
+                !(profileDetails?.address || profileDetails?.city) && styles.detailRowLast,
+              ]}
+            >
+              <Text style={styles.detailLabel}>Phone</Text>
+              <Text style={styles.detailValue}>{profileDetails.phone}</Text>
             </View>
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Email</Text>
-              <Text style={styles.detailValue}>
-                {profileDetails?.email || currentUser?.email || "—"}
+          ) : null}
+          {(profileDetails?.address || profileDetails?.city) ? (
+            <View style={[styles.detailRow, styles.detailRowLast]}>
+              <Text style={styles.detailLabel}>Address</Text>
+              <Text style={styles.detailValue} numberOfLines={2}>
+                {[
+                  profileDetails?.address,
+                  profileDetails?.city,
+                  profileDetails?.state,
+                  profileDetails?.country,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "—"}
               </Text>
             </View>
-          </View>
-          
-          {profileDetails?.phone && (
-            <>
-              <View style={styles.detailDivider} />
-              <View style={styles.detailRow}>
-                <View style={styles.detailIconContainer}>
-                  <Ionicons name="call-outline" size={18} color="#246BE1" />
-                </View>
-                <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Phone</Text>
-                  <Text style={styles.detailValue}>{profileDetails.phone}</Text>
-                </View>
-              </View>
-            </>
-          )}
-          
-          {(profileDetails?.address || profileDetails?.city) && (
-            <>
-              <View style={styles.detailDivider} />
-              <View style={styles.detailRow}>
-                <View style={styles.detailIconContainer}>
-                  <Ionicons name="location-outline" size={18} color="#246BE1" />
-                </View>
-                <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Address</Text>
-                  <Text style={styles.detailValue}>
-                    {[
-                      profileDetails.address,
-                      profileDetails.city,
-                      profileDetails.state,
-                      profileDetails.country,
-                    ]
-                      .filter(Boolean)
-                      .join(", ") || "—"}
-                  </Text>
-                </View>
-              </View>
-            </>
-          )}
+          ) : null}
         </View>
       </View>
 
@@ -834,6 +782,7 @@ export default function ProfileScreen() {
         onCancel={() => setShowLogoutModal(false)}
         onConfirm={handleConfirmSignOut}
       />
+      </View>
       </ScrollView>
     </View>
   );
@@ -848,6 +797,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    paddingBottom: 24,
+  },
+  scrollContentInner: {
     paddingHorizontal: 20,
   },
 
@@ -1280,215 +1232,156 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  historyItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#010D261A",
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 12,
+  // Payment History section
+  paymentHistorySection: {
+    marginTop: 20,
+    marginBottom: 24,
   },
-  historyImg: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
-    marginRight: 10,
-  },
-  historyTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#111",
-  },
-  historySub: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginTop: 2,
-  },
-
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-
-  orderCard: {
-    backgroundColor: "#fff",
-    marginTop: 8,
-    borderRadius: 16,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  orderHeader: {
+  paymentHistoryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 2,
+    marginBottom: 12,
   },
-  orderHeaderLeft: {
+  paymentHistoryTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  seeAllButton: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
+    gap: 2,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  seeAllText: {
+    color: "#2161CD",
+    fontSize: 13,
+    fontWeight: "600",
+    fontFamily: "AlbertSans_600SemiBold",
+  },
+  orderList: {
+    gap: 8,
+  },
+  orderCard: {
+    backgroundColor: "#FAFAFA",
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#EEEEEE",
+  },
+  orderHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
   orderImage: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 10,
-    marginRight: 8,
+    marginRight: 12,
+    backgroundColor: "#E8E8E8",
   },
   orderInfo: {
     flex: 1,
-    marginRight: 8,
+    minWidth: 0,
+    justifyContent: "center",
   },
-  orderStatusBadge: {
-    backgroundColor: "#E6F7D9",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  orderStatusText: {
-    color: "#3C7A2A",
-    fontWeight: "600",
-    fontSize: 11,
-  },
-  orderTitleRow: {
+  orderRight: {
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
+    gap: 6,
   },
   orderTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#0F172A",
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+    fontFamily: "AlbertSans_600SemiBold",
+    marginBottom: 2,
   },
   orderOtherCampaigns: {
-    fontSize: 11,
-    fontWeight: "400",
-    color: "#9CA3AF",
-    fontStyle: "italic",
-  },
-  orderMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#6B7280",
+    fontFamily: "AlbertSans_500Medium",
   },
   orderMetaText: {
-    fontSize: 11,
-    color: "#9CA3AF",
-  },
-  orderMetaDot: {
-    marginHorizontal: 8,
-    color: "#9CA3AF",
-    fontSize: 11,
-  },
-  orderMetaAmount: {
-    fontSize: 11,
-    color: "#0F172A",
-    fontWeight: "700",
-  },
-  orderDetails: {
-    marginTop: 12,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  orderDetailsHeader: {
-    marginBottom: 12,
-  },
-  orderDetailsTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#010D26",
-    fontFamily: "AlbertSans_700Bold",
-    marginBottom: 4,
-  },
-  orderDetailsSubtitle: {
     fontSize: 12,
     color: "#6B7280",
     fontFamily: "AlbertSans_400Regular",
   },
-  orderDetailsList: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 8,
+  orderStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  orderStatusText: {
+    fontWeight: "600",
+    fontSize: 10,
+    fontFamily: "AlbertSans_600SemiBold",
+  },
+  orderDetails: {
+    marginHorizontal: 12,
     marginBottom: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#EEEEEE",
+  },
+  orderDetailsHeader: {
+    marginBottom: 10,
+  },
+  orderDetailsTitle: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#9CA3AF",
+    fontFamily: "AlbertSans_600SemiBold",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  orderDetailsList: {
+    backgroundColor: "#FFF",
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: "#EEEEEE",
   },
   paymentRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: "#F5F5F5",
   },
   paymentRowLast: {
     borderBottomWidth: 0,
   },
-  paymentRowLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  paymentIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  paymentInfo: {
-    flex: 1,
-  },
   paymentName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#010D26",
-    fontFamily: "AlbertSans_600SemiBold",
-    marginBottom: 2,
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#374151",
+    fontFamily: "AlbertSans_500Medium",
+    flex: 1,
+    marginRight: 8,
   },
-  paymentId: {
-    fontSize: 11,
+  paymentNameFee: {
     color: "#9CA3AF",
     fontFamily: "AlbertSans_400Regular",
   },
   paymentTotal: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#010D26",
-    fontFamily: "AlbertSans_700Bold",
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#111827",
+    fontFamily: "AlbertSans_600SemiBold",
   },
   paymentTotalFee: {
-    color: "#9CA3AF",
-  },
-  orderDetailsDivider: {
-    height: 1,
-    backgroundColor: "#E5E7EB",
-    marginVertical: 12,
-  },
-  resendButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: "#EFF6FF",
-    gap: 8,
-  },
-  resendButtonText: {
-    color: "#246BE1",
-    fontSize: 14,
-    fontWeight: "600",
-    fontFamily: "AlbertSans_600SemiBold",
+    color: "#6B7280",
+    fontWeight: "500",
   },
 
   emptyContainer: {
@@ -1522,55 +1415,50 @@ const styles = StyleSheet.create({
 
   profileDetailsSection: {
     marginTop: 24,
-    marginBottom: 20,
+    marginBottom: 24,
+  },
+  profileDetailsSectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+    fontFamily: "AlbertSans_700Bold",
+    marginBottom: 10,
   },
   detailsCard: {
-    backgroundColor: "#FFF",
+    backgroundColor: "#FAFAFA",
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    borderColor: "#EEEEEE",
   },
   detailRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 0,
-  },
-  detailIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: "#EFF6FF",
-    justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
   },
-  detailContent: {
-    flex: 1,
+  detailRowLast: {
+    borderBottomWidth: 0,
   },
   detailLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: "#6B7280",
     fontWeight: "500",
     fontFamily: "AlbertSans_500Medium",
-    marginBottom: 4,
+    marginRight: 12,
+    minWidth: 56,
   },
   detailValue: {
-    fontSize: 14,
-    color: "#010D26",
-    fontWeight: "600",
-    fontFamily: "AlbertSans_600SemiBold",
-    lineHeight: 20,
-  },
-  detailDivider: {
-    height: 1,
-    backgroundColor: "#F3F4F6",
-    marginVertical: 12,
-    marginLeft: 48,
+    flex: 1,
+    minWidth: 0,
+    fontSize: 13,
+    color: "#111827",
+    fontWeight: "500",
+    fontFamily: "AlbertSans_500Medium",
+    textAlign: "right",
   },
 });

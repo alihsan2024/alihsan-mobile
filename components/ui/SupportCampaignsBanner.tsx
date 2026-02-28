@@ -7,6 +7,7 @@ import {
   ScrollView,
   Dimensions,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image as ExpoImage } from "expo-image";
@@ -17,26 +18,39 @@ import { fetchCampaigns } from "@/utils/api";
 
 const { width: screenWidth } = Dimensions.get("window");
 
+// Campaign pills under "Support Our Campaigns" (matches AU Next.js). Ramadan/Gaza navigate; others set quick-donate campaign.
 const campaigns = [
-  { label: "Water", name: "Water Campaign", slug: "water-campaign", icon: "💧" },
-  { label: "Zakat", name: "Zakat", slug: "zakat-al-maal", icon: "💰" },
-  { label: "Aqeeqah", name: "Aqeeqah", slug: "aqeeqah", icon: "🎁" },
-  { label: "Interest", name: "Interest", slug: "purify-your-wealth", icon: "📊" },
-  { label: "Shelter", name: "Shelter", slug: "shelter-appeal", icon: "🏠" },
-  { label: "Education", name: "Education", slug: "education-support", icon: "📚" },
-  { label: "Appeals", name: "Appeals", slug: "ramadan-combo-pack", icon: "📢" },
-  { label: "Health", name: "Health", slug: "health-and-medical", icon: "🏥" },
+  { label: "Ramadan", name: "Ramadan", slug: "ramadan", icon: "crescent", isSpecial: true, navigateOnly: true },
+  { label: "Ramadan in Gaza", name: "Ramadan in Gaza", slug: "gaza-ramadan", icon: "palestine-flag", isSpecial: true, navigateOnly: true },
+  { label: "Where Most Needed", name: "Where Most Needed In Ramadan", slug: "most-needed", icon: "megaphone", isSpecial: false },
+  { label: "Zakat Al Maal", name: "Zakat Al Maal", slug: "zakat-al-maal", icon: "cash", isSpecial: false },
+  { label: "Feed the Needy", name: "Feed the Needy", slug: "feed-the-needy", icon: "restaurant", isSpecial: false },
+  { label: "Gift of Sight", name: "Gift of Sight", slug: "eye-project", icon: "eye", isSpecial: false },
+  { label: "Orphan Appeal", name: "Orphan Appeal", slug: "orphan-appeal", icon: "people", isSpecial: false },
+  { label: "Water", name: "Water Campaign", slug: "water-campaign", icon: "water", isSpecial: false },
+  { label: "Emergency Appeal", name: "Emergency Appeal", slug: "emergency-appeal", icon: "warning", isSpecial: false },
 ];
+
+const PALESTINE_FLAG_URI = "https://purecatamphetamine.github.io/country-flag-icons/3x2/PS.svg";
 
 const amounts = [10, 25, 50, 200, 500, 1000];
 const frequencies = [
   { label: "One-time", value: "onetime" },
   { label: "Monthly", value: "monthly" },
-  { label: "Weekly", value: "weekly" },
+  { label: "Fridays", value: "friday" },
 ];
 
+/** Campaign shape sufficient for adding to basket (id, name, coverImage, checkoutType). */
+export type SupportCampaignForDonate = {
+  id: number;
+  name: string;
+  slug: string;
+  coverImage?: string | null;
+  checkoutType?: string | null;
+};
+
 interface SupportCampaignsBannerProps {
-  onDonate?: (amount: number, frequency: string, campaign: string) => void;
+  onDonate?: (amount: number, frequency: string, campaignSlug: string, campaign?: SupportCampaignForDonate | null) => void;
   onCampaignPress?: (campaign: any) => void;
   topInset?: number;
 }
@@ -46,22 +60,27 @@ export default function SupportCampaignsBanner({
   onCampaignPress,
   topInset = 0,
 }: SupportCampaignsBannerProps) {
-  const [selectedCampaign, setSelectedCampaign] = useState(campaigns[0].slug);
+  const [selectedCampaign, setSelectedCampaign] = useState("most-needed");
   const [selectedAmount, setSelectedAmount] = useState(amounts[0]);
   const [selectedFrequency, setSelectedFrequency] = useState(frequencies[0].value);
   const [searchQuery, setSearchQuery] = useState("");
   const [allCampaigns, setAllCampaigns] = useState<any[]>([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(true);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [pillsAtEnd, setPillsAtEnd] = useState(false);
 
   // Fetch all campaigns on mount
   useEffect(() => {
     const loadCampaigns = async () => {
+      setCampaignsLoading(true);
       try {
         const campaignsData = await fetchCampaigns();
         setAllCampaigns(campaignsData || []);
       } catch (error) {
         console.error("Error loading campaigns:", error);
+      } finally {
+        setCampaignsLoading(false);
       }
     };
     loadCampaigns();
@@ -82,9 +101,12 @@ export default function SupportCampaignsBanner({
     }
   }, [searchQuery, allCampaigns]);
 
-  const handleCampaignPress = (campaign: any) => {
-    setSelectedCampaign(campaign.slug);
-    onCampaignPress?.(campaign);
+  const handlePillPress = (campaign: (typeof campaigns)[number]) => {
+    if (campaign.navigateOnly) {
+      router.push(`/campaign/${campaign.slug}`);
+    } else {
+      setSelectedCampaign(campaign.slug);
+    }
   };
 
   const handleSearchResultPress = (campaign: any) => {
@@ -94,7 +116,18 @@ export default function SupportCampaignsBanner({
   };
 
   const handleDonate = () => {
-    onDonate?.(selectedAmount, selectedFrequency, selectedCampaign);
+    const campaign = allCampaigns.find((c) => (c.slug || c.Slug) === selectedCampaign);
+    const campaignForBasket =
+      campaign && campaign.id
+        ? {
+            id: campaign.id,
+            name: campaign.name ?? campaign.Name,
+            slug: campaign.slug ?? campaign.Slug ?? selectedCampaign,
+            coverImage: campaign.coverImage ?? campaign.cover_image ?? null,
+            checkoutType: campaign.checkoutType ?? campaign.CheckoutType ?? "COMMON",
+          }
+        : null;
+    onDonate?.(selectedAmount, selectedFrequency, selectedCampaign, campaignForBasket);
   };
 
   return (
@@ -206,36 +239,87 @@ export default function SupportCampaignsBanner({
                 <Text style={styles.mainHeading}>Support Our Campaigns</Text>
               </View>
 
-              {/* Campaign Pills - Commented out for now */}
-              {/* <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.campaignPillsContainer}
-              >
-                {campaigns.map((campaign) => {
-                  const isActive = selectedCampaign === campaign.slug;
-                  return (
-                    <TouchableOpacity
-                      key={campaign.slug}
-                      style={[
-                        styles.campaignPill,
-                        isActive && styles.campaignPillActive,
-                      ]}
-                      onPress={() => handleCampaignPress(campaign)}
-                    >
-                      <Text style={styles.campaignIcon}>{campaign.icon}</Text>
-                      <Text
+              {/* Campaign Pills - compact, full-width scroll; white fade on right until scrolled to end */}
+              <View style={styles.campaignPillsWrap}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.campaignPillsContent}
+                  style={styles.campaignPillsScroll}
+                  onScroll={(e) => {
+                    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+                    const atEnd = layoutMeasurement.width + contentOffset.x >= contentSize.width - 8;
+                    setPillsAtEnd(atEnd);
+                  }}
+                  scrollEventThrottle={16}
+                >
+                  {campaigns.map((campaign) => {
+                    const isActive = !campaign.navigateOnly && selectedCampaign === campaign.slug;
+                    const isSpecial = campaign.isSpecial;
+                    return (
+                      <TouchableOpacity
+                        key={campaign.slug}
                         style={[
-                          styles.campaignPillText,
-                          isActive && styles.campaignPillTextActive,
+                          styles.campaignPill,
+                          isSpecial && styles.campaignPillSpecial,
+                          isActive && !isSpecial && styles.campaignPillActive,
                         ]}
+                        onPress={() => handlePillPress(campaign)}
+                        activeOpacity={0.85}
                       >
-                        {campaign.name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView> */}
+                        {campaign.icon === "crescent" ? (
+                          <Ionicons
+                            name="moon"
+                            size={12}
+                            color={isSpecial ? "#010D26" : isActive ? "#010D26" : "#fff"}
+                          />
+                        ) : campaign.icon === "palestine-flag" ? (
+                          <ExpoImage
+                            source={{ uri: PALESTINE_FLAG_URI }}
+                            style={styles.pillFlag}
+                          />
+                        ) : (
+                          <Ionicons
+                            name={
+                              campaign.icon === "megaphone" ? "megaphone" :
+                              campaign.icon === "cash" ? "cash" :
+                              campaign.icon === "restaurant" ? "nutrition" :
+                              campaign.icon === "eye" ? "eye" :
+                              campaign.icon === "people" ? "people" :
+                              campaign.icon === "water" ? "water" :
+                              "warning"
+                            }
+                            size={12}
+                            color={isSpecial ? "#010D26" : isActive ? "#010D26" : "#fff"}
+                          />
+                        )}
+                        <Text
+                          style={[
+                            styles.campaignPillText,
+                            isSpecial && styles.campaignPillTextSpecial,
+                            isActive && !isSpecial && styles.campaignPillTextActive,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {campaign.label}
+                        </Text>
+                        {campaign.navigateOnly && (
+                          <Ionicons name="open-outline" size={10} color={isSpecial ? "#010D26" : "#fff"} />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+                {!pillsAtEnd && (
+                  <LinearGradient
+                    colors={["transparent", "#E5E7EB"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.campaignPillsFade}
+                    pointerEvents="none"
+                  />
+                )}
+              </View>
             </View>
 
             {/* Right Content - Donation Card */}
@@ -309,12 +393,26 @@ export default function SupportCampaignsBanner({
 
               {/* Donate Button */}
               <TouchableOpacity
-                style={styles.donateButton}
+                style={[styles.donateButton, campaignsLoading && styles.donateButtonDisabled]}
                 onPress={handleDonate}
                 activeOpacity={0.8}
+                disabled={campaignsLoading}
               >
-                <Ionicons name="heart" size={16} color="#010D26" />
-                <Text style={styles.donateButtonText}>Donate Now</Text>
+                {campaignsLoading ? (
+                  <>
+                    <ActivityIndicator size="small" color="#2161CD" />
+                    <Text style={styles.donateButtonText} numberOfLines={1}>
+                      Loading...
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="heart" size={16} color="#010D26" />
+                    <Text style={styles.donateButtonText} numberOfLines={1}>
+                      Donate to {campaigns.find((c) => c.slug === selectedCampaign)?.label ?? "Campaign"}
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -381,31 +479,59 @@ const styles = StyleSheet.create({
     textAlign: "left",
     lineHeight: 40,
   },
-  campaignPillsContainer: {
-    paddingHorizontal: 4,
-    gap: 8,
+  campaignPillsWrap: {
+    position: "relative",
+    width: screenWidth,
+    marginLeft: -16,
+  },
+  campaignPillsScroll: {
+    width: screenWidth,
+  },
+  campaignPillsContent: {
+    paddingLeft: 16,
+    paddingRight: 24,
+    gap: 6,
+    paddingVertical: 2,
+  },
+  campaignPillsFade: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 48,
   },
   campaignPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
     backgroundColor: "rgba(255, 255, 255, 0.15)",
-    marginRight: 8,
+  },
+  campaignPillSpecial: {
+    backgroundColor: "#FFD602",
+    borderWidth: 1.5,
+    borderColor: "rgba(230, 194, 0, 0.8)",
   },
   campaignPillActive: {
     backgroundColor: "#fff",
   },
-  campaignIcon: {
-    fontSize: 16,
+  pillFlag: {
+    width: 12,
+    height: 12,
+    borderRadius: 2,
   },
   campaignPillText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     color: "#fff",
     fontFamily: "AlbertSans_600SemiBold",
+  },
+  campaignPillTextSpecial: {
+    color: "#010D26",
+    fontWeight: "700",
+    fontFamily: "AlbertSans_700Bold",
   },
   campaignPillTextActive: {
     color: "#010D26",
@@ -504,6 +630,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     gap: 6,
+  },
+  donateButtonDisabled: {
+    opacity: 0.85,
   },
   donateButtonText: {
     fontSize: 14,
