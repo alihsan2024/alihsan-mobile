@@ -15,10 +15,15 @@ import { useSelector } from "react-redux";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
-import { loginUser } from "@/store/reduxSlice/authenticationSlice";
+import { loginUser, socialMediaLogin } from "@/store/reduxSlice/authenticationSlice";
 import LoadingScreen from "@/components/LoadingScreen";
 import Google from "@/assets/google.svg";
 import { useToast } from "@/context/ToastContext";
+import { getGoogleWebClientId } from "@/utils/googleAuth";
+import { GoogleLoginButton } from "@/components/GoogleLoginButton";
+import { AppleLoginButton } from "@/components/AppleLoginButton";
+
+const googleWebClientId = getGoogleWebClientId();
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -36,6 +41,88 @@ export default function LoginScreen() {
   const [error, setError] = useState("");
   const emailInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
+
+  const handleGoogleSuccess = async (userInfo: {
+    email: string;
+    firstName: string;
+    lastName: string;
+  }) => {
+    try {
+      const resultAction = await dispatch(
+        socialMediaLogin({
+          body: {
+            ...userInfo,
+            timezoneOffset: new Date().getTimezoneOffset(),
+          },
+          provider: "google",
+          keepSession: true,
+        })
+      );
+      if (socialMediaLogin.fulfilled.match(resultAction)) {
+        router.replace("/(tabs)/profile");
+      } else {
+        const errMsg =
+          (resultAction as any).error?.message ?? "Google sign-in failed";
+        showToast({ message: errMsg, type: "error", duration: 4000 });
+      }
+    } catch (e: any) {
+      showToast({
+        message: e?.message ?? "Google sign-in failed",
+        type: "error",
+        duration: 4000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleError = (message: string) => {
+    setLoading(false);
+    showToast({ message, type: "error", duration: 4000 });
+  };
+
+  const handleAppleSuccess = async (userInfo: {
+    appleId: string;
+    email: string | null;
+    firstName: string;
+    lastName: string;
+  }) => {
+    try {
+      const resultAction = await dispatch(
+        socialMediaLogin({
+          body: {
+            appleId: userInfo.appleId,
+            email: userInfo.email ?? undefined,
+            firstName: userInfo.firstName,
+            lastName: userInfo.lastName,
+            timezoneOffset: new Date().getTimezoneOffset(),
+          },
+          provider: "apple",
+          keepSession: true,
+        })
+      );
+      if (socialMediaLogin.fulfilled.match(resultAction)) {
+        router.replace("/(tabs)/profile");
+      } else {
+        const errMsg =
+          (resultAction as any).error?.message ?? "Apple sign-in failed";
+        showToast({ message: errMsg, type: "error", duration: 4000 });
+      }
+    } catch (e: any) {
+      showToast({
+        message: e?.message ?? "Apple sign-in failed",
+        type: "error",
+        duration: 4000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAppleError = (message: string) => {
+    setLoading(false);
+    showToast({ message, type: "error", duration: 4000 });
+  };
 
   // Redirect if already logged in
   useEffect(() => {
@@ -174,10 +261,28 @@ export default function LoginScreen() {
 
             <View style={styles.cardContent}>
               {/* Google Button */}
-              <TouchableOpacity style={styles.googleBtn} activeOpacity={0.8}>
-                <Google width={18} height={18} />
-                <Text style={styles.googleText}>Continue with Google</Text>
-              </TouchableOpacity>
+              {googleWebClientId ? (
+                <GoogleLoginButton
+                  clientId={googleWebClientId}
+                  onPressStart={() => setLoading(true)}
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  style={styles.googleBtn}
+                  textStyle={styles.googleText}
+                />
+              ) : (
+                <TouchableOpacity style={styles.googleBtn} activeOpacity={0.8} disabled>
+                  <Google width={18} height={18} />
+                  <Text style={[styles.googleText, { opacity: 0.6 }]}>Continue with Google (not configured)</Text>
+                </TouchableOpacity>
+              )}
+
+              <AppleLoginButton
+                onPressStart={() => setLoading(true)}
+                onSuccess={handleAppleSuccess}
+                onError={handleAppleError}
+                style={styles.appleBtnWrap}
+              />
 
               {/* Divider */}
               <View style={styles.divider}>
@@ -338,6 +443,9 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     padding: 20,
+  },
+  appleBtnWrap: {
+    marginTop: 10,
   },
   googleBtn: {
     height: 48,

@@ -12,6 +12,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
+import { useRouter } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch } from "@/store/store";
 
@@ -44,7 +45,10 @@ const formatPrice = (price: number): string => {
 
 let metalPricesFetchedOnce = false;
 
+const ZAKAT_AL_MAAL_SLUG = "zakat-al-maal";
+
 export default function ZakatCalculatorScreen() {
+  const router = useRouter();
   const dispatch: AppDispatch = useDispatch();
   const scrollRef = useRef<ScrollView>(null);
 
@@ -735,7 +739,7 @@ export default function ZakatCalculatorScreen() {
 
         <TouchableOpacity
           style={styles.knowAmountLink}
-          onPress={() => setKnownAmountModalVisible(true)}
+          onPress={() => router.push(`/campaign/${ZAKAT_AL_MAAL_SLUG}`)}
           activeOpacity={0.7}
         >
           <Text style={styles.knowAmountLinkText}>I already know my zakat amount</Text>

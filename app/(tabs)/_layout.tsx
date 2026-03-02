@@ -253,6 +253,20 @@ export default function TabsLayout() {
           href: null,
         }}
       />
+
+      <Tabs.Screen
+        name="ramadan"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="gaza-ramadan"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

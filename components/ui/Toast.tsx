@@ -29,6 +29,12 @@ interface ToastProps extends ToastConfig {
   onHide: () => void;
 }
 
+const TOAST_ACCENT = {
+  success: "#22C55E",
+  error: "#EF4444",
+  info: "#3B82F6",
+} as const;
+
 export const Toast: React.FC<ToastProps> = ({
   visible,
   message,
@@ -38,31 +44,25 @@ export const Toast: React.FC<ToastProps> = ({
   onHide,
 }) => {
   const insets = useSafeAreaInsets();
-  const slideAnim = useRef(new Animated.Value(-100)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(-56)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
-      // Show animation
       Animated.parallel([
-        Animated.spring(slideAnim, {
+        Animated.timing(translateY, {
           toValue: 0,
+          duration: 200,
           useNativeDriver: true,
-          tension: 65,
-          friction: 11,
         }),
-        Animated.timing(opacityAnim, {
+        Animated.timing(opacity, {
           toValue: 1,
-          duration: 300,
+          duration: 200,
           useNativeDriver: true,
         }),
       ]).start();
 
-      // Auto hide
-      const timer = setTimeout(() => {
-        hideToast();
-      }, duration);
-
+      const timer = setTimeout(() => hideToast(), duration);
       return () => clearTimeout(timer);
     } else {
       hideToast();
@@ -71,102 +71,61 @@ export const Toast: React.FC<ToastProps> = ({
 
   const hideToast = () => {
     Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: -100,
-        duration: 250,
+      Animated.timing(translateY, {
+        toValue: -56,
+        duration: 180,
         useNativeDriver: true,
       }),
-      Animated.timing(opacityAnim, {
+      Animated.timing(opacity, {
         toValue: 0,
-        duration: 250,
+        duration: 180,
         useNativeDriver: true,
       }),
-    ]).start(() => {
-      onHide();
-    });
+    ]).start(() => onHide());
   };
 
   if (!visible) return null;
 
-  const getIcon = () => {
-    switch (type) {
-      case "success":
-        return "checkmark-circle";
-      case "error":
-        return "close-circle";
-      case "info":
-        return "information-circle";
-      default:
-        return "checkmark-circle";
-    }
-  };
-
-  const getColors = () => {
-    switch (type) {
-      case "success":
-        return {
-          background: "#E8F7EF",
-          icon: "#16A34A",
-          text: "#166534",
-          border: "#BBF7D0",
-        };
-      case "error":
-        return {
-          background: "#FEE2E2",
-          icon: "#DC2626",
-          text: "#991B1B",
-          border: "#FECACA",
-        };
-      case "info":
-        return {
-          background: "#EFF6FF",
-          icon: "#2161CD",
-          text: "#1E40AF",
-          border: "#BFDBFE",
-        };
-      default:
-        return {
-          background: "#E8F7EF",
-          icon: "#16A34A",
-          text: "#166534",
-          border: "#BBF7D0",
-        };
-    }
-  };
-
-  const colors = getColors();
+  const iconName =
+    type === "success"
+      ? "checkmark-circle-outline"
+      : type === "error"
+      ? "close-circle-outline"
+      : "information-circle-outline";
+  const accent = TOAST_ACCENT[type];
 
   return (
     <Animated.View
       style={[
         styles.container,
         {
-          top: insets.top + 12,
-          transform: [{ translateY: slideAnim }],
-          opacity: opacityAnim,
+          top: insets.top + 6,
+          transform: [{ translateY }],
+          opacity,
         },
       ]}
       pointerEvents="box-none"
     >
-      <View style={[styles.toast, { backgroundColor: colors.background, borderColor: colors.border }]}>
+      <View style={styles.toast}>
+        <View style={[styles.accent, { backgroundColor: accent }]} />
         <View style={styles.content}>
-          <Ionicons name={getIcon() as any} size={20} color={colors.icon} />
-          <Text style={[styles.message, { color: colors.text }]} numberOfLines={2}>
+          <Ionicons name={iconName as any} size={16} color={accent} style={styles.icon} />
+          <Text style={styles.message} numberOfLines={2}>
             {message}
           </Text>
         </View>
-        {action && (
+        {action ? (
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.icon }]}
+            style={styles.action}
             onPress={() => {
               action.onPress();
               hideToast();
             }}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
-            <Text style={styles.actionText}>{action.label}</Text>
+            <Text style={[styles.actionText, { color: accent }]}>{action.label}</Text>
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
     </Animated.View>
   );
@@ -175,49 +134,57 @@ export const Toast: React.FC<ToastProps> = ({
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    left: 16,
-    right: 16,
+    left: 12,
+    right: 12,
     zIndex: 9999,
-    alignItems: "center",
   },
   toast: {
-    width: "100%",
-    maxWidth: SCREEN_WIDTH - 32,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
+    backgroundColor: "#FAFAFA",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.05)",
+    minHeight: 40,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 3,
+    maxWidth: SCREEN_WIDTH - 24,
+  },
+  accent: {
+    width: 2,
+    alignSelf: "stretch",
   },
   content: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
+  icon: {
+    opacity: 0.95,
   },
   message: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: "600",
-    fontFamily: "AlbertSans_600SemiBold",
-    lineHeight: 20,
+    fontSize: 13,
+    color: "#27272A",
+    fontFamily: "AlbertSans_400Regular",
+    lineHeight: 18,
   },
-  actionButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 8,
+  action: {
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    alignSelf: "stretch",
+    justifyContent: "center",
   },
   actionText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "700",
-    fontFamily: "AlbertSans_700Bold",
+    fontSize: 12,
+    fontWeight: "600",
+    fontFamily: "AlbertSans_600SemiBold",
   },
 });

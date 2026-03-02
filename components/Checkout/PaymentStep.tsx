@@ -100,7 +100,7 @@
 //     marginTop: 8,
 //   },
 // });
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { CardField } from "@stripe/stripe-react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -110,6 +110,7 @@ export type PaymentState = {
   paymentType: "card" | "paypal" | "applepay" | "googlepay";
   cardDetails: any;
   cardComplete: boolean;
+  saveCardForLater?: boolean;
 };
 
 type Props = {
@@ -123,6 +124,7 @@ export default function PaymentStep({ paymentState, setPaymentState, isPlatformP
   const { showToast } = useToast();
   const isIOS = Platform.OS === "ios";
   const isAndroid = Platform.OS === "android";
+  const [cardFieldKey, setCardFieldKey] = useState(0);
 
   // Automatically switch from PayPal to card if recurring items are detected
   useEffect(() => {
@@ -226,7 +228,7 @@ export default function PaymentStep({ paymentState, setPaymentState, isPlatformP
         </TouchableOpacity>
       )}
 
-      {/* CREDIT CARD */}
+      {/* Pay with your card */}
       <TouchableOpacity
         style={[
           styles.card,
@@ -242,7 +244,7 @@ export default function PaymentStep({ paymentState, setPaymentState, isPlatformP
       >
         <View style={styles.cardHeader}>
           <Ionicons name="card-outline" size={18} color="#264B8B" />
-          <Text style={styles.cardTitle}>Credit Card</Text>
+          <Text style={styles.cardTitle}>Pay with your card</Text>
           {paymentState.paymentType === "card" && (
             <View style={styles.selectedIndicator}>
               <Ionicons name="checkmark-circle" size={20} color="#264B8B" />
@@ -250,9 +252,10 @@ export default function PaymentStep({ paymentState, setPaymentState, isPlatformP
           )}
         </View>
 
-        {/* Stripe CardField styled to match Figma */}
+        {/* Stripe CardField - key forces remount when clearing */}
         <View style={styles.cardInputWrapper}>
           <CardField
+            key={cardFieldKey}
             postalCodeEnabled={false}
             cardStyle={{
               backgroundColor: "#FFFFFF",
@@ -271,10 +274,27 @@ export default function PaymentStep({ paymentState, setPaymentState, isPlatformP
         </View>
 
         <View style={styles.cardFooter}>
-          <View style={styles.checkboxRow}>
-            <View style={styles.checkbox} />
+          <TouchableOpacity
+            style={styles.checkboxRow}
+            onPress={() =>
+              setPaymentState((s) => ({
+                ...s,
+                paymentType: "card",
+                saveCardForLater: !s.saveCardForLater,
+              }))
+            }
+            activeOpacity={0.7}
+          >
+            <View style={[
+              styles.checkbox,
+              paymentState.saveCardForLater && styles.checkboxChecked,
+            ]}>
+              {paymentState.saveCardForLater && (
+                <Ionicons name="checkmark" size={12} color="#fff" />
+              )}
+            </View>
             <Text style={styles.checkboxText}>Save this card for later</Text>
-          </View>
+          </TouchableOpacity>
 
           <TouchableOpacity
             onPress={() => {
@@ -282,7 +302,9 @@ export default function PaymentStep({ paymentState, setPaymentState, isPlatformP
                 ...s,
                 cardDetails: null,
                 cardComplete: false,
+                saveCardForLater: false,
               }));
+              setCardFieldKey((k) => k + 1);
             }}
           >
             <Text style={styles.link}>Clear form</Text>
@@ -397,11 +419,17 @@ const styles = StyleSheet.create({
   },
 
   checkbox: {
-    width: 16,
-    height: 16,
+    width: 18,
+    height: 18,
     borderRadius: 4,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#9CA3AF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxChecked: {
+    backgroundColor: "#264B8B",
+    borderColor: "#264B8B",
   },
 
   checkboxText: {

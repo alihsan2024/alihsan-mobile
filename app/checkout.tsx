@@ -49,6 +49,7 @@ export default function CheckoutScreen() {
     paymentType: "card",
     cardDetails: null,
     cardComplete: false,
+    saveCardForLater: false,
   });
 
   const [detailsForm, setDetailsForm] = useState({

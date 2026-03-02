@@ -59,13 +59,16 @@ export const socialMediaLogin = createAsyncThunk(
     keepSession: boolean;
   }) => {
     try {
-      const response = await api.post(
-        provider === "google" ? "auth/googlelogin" : "auth/facebooklogin",
-        {
-          ...body,
-          timezoneOffset: new Date().getTimezoneOffset(),
-        }
-      );
+      const endpoint =
+        provider === "google"
+          ? "auth/googlelogin"
+          : provider === "apple"
+            ? "auth/applelogin"
+            : "auth/facebooklogin";
+      const response = await api.post(endpoint, {
+        ...body,
+        timezoneOffset: new Date().getTimezoneOffset(),
+      });
       const { payload } = response.data;
       const { secureSetItem } = await import("@/utils/secureStorage");
       await secureSetItem(

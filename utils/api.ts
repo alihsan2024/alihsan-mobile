@@ -253,10 +253,14 @@ export const fetchFeaturedCampaigns = async (
   }
 };
 
-// Get campaign details by slug
-export const getCampaignDetails = async (slug: string): Promise<any> => {
+// Get campaign details by slug (allowBmt: true for Ramadan/quick-donation items so BMT campaigns are included)
+export const getCampaignDetails = async (
+  slug: string,
+  options?: { allowBmt?: boolean }
+): Promise<any> => {
   try {
-    const response = await api.get(`/project/details/${slug}`);
+    const params = options?.allowBmt ? { allowBmt: "true" } : undefined;
+    const response = await api.get(`/project/details/${slug}`, { params });
     return response.data?.payload || {};
   } catch (error) {
     if (__DEV__) {
@@ -264,6 +268,41 @@ export const getCampaignDetails = async (slug: string): Promise<any> => {
     }
     throw error;
   }
+};
+
+/** Fetch Ramadan quick donation items (featured + sub) for the Ramadan page. */
+export const getRamadanQuickDonations = async (): Promise<{
+  featuredItems: Array<{
+    id: number;
+    title: string;
+    description?: string;
+    image: string;
+    price: number;
+    slug: string;
+    donationItem: string;
+    campaignId: number;
+    postText?: string;
+    campaign?: { id: number; name: string; slug: string; coverImage: string; checkoutType?: string };
+  }>;
+  subItems: Array<{
+    id: number;
+    title: string;
+    description?: string;
+    image: string;
+    price: number;
+    slug: string;
+    donationItem: string;
+    campaignId: number;
+    postText?: string;
+    campaign?: { id: number; name: string; slug: string; coverImage: string; checkoutType?: string };
+  }>;
+}> => {
+  const response = await api.get("/ramadan/quick-donations");
+  const payload = response.data?.payload;
+  return {
+    featuredItems: payload?.featuredItems ?? [],
+    subItems: payload?.subItems ?? [],
+  };
 };
 
 // Get campaign categories

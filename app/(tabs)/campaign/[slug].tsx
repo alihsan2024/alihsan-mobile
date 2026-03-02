@@ -10,6 +10,7 @@ import {
   TextInput,
   Dimensions,
   Animated,
+  Easing,
   Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -424,17 +425,28 @@ export default function GazaDonationScreen() {
   };
 
   const toggleDonationCard = () => {
-    const newExpandedState = !donationCardExpanded;
-    
-    // Always update state first so content is available for animation
-    setDonationCardExpanded(newExpandedState);
-    
-    // Animate after state update
-    Animated.timing(expandAnimation, {
-      toValue: newExpandedState ? 1 : 0,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
+    const isOpening = !donationCardExpanded;
+
+    if (isOpening) {
+      setDonationCardExpanded(true);
+      Animated.timing(expandAnimation, {
+        toValue: 1,
+        duration: 320,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+    } else {
+      Animated.timing(expandAnimation, {
+        toValue: 0,
+        duration: 280,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: false,
+      }).start(({ finished }) => {
+        if (finished) {
+          requestAnimationFrame(() => setDonationCardExpanded(false));
+        }
+      });
+    }
   };
 
   const animatedOpacity = expandAnimation.interpolate({
@@ -442,9 +454,20 @@ export default function GazaDonationScreen() {
     outputRange: [0, 1],
   });
 
+  const closedOpacity = expandAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0],
+  });
+
+  const expandedContentHeight = 400;
+  const closedBarHeight = 140;
   const animatedHeight = expandAnimation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 300],
+    outputRange: [0, expandedContentHeight],
+  });
+  const animatedCardMinHeight = expandAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [closedBarHeight, 0],
   });
 
   if (loading || !campaign) {
@@ -463,10 +486,8 @@ export default function GazaDonationScreen() {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{
         paddingBottom: donationCardExpanded
-          ? 300
-          : isAqeeqah
-          ? 96
-          : 92,
+          ? expandedContentHeight
+          : closedBarHeight + 24,
       }}
     >
       {/* ===== HERO ===== */}
@@ -941,16 +962,23 @@ export default function GazaDonationScreen() {
       </View>
     </ScrollView>
 
-    {/* Fixed Bottom Donation Card - same layout for all: Aqeeqah = "Complete on website", others = amount + Donate */}
-    <View
+    {/* Fixed Bottom Donation Card - modern card design when open/closed */}
+    <Animated.View
       style={[
         styles.bottomDonationCard,
         isAqeeqah && !donationCardExpanded && styles.bottomDonationCardAqeeqahOnly,
-        { paddingBottom: 8 },
+        { paddingBottom: 0, minHeight: animatedCardMinHeight },
       ]}
     >
-      {/* Closed State - full width: Aqeeqah = single button (minimal height), others = amount row + Donate + expand */}
-      {!donationCardExpanded && (
+      {/* Closed State - always in tree, opacity crossfades when expanding/closing */}
+      <Animated.View
+        style={[
+          styles.bottomDonationClosedWrapper,
+          { opacity: closedOpacity },
+          donationCardExpanded && styles.bottomDonationClosedWrapperOverlay,
+        ]}
+        pointerEvents={donationCardExpanded ? "none" : "auto"}
+      >
         <View style={[styles.bottomDonationClosed, isAqeeqah && styles.bottomDonationClosedAqeeqah]}>
           {isAqeeqah ? (
             <TouchableOpacity
@@ -964,6 +992,18 @@ export default function GazaDonationScreen() {
             </TouchableOpacity>
           ) : (
             <>
+              {/* Closed: title row with expand affordance */}
+              <TouchableOpacity
+                style={styles.bottomClosedTitleRow}
+                onPress={toggleDonationCard}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.bottomClosedTitle}>Choose donation</Text>
+                <View style={styles.bottomExpandChip}>
+                  <Text style={styles.bottomExpandChipText}>More options</Text>
+                  <Ionicons name="chevron-up" size={16} color="#246BE1" />
+                </View>
+              </TouchableOpacity>
               <View style={styles.bottomAmountRowClosed}>
                 {["10", "25", "50", "100"].map((v) => (
                   <TouchableOpacity
@@ -985,34 +1025,25 @@ export default function GazaDonationScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-              <View style={styles.bottomClosedFooter}>
-                <TouchableOpacity
-                  style={styles.bottomDonateBtnClosed}
-                  onPress={handleDonate}
-                  disabled={addingToCart}
-                >
-                  <Text style={styles.bottomDonateTextClosed}>
-                    {isInCart
-                      ? "Update Cart"
-                      : addingToCart
-                      ? "Adding..."
-                      : "Donate Now"}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.bottomExpandButton}
-                  onPress={toggleDonationCard}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="chevron-up" size={20} color="#6B7280" />
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                style={styles.bottomDonateBtnClosed}
+                onPress={handleDonate}
+                disabled={addingToCart}
+              >
+                <Text style={styles.bottomDonateTextClosed}>
+                  {isInCart
+                    ? "Update Cart"
+                    : addingToCart
+                    ? "Adding..."
+                    : "Donate Now"}
+                </Text>
+              </TouchableOpacity>
             </>
           )}
         </View>
-      )}
+      </Animated.View>
 
-      {/* Expanded State - only mount when open so closed card has minimal height */}
+      {/* Expanded State - sheet-style panel with header and content */}
       {donationCardExpanded && (
       <Animated.View
         style={[
@@ -1026,17 +1057,18 @@ export default function GazaDonationScreen() {
         pointerEvents="auto"
       >
         <View>
-            {/* Header with Close Button */}
+            {/* Expanded header with drag handle and close */}
+            <View style={styles.bottomExpandedHandle} />
             <View style={styles.bottomExpandedHeader}>
               <Text style={styles.bottomExpandedTitle}>
-                {isAqeeqah ? "Aqeeqah donation" : "Choose Donation"}
+                {isAqeeqah ? "Aqeeqah donation" : "Choose donation"}
               </Text>
               <TouchableOpacity
                 onPress={toggleDonationCard}
                 activeOpacity={0.7}
                 style={styles.bottomCloseButton}
               >
-                <Ionicons name="chevron-down" size={20} color="#010D26" />
+                <Ionicons name="chevron-down" size={22} color="#6B7280" />
               </TouchableOpacity>
             </View>
 
@@ -1049,6 +1081,7 @@ export default function GazaDonationScreen() {
           ) : (
             <>
           {/* Frequency Options */}
+          <Text style={styles.bottomSectionLabel}>Frequency</Text>
           <View style={styles.bottomFrequencyRow}>
             <TouchableOpacity
               style={[
@@ -1101,6 +1134,7 @@ export default function GazaDonationScreen() {
           </View>
 
           {/* Amount Buttons */}
+          <Text style={styles.bottomSectionLabel}>Amount</Text>
           <View style={styles.bottomAmountRow}>
             {["10", "25", "50", "100"].map((v) => (
               <TouchableOpacity
@@ -1156,7 +1190,7 @@ export default function GazaDonationScreen() {
         </View>
       </Animated.View>
       )}
-    </View>
+    </Animated.View>
 
     <ReplaceOrRemoveModal
       visible={replaceModalVisible}
@@ -1824,36 +1858,75 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
 
-  /* BOTTOM DONATION CARD - fixed to bottom of screen */
+  /* BOTTOM DONATION CARD - fixed to bottom, modern card style with strong box shadow */
   bottomDonationCard: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 24,
     zIndex: 100,
   },
-  /* Closed State - minimal height, compact */
+  bottomDonationClosedWrapper: {},
+  bottomDonationClosedWrapperOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  /* Closed State - title row + amounts + donate */
   bottomDonationClosed: {
-    paddingHorizontal: 16,
-    paddingTop: 6,
-    paddingBottom: 0,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  bottomClosedTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  bottomClosedTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#111827",
+    fontFamily: "AlbertSans_700Bold",
+    letterSpacing: 0.2,
+  },
+  bottomExpandChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(36, 107, 225, 0.08)",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  bottomExpandChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#246BE1",
+    fontFamily: "AlbertSans_600SemiBold",
   },
   /* Aqeeqah closed: compact padding around button */
   bottomDonationClosedAqeeqah: {
-    paddingTop: 8,
+    paddingTop: 12,
     paddingBottom: 8,
   },
   /* Card when Aqeeqah closed only */
   bottomDonationCardAqeeqahOnly: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
   },
   bottomAqeeqahClosed: {
     paddingVertical: 4,
@@ -1881,14 +1954,14 @@ const styles = StyleSheet.create({
   },
   bottomAmountRowClosed: {
     flexDirection: "row",
-    gap: 6,
-    marginBottom: 4,
+    gap: 8,
+    marginBottom: 10,
   },
   bottomAmountButtonClosed: {
     flex: 1,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: "#fff",
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#F9FAFB",
     alignItems: "center",
     borderWidth: 1.5,
     borderColor: "#E5E7EB",
@@ -1898,9 +1971,9 @@ const styles = StyleSheet.create({
     borderColor: "#246BE1",
   },
   bottomAmountButtonTextClosed: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "600",
-    color: "#010D26",
+    color: "#374151",
     fontFamily: "AlbertSans_600SemiBold",
   },
   bottomAmountButtonTextClosedActive: {
@@ -1915,21 +1988,20 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   bottomDonateBtnClosed: {
-    flex: 1,
-    backgroundColor: "#FFD602",
-    paddingVertical: 10,
-    borderRadius: 10,
+    backgroundColor: "#246BE1",
+    paddingVertical: 12,
+    borderRadius: 14,
     alignItems: "center",
-    shadowColor: "#FFD602",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
+    shadowColor: "#246BE1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
     elevation: 4,
   },
   bottomDonateTextClosed: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
-    color: "#010D26",
+    color: "#FFFFFF",
     fontFamily: "AlbertSans_700Bold",
   },
   bottomExpandButton: {
@@ -1941,38 +2013,59 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
-  /* Expanded State - compact */
+  /* Expanded State - sheet-style panel */
   bottomDonationExpanded: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 6,
+    paddingHorizontal: 20,
+    paddingTop: 6,
+    paddingBottom: 12,
+  },
+  bottomExpandedHandle: {
+    alignSelf: "center",
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#E5E7EB",
+    marginBottom: 12,
   },
   bottomExpandedHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 16,
   },
   bottomExpandedTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "700",
-    color: "#010D26",
+    color: "#111827",
     fontFamily: "AlbertSans_700Bold",
+    letterSpacing: 0.2,
   },
   bottomCloseButton: {
-    padding: 4,
+    padding: 8,
+    marginRight: -8,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+  },
+  bottomSectionLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#9CA3AF",
+    fontFamily: "AlbertSans_600SemiBold",
+    marginBottom: 6,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
   bottomFrequencyRow: {
     flexDirection: "row",
-    gap: 6,
-    marginBottom: 6,
+    gap: 8,
+    marginBottom: 12,
   },
   bottomFrequencyButton: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: "#fff",
+    borderRadius: 12,
+    backgroundColor: "#F9FAFB",
     alignItems: "center",
     borderWidth: 1.5,
     borderColor: "#E5E7EB",
@@ -1994,14 +2087,14 @@ const styles = StyleSheet.create({
   },
   bottomAmountRow: {
     flexDirection: "row",
-    gap: 6,
-    marginBottom: 8,
+    gap: 8,
+    marginBottom: 12,
   },
   bottomAmountButton: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: "#fff",
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#F9FAFB",
     alignItems: "center",
     borderWidth: 1.5,
     borderColor: "#E5E7EB",
@@ -2011,9 +2104,9 @@ const styles = StyleSheet.create({
     borderColor: "#246BE1",
   },
   bottomAmountButtonText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "600",
-    color: "#010D26",
+    color: "#374151",
     fontFamily: "AlbertSans_600SemiBold",
   },
   bottomAmountButtonTextActive: {
@@ -2024,26 +2117,26 @@ const styles = StyleSheet.create({
   bottomCustomAmount: {
     borderWidth: 1.5,
     borderColor: "#E5E7EB",
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    marginBottom: 8,
+    backgroundColor: "#F9FAFB",
+    marginBottom: 14,
   },
   bottomCurrencyPrefix: {
-    fontSize: 14,
-    color: "#010D26",
+    fontSize: 15,
+    color: "#111827",
     fontWeight: "600",
     marginRight: 6,
     fontFamily: "AlbertSans_600SemiBold",
   },
   bottomCustomInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
-    color: "#010D26",
+    color: "#111827",
     fontFamily: "AlbertSans_600SemiBold",
   },
   bottomCurrency: {
@@ -2054,20 +2147,20 @@ const styles = StyleSheet.create({
     fontFamily: "AlbertSans_600SemiBold",
   },
   bottomDonateBtn: {
-    backgroundColor: "#FFD602",
-    paddingVertical: 10,
-    borderRadius: 10,
+    backgroundColor: "#246BE1",
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: "center",
-    shadowColor: "#FFD602",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
+    shadowColor: "#246BE1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
     elevation: 4,
   },
   bottomDonateText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
-    color: "#010D26",
+    color: "#FFFFFF",
     fontFamily: "AlbertSans_700Bold",
   },
 });

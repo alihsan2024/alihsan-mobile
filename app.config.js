@@ -22,6 +22,7 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "org.alihsan.mobile",
+      usesAppleSignIn: true,
       config: {
         googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
       },
@@ -60,7 +61,7 @@ module.exports = {
       bundler: "metro",
     },
     scheme: "alihsan",
-    plugins: ["expo-router", "expo-font", "expo-web-browser", "expo-secure-store"],
+    plugins: ["expo-router", "expo-font", "expo-web-browser", "expo-secure-store", "expo-apple-authentication"],
     extra: {
       router: {},
       eas: {

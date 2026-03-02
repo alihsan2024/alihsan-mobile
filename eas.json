@@ -8,9 +8,10 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL_DEV": "http://192.168.20.16:4001",
+        "EXPO_PUBLIC_API_URL_DEV": "http://192.168.20.14:4001",
         "EXPO_PUBLIC_STRIPE_KEY": "pk_test_5178emeJJ6oohcr5ljBoClAZ2tL10lPsY0XVNjPyhnogfrYN649N0EAt5B33Q0jf6QjvpOmqoOgmvmh8o0fn0BHvj00ULR40DFl",
-        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyAr-lr0NLXtT58Q53qE53uvLQU5u8wHa9Y"
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyAr-lr0NLXtT58Q53qE53uvLQU5u8wHa9Y",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "947398113266-ovii7lbmd5qn4o3hoai0tqbm6ujlmc6h.apps.googleusercontent.com"
       }
     },
     "preview": {
@@ -19,7 +20,8 @@
         "EXPO_PUBLIC_API_URL": "https://api.alihsan.org.au",
         "EXPO_PUBLIC_STRIPE_KEY": "pk_live_31h1ZzOVvmcroPOzhQfl4YxG",
         "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyAr-lr0NLXtT58Q53qE53uvLQU5u8wHa9Y",
-        "EXPO_PUBLIC_GOOGLE_MAPS_CLIENT_ID": "947398113266-ovii7lbmd5qn4o3hoai0tqbm6ujlmc6h.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_MAPS_CLIENT_ID": "947398113266-ovii7lbmd5qn4o3hoai0tqbm6ujlmc6h.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "947398113266-ovii7lbmd5qn4o3hoai0tqbm6ujlmc6h.apps.googleusercontent.com"
       }
     },
     "production": {
@@ -28,7 +30,8 @@
         "EXPO_PUBLIC_API_URL": "https://api.alihsan.org.au",
         "EXPO_PUBLIC_STRIPE_KEY": "pk_live_31h1ZzOVvmcroPOzhQfl4YxG",
         "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyAr-lr0NLXtT58Q53qE53uvLQU5u8wHa9Y",
-        "EXPO_PUBLIC_GOOGLE_MAPS_CLIENT_ID": "947398113266-ovii7lbmd5qn4o3hoai0tqbm6ujlmc6h.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_MAPS_CLIENT_ID": "947398113266-ovii7lbmd5qn4o3hoai0tqbm6ujlmc6h.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "947398113266-ovii7lbmd5qn4o3hoai0tqbm6ujlmc6h.apps.googleusercontent.com"
       }
     }
   },

@@ -71,10 +71,10 @@ export const DonationAppealModal: React.FC<DonationAppealModalProps> = ({
     }
   }, [visible]);
 
-  // ===== Donate Now → navigate to Gaza Ramadan 2026 campaign page =====
+  // ===== Donate Now → navigate to Gaza Ramadan 2026 page =====
   const handleDonate = () => {
     onClose();
-    router.push("/campaign/gaza-ramadan");
+    router.push("/(tabs)/gaza-ramadan");
   };
 
   return (

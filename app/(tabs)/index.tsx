@@ -527,7 +527,7 @@ export default function HomeScreen() {
             onPress={(item) => {
               switch (item.title) {
                 case "Food Packs":
-                  router.push("/campaign/ramadan");
+                  router.push("/(tabs)/ramadan");
                   break;
                 case "Sponsorship":
                   router.push("/orphans-list");

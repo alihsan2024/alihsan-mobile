@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Dimensions,
   TextInput,
   ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image as ExpoImage } from "expo-image";
@@ -69,6 +70,8 @@ export default function SupportCampaignsBanner({
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [pillsAtEnd, setPillsAtEnd] = useState(false);
+  const dropdownCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchInputRef = useRef<TextInput>(null);
 
   // Fetch all campaigns on mount
   useEffect(() => {
@@ -86,14 +89,18 @@ export default function SupportCampaignsBanner({
     loadCampaigns();
   }, []);
 
-  // Filter campaigns based on search query
+  // Filter campaigns based on search query (show results from 1 character for better discoverability)
   useEffect(() => {
-    if (searchQuery.trim().length >= 2) {
-      const filtered = allCampaigns.filter((campaign) =>
-        campaign.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        campaign.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    const query = searchQuery.trim();
+    if (query.length >= 1) {
+      const lower = query.toLowerCase();
+      const filtered = allCampaigns.filter(
+        (campaign) =>
+          campaign.name?.toLowerCase().includes(lower) ||
+          campaign.description?.toLowerCase().includes(lower) ||
+          (campaign.slug && campaign.slug.toLowerCase().includes(lower))
       );
-      setSearchResults(filtered.slice(0, 5)); // Limit to 5 results
+      setSearchResults(filtered.slice(0, 20));
       setShowDropdown(true);
     } else {
       setSearchResults([]);
@@ -101,18 +108,56 @@ export default function SupportCampaignsBanner({
     }
   }, [searchQuery, allCampaigns]);
 
+  useEffect(() => {
+    return () => {
+      if (dropdownCloseTimerRef.current) clearTimeout(dropdownCloseTimerRef.current);
+    };
+  }, []);
+
   const handlePillPress = (campaign: (typeof campaigns)[number]) => {
     if (campaign.navigateOnly) {
-      router.push(`/campaign/${campaign.slug}`);
+      if (campaign.slug === "ramadan") {
+        router.push("/(tabs)/ramadan");
+      } else if (campaign.slug === "gaza-ramadan") {
+        router.push("/(tabs)/gaza-ramadan");
+      } else {
+        router.push(`/campaign/${campaign.slug}`);
+      }
     } else {
       setSelectedCampaign(campaign.slug);
     }
   };
 
   const handleSearchResultPress = (campaign: any) => {
+    if (dropdownCloseTimerRef.current) {
+      clearTimeout(dropdownCloseTimerRef.current);
+      dropdownCloseTimerRef.current = null;
+    }
     setSearchQuery("");
     setShowDropdown(false);
-    router.push(`/campaign/${campaign.slug}`);
+    Keyboard.dismiss();
+    if (campaign.slug === "gaza-ramadan") {
+      router.push("/(tabs)/gaza-ramadan");
+    } else if (campaign.slug === "ramadan") {
+      router.push("/(tabs)/ramadan");
+    } else {
+      router.push(`/campaign/${campaign.slug}`);
+    }
+  };
+
+  const handleSearchBlur = () => {
+    dropdownCloseTimerRef.current = setTimeout(() => {
+      setShowDropdown(false);
+      dropdownCloseTimerRef.current = null;
+    }, 350);
+  };
+
+  const handleSearchFocus = () => {
+    if (dropdownCloseTimerRef.current) {
+      clearTimeout(dropdownCloseTimerRef.current);
+      dropdownCloseTimerRef.current = null;
+    }
+    if (searchQuery.trim().length >= 1) setShowDropdown(true);
   };
 
   const handleDonate = () => {
@@ -148,83 +193,92 @@ export default function SupportCampaignsBanner({
           end={{ x: 1, y: 0 }}
           style={[styles.gradient, { paddingTop: (topInset || 0) + 24 }]}
         >
-          {/* Search Bar and Notification */}
+          {/* Search Bar - accessible, supports 1+ char search */}
           <View style={styles.headerBar}>
             <View style={styles.searchWrapper}>
               <View style={styles.searchContainer}>
-                <Feather name="search" size={16} color="#fff" />
+                <Feather name="search" size={18} color="#fff" accessibilityLabel="Search icon" />
                 <TextInput
-                  placeholder="Search campaigns..."
-                  placeholderTextColor="rgba(255,255,255,0.6)"
+                  ref={searchInputRef}
+                  placeholder="Search campaigns by name..."
+                  placeholderTextColor="rgba(255,255,255,0.7)"
                   style={styles.searchInput}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
-                  onFocus={() => {
-                    if (searchQuery.trim().length >= 2) {
-                      setShowDropdown(true);
-                    }
-                  }}
-                  onBlur={() => {
-                    // Delay to allow click on dropdown item
-                    setTimeout(() => setShowDropdown(false), 200);
-                  }}
+                  onFocus={handleSearchFocus}
+                  onBlur={handleSearchBlur}
+                  accessibilityLabel="Search campaigns"
+                  accessibilityHint="Type to find a campaign. Results appear below."
+                  returnKeyType="search"
                 />
                 {searchQuery.length > 0 && (
                   <TouchableOpacity
                     onPress={() => {
                       setSearchQuery("");
                       setShowDropdown(false);
+                      searchInputRef.current?.focus();
                     }}
                     style={styles.clearButton}
+                    accessibilityLabel="Clear search"
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   >
-                    <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.8)" />
+                    <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.9)" />
                   </TouchableOpacity>
                 )}
               </View>
             </View>
           </View>
 
-          {/* Dropdown - rendered as sibling to appear on top */}
+          {/* Dropdown - ScrollView (not FlatList) to avoid nesting inside parent ScrollView */}
           {showDropdown && searchResults.length > 0 && (
             <View style={[styles.dropdown, { top: (topInset || 0) + 24 + 44 + 8 }]}>
+              <View style={styles.dropdownHeader}>
+                <Text style={styles.dropdownHeaderText}>
+                  {searchResults.length} campaign{searchResults.length !== 1 ? "s" : ""} found
+                </Text>
+              </View>
               <ScrollView
                 style={styles.dropdownScrollView}
-                showsVerticalScrollIndicator={false}
-                nestedScrollEnabled={true}
+                contentContainerStyle={styles.dropdownListContent}
+                showsVerticalScrollIndicator={true}
                 keyboardShouldPersistTaps="handled"
                 keyboardDismissMode="on-drag"
+                bounces={true}
+                nestedScrollEnabled={true}
               >
                 {searchResults.map((item, index) => (
-                  <TouchableOpacity
-                    key={item.id?.toString() || item.slug || index.toString()}
-                    style={[
-                      styles.dropdownItem,
-                      index === searchResults.length - 1 && styles.dropdownItemLast,
-                    ]}
-                    onPress={() => handleSearchResultPress(item)}
-                    activeOpacity={0.8}
-                  >
-                    <ExpoImage
-                      source={
-                        item.coverImage || item.cover_image
-                          ? { uri: item.coverImage || item.cover_image }
-                          : require("../../assets/card1.png")
-                      }
-                      style={styles.dropdownItemImage}
-                      contentFit="cover"
-                    />
-                    <View style={styles.dropdownItemContent}>
-                      <Text style={styles.dropdownItemText} numberOfLines={2}>
-                        {item.name}
-                      </Text>
-                      {item.description && (
-                        <Text style={styles.dropdownItemDescription} numberOfLines={1}>
-                          {item.description.replace(/<[^>]*>/g, "").substring(0, 60)}...
+                  <React.Fragment key={item.id?.toString() ?? item.slug ?? index}>
+                    {index > 0 && <View style={styles.dropdownItemSeparator} />}
+                    <TouchableOpacity
+                      style={styles.dropdownItem}
+                      onPress={() => handleSearchResultPress(item)}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open ${item.name}`}
+                    >
+                      <ExpoImage
+                        source={
+                          item.coverImage || item.cover_image
+                            ? { uri: item.coverImage || item.cover_image }
+                            : require("../../assets/card1.png")
+                        }
+                        style={styles.dropdownItemImage}
+                        contentFit="cover"
+                      />
+                      <View style={styles.dropdownItemContent}>
+                        <Text style={styles.dropdownItemText} numberOfLines={2}>
+                          {item.name}
                         </Text>
-                      )}
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color="#6B7280" />
-                  </TouchableOpacity>
+                        {item.description ? (
+                          <Text style={styles.dropdownItemDescription} numberOfLines={1}>
+                            {item.description.replace(/<[^>]*>/g, "").trim().substring(0, 50)}
+                            {(item.description.replace(/<[^>]*>/g, "").trim().length > 50) ? "…" : ""}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+                    </TouchableOpacity>
+                  </React.Fragment>
                 ))}
               </ScrollView>
             </View>
@@ -654,69 +708,98 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     flex: 1,
-    height: 44,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
+    gap: 10,
+    paddingHorizontal: 14,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.5)",
+    backgroundColor: "rgba(255,255,255,0.55)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
   },
   searchInput: {
     flex: 1,
     color: "#fff",
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "500",
     fontFamily: "AlbertSans_500Medium",
+    minHeight: 44,
+    paddingVertical: 10,
   },
   clearButton: {
-    padding: 4,
+    padding: 8,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   dropdown: {
     position: "absolute",
     left: 16,
     right: 16,
     backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 14,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 30,
-    maxHeight: 400,
+    shadowOpacity: 0.28,
+    shadowRadius: 24,
+    elevation: 28,
+    height: 320,
     overflow: "hidden",
     zIndex: 99999,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "rgba(0,0,0,0.06)",
+  },
+  dropdownHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    backgroundColor: "#FAFAFA",
+  },
+  dropdownHeaderText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6B7280",
+    fontFamily: "AlbertSans_600SemiBold",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   dropdownScrollView: {
-    maxHeight: 400,
+    flex: 1,
+  },
+  dropdownListContent: {
+    paddingVertical: 8,
+    paddingBottom: 16,
+  },
+  dropdownItemSeparator: {
+    height: 1,
+    backgroundColor: "#F3F4F6",
+    marginHorizontal: 16,
   },
   dropdownItem: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    minHeight: 56,
     gap: 12,
   },
-  dropdownItemLast: {
-    borderBottomWidth: 0,
-  },
   dropdownItemImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 10,
     backgroundColor: "#F3F4F6",
   },
   dropdownItemContent: {
     flex: 1,
-    gap: 4,
+    justifyContent: "center",
+    minHeight: 48,
   },
   dropdownItemText: {
     fontSize: 15,
-    color: "#010D26",
+    color: "#111827",
     fontWeight: "600",
     fontFamily: "AlbertSans_600SemiBold",
     lineHeight: 20,
@@ -727,5 +810,6 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     fontFamily: "AlbertSans_400Regular",
     lineHeight: 16,
+    marginTop: 2,
   },
 });
