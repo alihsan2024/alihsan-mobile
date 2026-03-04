@@ -1,4 +1,10 @@
-import React, { useEffect, useCallback, useState, useMemo, useRef } from "react";
+import React, {
+  useEffect,
+  useCallback,
+  useState,
+  useMemo,
+  useRef,
+} from "react";
 import {
   View,
   Text,
@@ -23,14 +29,23 @@ import {
   clearCache,
   setProfileDetails,
 } from "@/store/reduxSlice/profileStatisticsSlice";
-import { getProfile, logoutUser } from "@/store/reduxSlice/authenticationSlice";
+import {
+  deleteAccount,
+  getProfile,
+  logoutUser,
+} from "@/store/reduxSlice/authenticationSlice";
 import LogoutConfirmationModal from "@/components/ui/Modals/LogoutConfirmationModal";
 import { getPaymentsList } from "@/store/reduxSlice/paymentDetailsSlice";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useFocusEffect } from "@react-navigation/native";
+import { useAuth } from "@/context/AuthContext";
+import { emptyBasket } from "@/store/reduxSlice/basketSlice";
 
 // Enable LayoutAnimation on Android
-if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
@@ -80,21 +95,21 @@ export default function ProfileScreen() {
   const user = useSelector((state: any) => state.authentication.user);
   const authUser = useSelector((state: any) => state.authentication.auth);
   const profileDetails = useSelector(
-    (state: any) => state.profileStatistics.profileDetails
+    (state: any) => state.profileStatistics.profileDetails,
   );
   const statistics = useSelector(
-    (state: any) => state.profileStatistics.statistics
+    (state: any) => state.profileStatistics.statistics,
   );
   const recentDonations = useSelector(
-    (state: any) => state.profileStatistics.recentDonations
+    (state: any) => state.profileStatistics.recentDonations,
   );
   const loading = useSelector((state: any) => state.profileStatistics.loading);
   const error = useSelector((state: any) => state.profileStatistics.error);
   const paymentRows = useSelector(
-    (state: any) => state.paymentDetails.paymentList.rows
+    (state: any) => state.paymentDetails.paymentList.rows,
   );
   const paymentsLoading = useSelector(
-    (state: any) => state.paymentDetails.paymentList.loading
+    (state: any) => state.paymentDetails.paymentList.loading,
   );
 
   const isAuthenticated = !!user || !!authUser;
@@ -102,7 +117,7 @@ export default function ProfileScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedOrders, setExpandedOrders] = useState<Set<string | number>>(
-    new Set()
+    new Set(),
   );
   const scrollViewRef = useRef<ScrollView>(null);
   const notLoggedInScrollViewRef = useRef<ScrollView>(null);
@@ -127,7 +142,7 @@ export default function ProfileScreen() {
           page: "1",
           fromdate: farPastDate,
           limit: 50, // Fetch more to account for grouping by orderId
-        })
+        }),
       );
     }
   }, [isAuthenticated, dispatch, appDispatch]);
@@ -151,7 +166,7 @@ export default function ProfileScreen() {
               page: "1",
               fromdate: new Date(2000, 0, 1).getTime().toString(),
               limit: 50,
-            })
+            }),
           ),
         ]).finally(() => {
           setRefreshing(false);
@@ -164,7 +179,7 @@ export default function ProfileScreen() {
     useCallback(() => {
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
       notLoggedInScrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    }, [])
+    }, []),
   );
 
   const groupedOrders = useMemo(() => {
@@ -179,13 +194,15 @@ export default function ProfileScreen() {
     > = {};
 
     // Use payments from getPaymentsList (includes orderId) instead of recentDonations
-    const paymentsToGroup = paymentRows && Array.isArray(paymentRows) ? paymentRows : [];
+    const paymentsToGroup =
+      paymentRows && Array.isArray(paymentRows) ? paymentRows : [];
 
     // Helper function to check if payment is a processing fee
     const isProcessingFee = (payment: any) => {
       const notes = payment?.notes || payment?.Donation?.notes || "";
       const campaignId = payment?.campaignId || payment?.Campaign?.id;
-      const donationItem = payment?.donationItem || payment?.Donation?.donationItem || "";
+      const donationItem =
+        payment?.donationItem || payment?.Donation?.donationItem || "";
       return (
         notes.toLowerCase().includes("processing fee") ||
         campaignId === 259 ||
@@ -197,13 +214,13 @@ export default function ProfileScreen() {
     paymentsToGroup.forEach((payment: any) => {
       // Get orderId from Donation object (payments API structure)
       const orderId = payment?.Donation?.orderId || payment?.orderId;
-      
+
       // Only group by orderId - skip payments without orderId
       if (!orderId) {
         console.warn("Payment missing orderId, skipping:", payment);
         return;
       }
-      
+
       const date = payment?.updatedAt || payment?.createdAt;
       const isFee = isProcessingFee(payment);
 
@@ -232,7 +249,7 @@ export default function ProfileScreen() {
 
     const sorted = Object.values(grouped).sort(
       (a, b) =>
-        new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()
+        new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime(),
     );
     // Return only top 5 orders for profile page preview
     return sorted.slice(0, 5);
@@ -293,6 +310,27 @@ export default function ProfileScreen() {
     }
   };
 
+  // const handleDeleteAccount = async () => {
+  //   try {
+  //     dispatch(emptyBasket());
+  //     await deleteAccount(authUser.id);
+  //     await logout();
+
+  //     router.replace("/(tabs)/");
+  //   } catch (error) {
+  //     console.error("Delete account failed:", error);
+  //   }
+  // };
+  const handleDeleteAccount = async () => {
+    try {
+      await appDispatch(deleteAccount(authUser.id)).unwrap();
+
+      router.replace("/(tabs)/");
+    } catch (error) {
+      console.error("Delete account failed:", error);
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -313,12 +351,17 @@ export default function ProfileScreen() {
               style={styles.authCardTopSection}
             >
               <View style={styles.welcomeIconContainer}>
-                <Ionicons name="person-circle-outline" size={48} color="#246BE1" />
+                <Ionicons
+                  name="person-circle-outline"
+                  size={48}
+                  color="#246BE1"
+                />
               </View>
               <Text style={styles.guthenText}>Welcome</Text>
               <Text style={styles.authTitle}>Join Our Community</Text>
               <Text style={styles.authSubtitle}>
-                Sign in to access your profile, track your donations, and make a lasting impact.
+                Sign in to access your profile, track your donations, and make a
+                lasting impact.
               </Text>
             </LinearGradient>
 
@@ -341,7 +384,9 @@ export default function ProfileScreen() {
                 activeOpacity={0.8}
               >
                 <Ionicons name="person-add-outline" size={18} color="#010D26" />
-                <Text style={styles.authSecondaryButtonText}>Create Account</Text>
+                <Text style={styles.authSecondaryButtonText}>
+                  Create Account
+                </Text>
                 <Ionicons name="chevron-forward" size={16} color="#010D26" />
               </TouchableOpacity>
             </View>
@@ -379,7 +424,8 @@ export default function ProfileScreen() {
                 <View style={styles.featureContent}>
                   <Text style={styles.featureTitle}>Recurring Donations</Text>
                   <Text style={styles.featureDescription}>
-                    Set up monthly or weekly donations to support causes you care about
+                    Set up monthly or weekly donations to support causes you
+                    care about
                   </Text>
                 </View>
               </View>
@@ -389,7 +435,11 @@ export default function ProfileScreen() {
                   colors={["#EFF6FF", "#F0F9FF"]}
                   style={styles.featureIconGradient}
                 >
-                  <Ionicons name="document-text-outline" size={22} color="#246BE1" />
+                  <Ionicons
+                    name="document-text-outline"
+                    size={22}
+                    color="#246BE1"
+                  />
                 </LinearGradient>
                 <View style={styles.featureContent}>
                   <Text style={styles.featureTitle}>Download Invoices</Text>
@@ -404,7 +454,11 @@ export default function ProfileScreen() {
                   colors={["#EFF6FF", "#F0F9FF"]}
                   style={styles.featureIconGradient}
                 >
-                  <Ionicons name="notifications-outline" size={22} color="#246BE1" />
+                  <Ionicons
+                    name="notifications-outline"
+                    size={22}
+                    color="#246BE1"
+                  />
                 </LinearGradient>
                 <View style={styles.featureContent}>
                   <Text style={styles.featureTitle}>Project Updates</Text>
@@ -446,343 +500,411 @@ export default function ProfileScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-      <View style={styles.scrollContentInner}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.push("/(tabs)/")}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="chevron-back" size={22} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity
-          style={styles.signOutButton}
-          onPress={handleSignOutPress}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="log-out-outline" size={20} color="#DC2626" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Donation Summary Card - Credit Card Style */}
-      <View style={styles.creditCardContainer}>
-        <LinearGradient
-          colors={["#5089E7", "#2161CD"]}
-          style={styles.creditCard}
-        >
-          {/* Card Top with Logo */}
-          <View style={styles.cardTop}>
-            <Image
-              source={require("../../assets/logo-white.png")}
-              style={styles.cardLogo}
-              resizeMode="contain"
-            />
-            <View style={styles.cardPattern}>
-              <View style={styles.cardDot} />
-              <View style={styles.cardDot} />
-              <View style={styles.cardDot} />
-              <View style={styles.cardDot} />
-            </View>
-          </View>
-
-          {/* Card Content */}
-          <View style={styles.cardContent}>
-            <View style={styles.cardContentLeft}>
-              <Text style={styles.cardLabel}>Total Donation</Text>
-            </View>
-            <View style={styles.cardContentRight}>
-              {loading ? (
-                <ActivityIndicator size="small" color="#FFF" />
-              ) : (
-                <Text style={styles.cardAmount}>
-                  {formatCurrency(statistics.total || 0)}
-                </Text>
-              )}
-            </View>
-          </View>
-
-          {/* Card Footer with Stats */}
-          <View style={styles.cardFooter}>
-            {[
-              {
-                icon: "hand-left-outline",
-                label: "Zakat",
-                value: statistics.zakat || 0,
-              },
-              {
-                icon: "wallet-outline",
-                label: "Sadaqah",
-                value: statistics.sadaqah || 0,
-              },
-              {
-                icon: "people-outline",
-                label: "Orphan",
-                value: statistics.orphan || 0,
-              },
-            ].map((item, index) => (
-              <View key={index} style={styles.cardStatItem}>
-                <View style={styles.cardStatIcon}>
-                  <Ionicons name={item.icon as any} size={14} color="#FFD602" />
-                </View>
-                {loading ? (
-                  <ActivityIndicator size="small" color="#FFF" />
-                ) : (
-                  <Text style={styles.cardStatValue}>
-                    {formatCurrency(item.value)}
-                  </Text>
-                )}
-                <Text style={styles.cardStatLabel}>{item.label}</Text>
-              </View>
-            ))}
-          </View>
-        </LinearGradient>
-      </View>
-
-      {/* Profile */}
-      <View style={styles.profileRow}>
-        <Image
-          source={{
-            uri: "https://static.vecteezy.com/system/resources/thumbnails/005/544/718/small/profile-icon-design-free-vector.jpg",
-          }}
-          style={styles.avatar}
-          contentFit="cover"
-        />
-        <View>
-          <Text style={styles.greeting}>{getGreeting()}</Text>
-          <Text style={styles.subGreeting}>
-            {statistics.total > 0
-              ? `Your ${new Date().getFullYear()} impact is amazing.`
-              : "Start making a difference today."}
-          </Text>
-        </View>
-      </View>
-
-      {/* Error Message */}
-      {error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => dispatch(fetchProfileData(5))}
-          >
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Payment History Section */}
-      <View style={styles.paymentHistorySection}>
-        <View style={styles.paymentHistoryHeader}>
-          <Text style={styles.paymentHistoryTitle}>Payment History</Text>
-          <TouchableOpacity
-            style={styles.seeAllButton}
-            onPress={() => router.push("/(tabs)/one-time-user-donations")}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.seeAllText}>See all</Text>
-            <Ionicons name="chevron-forward" size={14} color="#2161CD" />
-          </TouchableOpacity>
-        </View>
-
-      {(loading || paymentsLoading) && groupedOrders.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#2161CD" />
-          <Text style={styles.loadingText}>Loading donations...</Text>
-        </View>
-      ) : groupedOrders.length > 0 ? (
-        <View style={styles.orderList}>
-        {groupedOrders.map((order, index) => {
-          const isExpanded = expandedOrders.has(order.orderId);
-          // Helper function to check if payment is a processing fee
-          const isProcessingFee = (item: any) => {
-            const notes = item?.notes || item?.Donation?.notes || "";
-            const campaignId = item?.campaignId || item?.Campaign?.id;
-            const donationItem = item?.donationItem || item?.Donation?.donationItem || "";
-            return (
-              notes.toLowerCase().includes("processing fee") ||
-              campaignId === 259 ||
-              donationItem.toLowerCase().includes("processing fee") ||
-              donationItem.toLowerCase().includes("admin fee")
-            );
-          };
-          // Filter out processing fee items and get the first non-processing-fee item
-          const nonProcessingFeeItems = order.items.filter((item: any) => !isProcessingFee(item));
-          const primaryItem = nonProcessingFeeItems[0] || order.items[0];
-          
-          // Get unique campaigns (excluding processing fees)
-          const uniqueCampaigns = new Map<string, number>();
-          nonProcessingFeeItems.forEach((item: any) => {
-            const campaignName = item?.Campaign?.name
-              ? item.Campaign.name
-              : item?.orphan_id
-              ? "Orphan Sponsorship"
-              : "Donation";
-            uniqueCampaigns.set(campaignName, (uniqueCampaigns.get(campaignName) || 0) + 1);
-          });
-          const campaignCount = uniqueCampaigns.size;
-          const totalItems = nonProcessingFeeItems.length;
-          
-          const primaryCampaignName =
-            primaryItem?.Campaign?.name
-              ? primaryItem.Campaign.name
-              : primaryItem?.orphan_id
-              ? "Orphan Sponsorship"
-              : "Donation";
-          
-          // Build campaign name with count
-          const otherCount = campaignCount > 1 ? campaignCount - 1 : 0;
-          
-          const coverImage =
-            (primaryItem?.Campaign as any)?.coverImage ||
-            "https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/1708467963799-alihsan-coverImage.png";
-          const orderStatus =
-            primaryItem?.status ||
-            primaryItem?.Donation?.status ||
-            "COMPLETED";
-          const statusUpper = String(orderStatus).toUpperCase();
-          const statusLabel =
-            statusUpper === "COMPLETED" ? "Completed" : statusUpper;
-          const statusStyle = getStatusBadgeStyle(orderStatus);
-          const amountLabel = `AUD $${Number(order.totalAmount).toFixed(2)}`;
-
-          return (
-            <View key={order.orderId || index} style={styles.orderCard}>
-              <TouchableOpacity
-                style={styles.orderHeader}
-                onPress={() => toggleOrderExpansion(order.orderId)}
-                activeOpacity={0.7}
-              >
-                <Image source={{ uri: coverImage }} style={styles.orderImage} />
-                <View style={styles.orderInfo}>
-                  <Text style={styles.orderTitle} numberOfLines={1}>
-                    {primaryCampaignName}
-                    {otherCount > 0 && (
-                      <Text style={styles.orderOtherCampaigns}> +{otherCount}</Text>
-                    )}
-                  </Text>
-                  <Text style={styles.orderMetaText}>
-                    {formatDate(order.paymentDate)} · {amountLabel}
-                  </Text>
-                </View>
-                <View style={styles.orderRight}>
-                  <View style={[styles.orderStatusBadge, { backgroundColor: statusStyle.backgroundColor }]}>
-                    <Text style={[styles.orderStatusText, { color: statusStyle.color }]}>{statusLabel}</Text>
-                  </View>
-                  <Ionicons
-                    name={isExpanded ? "chevron-up" : "chevron-down"}
-                    size={18}
-                    color="#9CA3AF"
-                  />
-                </View>
-              </TouchableOpacity>
-
-              {isExpanded && (
-                <View style={styles.orderDetails}>
-                  <View style={styles.orderDetailsHeader}>
-                    <Text style={styles.orderDetailsTitle}>Order #{order.orderId}</Text>
-                  </View>
-                  <View style={styles.orderDetailsList}>
-                    {order.items.map((item: any, itemIndex: number) => {
-                      const isFee = isProcessingFee(item);
-                      return (
-                        <View
-                          key={item.id}
-                          style={[
-                            styles.paymentRow,
-                            itemIndex === order.items.length - 1 && styles.paymentRowLast,
-                          ]}
-                        >
-                          <Text style={[styles.paymentName, isFee && styles.paymentNameFee]} numberOfLines={1}>
-                            {isFee
-                              ? "Processing fee"
-                              : item?.Campaign?.name
-                              ? item.Campaign.name
-                              : item?.orphan_id
-                              ? "Orphan Sponsorship"
-                              : "Donation"}
-                          </Text>
-                          <Text style={[styles.paymentTotal, isFee && styles.paymentTotalFee]}>
-                            ${Number(item?.total || item?.Donation?.total || 0).toFixed(2)}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                </View>
-              )}
-            </View>
-          );
-        })}
-        </View>
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No donations yet</Text>
-          <Text style={styles.emptySubText}>
-            Start making a difference by donating to a cause
-          </Text>
-          <TouchableOpacity
-            style={styles.donateButton}
-            onPress={() => router.push("/(tabs)/campaigns")}
-          >
-            <Text style={styles.donateButtonText}>Browse Campaigns</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      </View>
-
-      {/* Profile Details Section */}
-      <View style={styles.profileDetailsSection}>
-        <Text style={styles.profileDetailsSectionTitle}>Profile Details</Text>
-        <View style={styles.detailsCard}>
-          <View
-            style={[
-              styles.detailRow,
-              !profileDetails?.phone && !(profileDetails?.address || profileDetails?.city) && styles.detailRowLast,
-            ]}
-          >
-            <Text style={styles.detailLabel}>Email</Text>
-            <Text style={styles.detailValue} numberOfLines={1}>
-              {profileDetails?.email || currentUser?.email || "—"}
-            </Text>
-          </View>
-          {profileDetails?.phone ? (
-            <View
-              style={[
-                styles.detailRow,
-                !(profileDetails?.address || profileDetails?.city) && styles.detailRowLast,
-              ]}
+        <View style={styles.scrollContentInner}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => router.push("/(tabs)/")}
+              activeOpacity={0.7}
             >
-              <Text style={styles.detailLabel}>Phone</Text>
-              <Text style={styles.detailValue}>{profileDetails.phone}</Text>
-            </View>
-          ) : null}
-          {(profileDetails?.address || profileDetails?.city) ? (
-            <View style={[styles.detailRow, styles.detailRowLast]}>
-              <Text style={styles.detailLabel}>Address</Text>
-              <Text style={styles.detailValue} numberOfLines={2}>
+              <Ionicons name="chevron-back" size={22} color="#333" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Profile</Text>
+            <TouchableOpacity
+              style={styles.signOutButton}
+              onPress={handleSignOutPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Donation Summary Card - Credit Card Style */}
+          <View style={styles.creditCardContainer}>
+            <LinearGradient
+              colors={["#5089E7", "#2161CD"]}
+              style={styles.creditCard}
+            >
+              {/* Card Top with Logo */}
+              <View style={styles.cardTop}>
+                <Image
+                  source={require("../../assets/logo-white.png")}
+                  style={styles.cardLogo}
+                  resizeMode="contain"
+                />
+                <View style={styles.cardPattern}>
+                  <View style={styles.cardDot} />
+                  <View style={styles.cardDot} />
+                  <View style={styles.cardDot} />
+                  <View style={styles.cardDot} />
+                </View>
+              </View>
+
+              {/* Card Content */}
+              <View style={styles.cardContent}>
+                <View style={styles.cardContentLeft}>
+                  <Text style={styles.cardLabel}>Total Donation</Text>
+                </View>
+                <View style={styles.cardContentRight}>
+                  {loading ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Text style={styles.cardAmount}>
+                      {formatCurrency(statistics.total || 0)}
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              {/* Card Footer with Stats */}
+              <View style={styles.cardFooter}>
                 {[
-                  profileDetails?.address,
-                  profileDetails?.city,
-                  profileDetails?.state,
-                  profileDetails?.country,
-                ]
-                  .filter(Boolean)
-                  .join(", ") || "—"}
+                  {
+                    icon: "hand-left-outline",
+                    label: "Zakat",
+                    value: statistics.zakat || 0,
+                  },
+                  {
+                    icon: "wallet-outline",
+                    label: "Sadaqah",
+                    value: statistics.sadaqah || 0,
+                  },
+                  {
+                    icon: "people-outline",
+                    label: "Orphan",
+                    value: statistics.orphan || 0,
+                  },
+                ].map((item, index) => (
+                  <View key={index} style={styles.cardStatItem}>
+                    <View style={styles.cardStatIcon}>
+                      <Ionicons
+                        name={item.icon as any}
+                        size={14}
+                        color="#FFD602"
+                      />
+                    </View>
+                    {loading ? (
+                      <ActivityIndicator size="small" color="#FFF" />
+                    ) : (
+                      <Text style={styles.cardStatValue}>
+                        {formatCurrency(item.value)}
+                      </Text>
+                    )}
+                    <Text style={styles.cardStatLabel}>{item.label}</Text>
+                  </View>
+                ))}
+              </View>
+            </LinearGradient>
+          </View>
+
+          {/* Profile */}
+          <View style={styles.profileRow}>
+            <Image
+              source={{
+                uri: "https://static.vecteezy.com/system/resources/thumbnails/005/544/718/small/profile-icon-design-free-vector.jpg",
+              }}
+              style={styles.avatar}
+              contentFit="cover"
+            />
+            <View>
+              <Text style={styles.greeting}>{getGreeting()}</Text>
+              <Text style={styles.subGreeting}>
+                {statistics.total > 0
+                  ? `Your ${new Date().getFullYear()} impact is amazing.`
+                  : "Start making a difference today."}
               </Text>
             </View>
-          ) : null}
-        </View>
-      </View>
+          </View>
 
-      {/* Logout Confirmation Modal */}
-      <LogoutConfirmationModal
-        visible={showLogoutModal}
-        onCancel={() => setShowLogoutModal(false)}
-        onConfirm={handleConfirmSignOut}
-      />
-      </View>
+          {/* Error Message */}
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => dispatch(fetchProfileData(5))}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Payment History Section */}
+          <View style={styles.paymentHistorySection}>
+            <View style={styles.paymentHistoryHeader}>
+              <Text style={styles.paymentHistoryTitle}>Payment History</Text>
+              <TouchableOpacity
+                style={styles.seeAllButton}
+                onPress={() => router.push("/(tabs)/one-time-user-donations")}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.seeAllText}>See all</Text>
+                <Ionicons name="chevron-forward" size={14} color="#2161CD" />
+              </TouchableOpacity>
+            </View>
+
+            {(loading || paymentsLoading) && groupedOrders.length === 0 ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#2161CD" />
+                <Text style={styles.loadingText}>Loading donations...</Text>
+              </View>
+            ) : groupedOrders.length > 0 ? (
+              <View style={styles.orderList}>
+                {groupedOrders.map((order, index) => {
+                  const isExpanded = expandedOrders.has(order.orderId);
+                  // Helper function to check if payment is a processing fee
+                  const isProcessingFee = (item: any) => {
+                    const notes = item?.notes || item?.Donation?.notes || "";
+                    const campaignId = item?.campaignId || item?.Campaign?.id;
+                    const donationItem =
+                      item?.donationItem || item?.Donation?.donationItem || "";
+                    return (
+                      notes.toLowerCase().includes("processing fee") ||
+                      campaignId === 259 ||
+                      donationItem.toLowerCase().includes("processing fee") ||
+                      donationItem.toLowerCase().includes("admin fee")
+                    );
+                  };
+                  // Filter out processing fee items and get the first non-processing-fee item
+                  const nonProcessingFeeItems = order.items.filter(
+                    (item: any) => !isProcessingFee(item),
+                  );
+                  const primaryItem =
+                    nonProcessingFeeItems[0] || order.items[0];
+
+                  // Get unique campaigns (excluding processing fees)
+                  const uniqueCampaigns = new Map<string, number>();
+                  nonProcessingFeeItems.forEach((item: any) => {
+                    const campaignName = item?.Campaign?.name
+                      ? item.Campaign.name
+                      : item?.orphan_id
+                        ? "Orphan Sponsorship"
+                        : "Donation";
+                    uniqueCampaigns.set(
+                      campaignName,
+                      (uniqueCampaigns.get(campaignName) || 0) + 1,
+                    );
+                  });
+                  const campaignCount = uniqueCampaigns.size;
+                  const totalItems = nonProcessingFeeItems.length;
+
+                  const primaryCampaignName = primaryItem?.Campaign?.name
+                    ? primaryItem.Campaign.name
+                    : primaryItem?.orphan_id
+                      ? "Orphan Sponsorship"
+                      : "Donation";
+
+                  // Build campaign name with count
+                  const otherCount = campaignCount > 1 ? campaignCount - 1 : 0;
+
+                  const coverImage =
+                    (primaryItem?.Campaign as any)?.coverImage ||
+                    "https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/1708467963799-alihsan-coverImage.png";
+                  const orderStatus =
+                    primaryItem?.status ||
+                    primaryItem?.Donation?.status ||
+                    "COMPLETED";
+                  const statusUpper = String(orderStatus).toUpperCase();
+                  const statusLabel =
+                    statusUpper === "COMPLETED" ? "Completed" : statusUpper;
+                  const statusStyle = getStatusBadgeStyle(orderStatus);
+                  const amountLabel = `AUD $${Number(order.totalAmount).toFixed(2)}`;
+
+                  return (
+                    <View key={order.orderId || index} style={styles.orderCard}>
+                      <TouchableOpacity
+                        style={styles.orderHeader}
+                        onPress={() => toggleOrderExpansion(order.orderId)}
+                        activeOpacity={0.7}
+                      >
+                        <Image
+                          source={{ uri: coverImage }}
+                          style={styles.orderImage}
+                        />
+                        <View style={styles.orderInfo}>
+                          <Text style={styles.orderTitle} numberOfLines={1}>
+                            {primaryCampaignName}
+                            {otherCount > 0 && (
+                              <Text style={styles.orderOtherCampaigns}>
+                                {" "}
+                                +{otherCount}
+                              </Text>
+                            )}
+                          </Text>
+                          <Text style={styles.orderMetaText}>
+                            {formatDate(order.paymentDate)} · {amountLabel}
+                          </Text>
+                        </View>
+                        <View style={styles.orderRight}>
+                          <View
+                            style={[
+                              styles.orderStatusBadge,
+                              { backgroundColor: statusStyle.backgroundColor },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.orderStatusText,
+                                { color: statusStyle.color },
+                              ]}
+                            >
+                              {statusLabel}
+                            </Text>
+                          </View>
+                          <Ionicons
+                            name={isExpanded ? "chevron-up" : "chevron-down"}
+                            size={18}
+                            color="#9CA3AF"
+                          />
+                        </View>
+                      </TouchableOpacity>
+
+                      {isExpanded && (
+                        <View style={styles.orderDetails}>
+                          <View style={styles.orderDetailsHeader}>
+                            <Text style={styles.orderDetailsTitle}>
+                              Order #{order.orderId}
+                            </Text>
+                          </View>
+                          <View style={styles.orderDetailsList}>
+                            {order.items.map((item: any, itemIndex: number) => {
+                              const isFee = isProcessingFee(item);
+                              return (
+                                <View
+                                  key={item.id}
+                                  style={[
+                                    styles.paymentRow,
+                                    itemIndex === order.items.length - 1 &&
+                                      styles.paymentRowLast,
+                                  ]}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.paymentName,
+                                      isFee && styles.paymentNameFee,
+                                    ]}
+                                    numberOfLines={1}
+                                  >
+                                    {isFee
+                                      ? "Processing fee"
+                                      : item?.Campaign?.name
+                                        ? item.Campaign.name
+                                        : item?.orphan_id
+                                          ? "Orphan Sponsorship"
+                                          : "Donation"}
+                                  </Text>
+                                  <Text
+                                    style={[
+                                      styles.paymentTotal,
+                                      isFee && styles.paymentTotalFee,
+                                    ]}
+                                  >
+                                    $
+                                    {Number(
+                                      item?.total || item?.Donation?.total || 0,
+                                    ).toFixed(2)}
+                                  </Text>
+                                </View>
+                              );
+                            })}
+                          </View>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No donations yet</Text>
+                <Text style={styles.emptySubText}>
+                  Start making a difference by donating to a cause
+                </Text>
+                <TouchableOpacity
+                  style={styles.donateButton}
+                  onPress={() => router.push("/(tabs)/campaigns")}
+                >
+                  <Text style={styles.donateButtonText}>Browse Campaigns</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {/* Profile Details Section */}
+          <View style={styles.profileDetailsSection}>
+            <Text style={styles.profileDetailsSectionTitle}>
+              Profile Details
+            </Text>
+            <View style={styles.detailsCard}>
+              <View
+                style={[
+                  styles.detailRow,
+                  !profileDetails?.phone &&
+                    !(profileDetails?.address || profileDetails?.city) &&
+                    styles.detailRowLast,
+                ]}
+              >
+                <Text style={styles.detailLabel}>Email</Text>
+                <Text style={styles.detailValue} numberOfLines={1}>
+                  {profileDetails?.email || currentUser?.email || "—"}
+                </Text>
+              </View>
+              {profileDetails?.phone ? (
+                <View
+                  style={[
+                    styles.detailRow,
+                    !(profileDetails?.address || profileDetails?.city) &&
+                      styles.detailRowLast,
+                  ]}
+                >
+                  <Text style={styles.detailLabel}>Phone</Text>
+                  <Text style={styles.detailValue}>{profileDetails.phone}</Text>
+                </View>
+              ) : null}
+              {profileDetails?.address || profileDetails?.city ? (
+                <View style={[styles.detailRow, styles.detailRowLast]}>
+                  <Text style={styles.detailLabel}>Address</Text>
+                  <Text style={styles.detailValue} numberOfLines={2}>
+                    {[
+                      profileDetails?.address,
+                      profileDetails?.city,
+                      profileDetails?.state,
+                      profileDetails?.country,
+                    ]
+                      .filter(Boolean)
+                      .join(", ") || "—"}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+
+          <View style={styles.deleteSection}>
+            <Text style={styles.deleteSectionTitle}>Danger Zone</Text>
+
+            <TouchableOpacity
+              style={styles.deleteAccountButton}
+              onPress={handleDeleteAccount}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="trash-outline" size={18} color="#DC2626" />
+              <Text style={styles.deleteAccountText}>Delete Account</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.deleteWarningText}>
+              This will deactivate your account and remove items from your
+              basket.
+            </Text>
+          </View>
+
+          {/* Logout Confirmation Modal */}
+          <LogoutConfirmationModal
+            visible={showLogoutModal}
+            onCancel={() => setShowLogoutModal(false)}
+            onConfirm={handleConfirmSignOut}
+          />
+        </View>
       </ScrollView>
     </View>
   );
@@ -1460,5 +1582,43 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     fontFamily: "AlbertSans_500Medium",
     textAlign: "right",
+  },
+  deleteSection: {
+    marginTop: 30,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+  },
+
+  deleteSectionTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#DC2626",
+    marginBottom: 10,
+  },
+
+  deleteAccountButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+    backgroundColor: "#FEF2F2",
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+
+  deleteAccountText: {
+    color: "#DC2626",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  deleteWarningText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#6B7280",
+    textAlign: "center",
   },
 });
