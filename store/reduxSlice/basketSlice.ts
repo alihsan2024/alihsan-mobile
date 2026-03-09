@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import api from "@/utils/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { basketApi } from "./api/basketApi";
 // import { trackAddToCart as trackDataLayerAddToCart } from "@/utils/dataLayerTracking";
 
 export interface BasketItem {
@@ -76,7 +77,7 @@ export const addBasketItem = createAsyncThunk<any, any>(
     } catch (e: any) {
       return thunkAPI.rejectWithValue(e?.response?.data || "Unknown error");
     }
-  }
+  },
 );
 
 export const bulkAddDonation = createAsyncThunk<any, any>(
@@ -93,7 +94,7 @@ export const bulkAddDonation = createAsyncThunk<any, any>(
     } catch (e: any) {
       return thunkAPI.rejectWithValue(e?.response?.data || "Unknown error");
     }
-  }
+  },
 );
 
 export const updateBasketItem = createAsyncThunk<any, any>(
@@ -110,7 +111,7 @@ export const updateBasketItem = createAsyncThunk<any, any>(
     } catch (e: any) {
       return thunkAPI.rejectWithValue(e?.response?.data || "Unknown error");
     }
-  }
+  },
 );
 
 export const removeBasketItem = createAsyncThunk<
@@ -153,7 +154,7 @@ export const getInterestedItems = createAsyncThunk<any, any>(
       }
       return thunkAPI.rejectWithValue(e?.response?.data || "Unknown error");
     }
-  }
+  },
 );
 
 export const getAnyZakatCampaign = createAsyncThunk<any, any>(
@@ -172,7 +173,7 @@ export const getAnyZakatCampaign = createAsyncThunk<any, any>(
       }
       return thunkAPI.rejectWithValue(e?.response?.data || "Unknown error");
     }
-  }
+  },
 );
 
 export const handleBasketCheckout = createAsyncThunk<any, any>(
@@ -191,7 +192,39 @@ export const handleBasketCheckout = createAsyncThunk<any, any>(
       }
       return thunkAPI.rejectWithValue(e?.response?.data || "Unknown error");
     }
-  }
+  },
+);
+export const clearBasket = createAsyncThunk(
+  "basket/clear",
+  async (_, thunkAPI) => {
+    try {
+      const response = await api.get("/basket");
+      const items = response?.data?.payload ?? [];
+
+      for (const item of items) {
+        await api.delete("/basket", {
+          data: {
+            campaignId: item.campaignId,
+            donationItem: item.donationItem,
+          },
+        });
+      }
+
+      await AsyncStorage.removeItem("checkout");
+
+      thunkAPI.dispatch(emptyBasket());
+
+      // clear RTK query cache
+      thunkAPI.dispatch(basketApi.util.resetApiState());
+
+      return true;
+    } catch (error: any) {
+      console.log("CLEAR BASKET ERROR:", error);
+      return thunkAPI.rejectWithValue(
+        error?.response?.data || "Failed to clear basket",
+      );
+    }
+  },
 );
 export const handlePaypalCheckout = createAsyncThunk<any, any>(
   "handle/paypalCheckout",
@@ -208,25 +241,26 @@ export const handlePaypalCheckout = createAsyncThunk<any, any>(
         return e?.response?.data;
       }
       return thunkAPI.rejectWithValue(
-        e?.response?.payload?.payload?.error || "Unknown error"
+        e?.response?.payload?.payload?.error || "Unknown error",
       );
     }
-  }
+  },
 );
 
 export const basketSlice = createSlice({
   name: "projects",
   initialState,
   reducers: {
-    emptyBasket: (state, action) => {
+    emptyBasket: (state) => {
       state.basketItems = [];
+      state.count = 0;
     },
     updateBasket: (state, action) => {
       state.basketItems = [...state.basketItems, action?.payload];
     },
     editBasket: (
       state,
-      action: PayloadAction<{ index: number; newValue: BasketItem }>
+      action: PayloadAction<{ index: number; newValue: BasketItem }>,
     ) => {
       const { index, newValue } = action.payload;
       const newBasketItems = [...state.basketItems];
@@ -268,7 +302,7 @@ export const basketSlice = createSlice({
     builder.addCase(removeBasketItem.fulfilled, (state, action) => {
       state.loading = false;
       state.basketItems = state?.basketItems.filter(
-        (item) => item.campaignId !== action.payload
+        (item) => item.campaignId !== action.payload,
       );
       state.error = "";
     });
@@ -296,6 +330,10 @@ export const basketSlice = createSlice({
     builder.addCase(getAnyZakatCampaign.rejected, (state, action) => {
       state.loading = false;
       state.zakatItem = [];
+    });
+    builder.addCase(clearBasket.fulfilled, (state) => {
+      state.basketItems = [];
+      state.count = 0;
     });
   },
 });
