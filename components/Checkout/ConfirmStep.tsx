@@ -312,9 +312,7 @@ const ConfirmStep = ({ summary }: Props) => {
             </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoTitle}>Secure & Transparent</Text>
-              <Text style={styles.infoText}>
-                100% of your donation goes directly to the field
-              </Text>
+             
             </View>
           </LinearGradient>
         </View>
