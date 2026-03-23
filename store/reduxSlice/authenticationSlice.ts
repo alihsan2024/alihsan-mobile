@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import api from "@/utils/api";
+import { clearBasket } from "./basketSlice";
 
 export interface AuthUser {
   token: string;
@@ -81,21 +82,21 @@ export const socialMediaLogin = createAsyncThunk(
           lastName: payload.lastName,
           id: payload.id,
           isloggedIn: true,
-        })
+        }),
       );
       api.defaults.headers.common.Authorization = `Bearer ${response.data.payload?.token}`;
       return response.data;
     } catch (e: any) {
       throw new Error(e?.response?.data?.message || "Something went wrong");
     }
-  }
+  },
 );
 
 export const loginUser = createAsyncThunk(
   "authenticate/email",
   async (
     { body, keepSession }: { body: any; keepSession: boolean },
-    thunkAPI
+    thunkAPI,
   ) => {
     try {
       const response = await api.post("auth/login", body);
@@ -113,7 +114,7 @@ export const loginUser = createAsyncThunk(
           lastName: payload.lastName,
           id: payload.id,
           isloggedIn: true,
-        })
+        }),
       );
       api.defaults.headers.common["Authorization"] = `Bearer ${payload.token}`;
 
@@ -123,7 +124,7 @@ export const loginUser = createAsyncThunk(
     } catch (e: any) {
       throw new Error(e?.response?.data?.message || "Something went wrong");
     }
-  }
+  },
 );
 
 export const getProfile = createAsyncThunk(
@@ -143,7 +144,7 @@ export const getProfile = createAsyncThunk(
       }
       throw new Error(e?.response?.data?.message || "Something went wrong");
     }
-  }
+  },
 );
 
 export const updateProfile = createAsyncThunk(
@@ -155,7 +156,7 @@ export const updateProfile = createAsyncThunk(
     } catch (e: any) {
       return thunkAPI.rejectWithValue(e?.response?.data || "Unknown error");
     }
-  }
+  },
 );
 
 export const deleteProfile = createAsyncThunk(
@@ -174,7 +175,31 @@ export const deleteProfile = createAsyncThunk(
     } catch (e: any) {
       return thunkAPI.rejectWithValue(e?.response?.data || "Unknown error");
     }
-  }
+  },
+);
+export const deleteAccount = createAsyncThunk(
+  "auth/delete-account",
+  async (userId: string, thunkAPI) => {
+    try {
+      await thunkAPI.dispatch(clearBasket()).unwrap();
+
+      await api.post("/auth/change-user-status", {
+        userId,
+        status: "deleted",
+      });
+
+      const { secureRemoveItem } = await import("@/utils/secureStorage");
+      await secureRemoveItem("loggedIn");
+
+      return true;
+    } catch (e: any) {
+      console.log("DELETE ACCOUNT ERROR:", e?.response?.data || e);
+
+      return thunkAPI.rejectWithValue(
+        e?.response?.data?.message || "Failed to delete account",
+      );
+    }
+  },
 );
 export const changePassword = createAsyncThunk(
   "post/changePassword",
@@ -185,7 +210,7 @@ export const changePassword = createAsyncThunk(
     } catch (e: any) {
       return thunkAPI.rejectWithValue(e?.response?.data || "Unknown error");
     }
-  }
+  },
 );
 
 export const captchaValidation = createAsyncThunk(
@@ -197,7 +222,7 @@ export const captchaValidation = createAsyncThunk(
     } catch (e: any) {
       return thunkAPI.rejectWithValue(e?.response?.data || "Unknown error");
     }
-  }
+  },
 );
 // profile/password
 
@@ -212,13 +237,13 @@ export const logoutUser = createAsyncThunk(
 
       // Note: Device re-registration as guest is skipped to avoid native module issues
       // The device will be automatically registered when the app restarts or user logs in again
-      
+
       return true;
     } catch (e) {
       console.error("[Logout] Failed to clear auth storage", e);
       return thunkAPI.rejectWithValue("Logout failed");
     }
-  }
+  },
 );
 
 export const authenticationSlice = createSlice({
@@ -331,6 +356,12 @@ export const authenticationSlice = createSlice({
         state.loading = false;
         state.error = action.error?.message || "";
       });
+    builder.addCase(deleteAccount.fulfilled, (state) => {
+      return {
+        ...initialState,
+        isReady: true,
+      };
+    });
   },
 });
 

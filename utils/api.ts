@@ -21,7 +21,7 @@ export const registerDeviceToken = async ({
     if (__DEV__) {
       console.error(
         "Error registering device token:",
-        error.response?.data || error.message
+        error.response?.data || error.message,
       );
     }
     throw error;
@@ -31,7 +31,11 @@ import axios from "axios";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
-import { secureSetItem, secureGetItem, secureRemoveItem } from "./secureStorage";
+import {
+  secureSetItem,
+  secureGetItem,
+  secureRemoveItem,
+} from "./secureStorage";
 
 // Configure API URLs for different environments
 // Priority: __DEV__ -> dev env/config -> fallback, otherwise prod env/config -> fallback
@@ -83,7 +87,7 @@ api.interceptors.request.use(
       console.error("API Request Error:", error);
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // Import network status setter
@@ -103,11 +107,11 @@ api.interceptors.response.use(
     if (__DEV__) {
       console.error("API Response Error:", error.message);
     }
-    
+
     // Detect network errors - only set to false on clear network failures
-    const isNetworkError = 
-      !error.response && (
-        error.message?.includes("Network Error") ||
+    const isNetworkError =
+      !error.response &&
+      (error.message?.includes("Network Error") ||
         error.message?.includes("network") ||
         error.message?.includes("timeout") ||
         error.message?.includes("ECONNREFUSED") ||
@@ -115,8 +119,7 @@ api.interceptors.response.use(
         error.code === "ERR_NETWORK" ||
         error.code === "ECONNABORTED" ||
         error.message?.includes("Network request failed") ||
-        error.message?.includes("Failed to fetch")
-      );
+        error.message?.includes("Failed to fetch"));
 
     // Only update network status to false on clear network errors
     // Don't set to true here - let the connectivity check handle that
@@ -129,7 +132,7 @@ api.interceptors.response.use(
       console.error("Error Data:", error.response.data);
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // Set auth token in headers
@@ -194,22 +197,29 @@ interface CampaignsResponse {
 const CACHE_TTL_FEATURED_MS = 30 * 60 * 1000; // 30 min
 const CACHE_TTL_CAMPAIGNS_MS = 30 * 60 * 1000; // 30 min
 let featuredCampaignsCache: { data: Campaign[]; ts: number } | null = null;
-const campaignsCacheByKey: Record<string, { data: Campaign[]; ts: number }> = {};
+const campaignsCacheByKey: Record<string, { data: Campaign[]; ts: number }> =
+  {};
 
 /** Clear campaigns caches (e.g. after pull-to-refresh or when data may be stale). */
 export const invalidateCampaignsCache = () => {
   featuredCampaignsCache = null;
-  Object.keys(campaignsCacheByKey).forEach((k) => delete campaignsCacheByKey[k]);
+  Object.keys(campaignsCacheByKey).forEach(
+    (k) => delete campaignsCacheByKey[k],
+  );
 };
 
 // Fetch all campaigns
 export const fetchCampaigns = async (
   isMobileCampaign?: boolean,
-  forceRefresh?: boolean
+  forceRefresh?: boolean,
 ): Promise<Campaign[]> => {
   const cacheKey = `campaigns_${isMobileCampaign === true}`;
   const cached = campaignsCacheByKey[cacheKey];
-  if (!forceRefresh && cached && Date.now() - cached.ts < CACHE_TTL_CAMPAIGNS_MS) {
+  if (
+    !forceRefresh &&
+    cached &&
+    Date.now() - cached.ts < CACHE_TTL_CAMPAIGNS_MS
+  ) {
     return cached.data;
   }
   try {
@@ -234,7 +244,7 @@ export const fetchCampaigns = async (
 
 // Fetch all featured campaigns
 export const fetchFeaturedCampaigns = async (
-  forceRefresh?: boolean
+  forceRefresh?: boolean,
 ): Promise<Campaign[]> => {
   if (
     !forceRefresh &&
@@ -260,7 +270,7 @@ export const fetchFeaturedCampaigns = async (
 // Get campaign details by slug (allowBmt: true for Ramadan/quick-donation items so BMT campaigns are included)
 export const getCampaignDetails = async (
   slug: string,
-  options?: { allowBmt?: boolean }
+  options?: { allowBmt?: boolean },
 ): Promise<any> => {
   try {
     const params = options?.allowBmt ? { allowBmt: "true" } : undefined;
@@ -286,7 +296,13 @@ export const getRamadanQuickDonations = async (): Promise<{
     donationItem: string;
     campaignId: number;
     postText?: string;
-    campaign?: { id: number; name: string; slug: string; coverImage: string; checkoutType?: string };
+    campaign?: {
+      id: number;
+      name: string;
+      slug: string;
+      coverImage: string;
+      checkoutType?: string;
+    };
   }>;
   subItems: Array<{
     id: number;
@@ -298,7 +314,13 @@ export const getRamadanQuickDonations = async (): Promise<{
     donationItem: string;
     campaignId: number;
     postText?: string;
-    campaign?: { id: number; name: string; slug: string; coverImage: string; checkoutType?: string };
+    campaign?: {
+      id: number;
+      name: string;
+      slug: string;
+      coverImage: string;
+      checkoutType?: string;
+    };
   }>;
 }> => {
   const response = await api.get("/ramadan/quick-donations");
@@ -365,7 +387,7 @@ export interface AuthResponse {
 
 // Login user
 export const login = async (
-  credentials: LoginRequest
+  credentials: LoginRequest,
 ): Promise<AuthResponse> => {
   try {
     const response = await api.post("/auth/login", {
@@ -407,7 +429,8 @@ export const forgotPassword = async (email: string): Promise<void> => {
     });
   } catch (error: any) {
     const message =
-      error.response?.data?.message || "Failed to send reset email. Please try again.";
+      error.response?.data?.message ||
+      "Failed to send reset email. Please try again.";
     throw new Error(message);
   }
 };
@@ -494,13 +517,13 @@ export const getDonationStatistics = async (): Promise<DonationStatistics> => {
     const [onetimeRes, activeRecurringRes, inactiveRecurringRes] =
       await Promise.all([
         api.get(
-          `/donations/of-user/onetime?page=1&limit=${limit}&sort=date&order=desc`
+          `/donations/of-user/onetime?page=1&limit=${limit}&sort=date&order=desc`,
         ),
         api.get(
-          `/donations/of-user/recurring/active?page=1&limit=${limit}&sort=date&order=desc`
+          `/donations/of-user/recurring/active?page=1&limit=${limit}&sort=date&order=desc`,
         ),
         api.get(
-          `/donations/of-user/recurring/inactive?page=1&limit=${limit}&sort=date&order=desc`
+          `/donations/of-user/recurring/inactive?page=1&limit=${limit}&sort=date&order=desc`,
         ),
       ]);
 
@@ -541,7 +564,7 @@ export const getDonationStatistics = async (): Promise<DonationStatistics> => {
 
         return acc;
       },
-      { total: 0, zakat: 0, sadaqah: 0, orphan: 0 }
+      { total: 0, zakat: 0, sadaqah: 0, orphan: 0 },
     );
 
     return stats;
@@ -556,11 +579,11 @@ export const getDonationStatistics = async (): Promise<DonationStatistics> => {
 
 // Get recent donations
 export const getRecentDonations = async (
-  limit: number = 5
+  limit: number = 5,
 ): Promise<RecentDonation[]> => {
   try {
     const response = await api.get(
-      `/donations/of-user/onetime?page=1&limit=${limit}&sort=date&order=desc`
+      `/donations/of-user/onetime?page=1&limit=${limit}&sort=date&order=desc`,
     );
     return response.data?.payload?.rows || [];
   } catch (error) {
@@ -625,7 +648,7 @@ export const getBasketItems = async (): Promise<BasketItem[]> => {
 
 // Add item to basket
 export const addToBasket = async (
-  item: AddToBasketRequest
+  item: AddToBasketRequest,
 ): Promise<{ basketItemId: number }> => {
   try {
     // Remove undefined/null fields to avoid sending them to the backend
@@ -648,7 +671,7 @@ export const addToBasket = async (
 
 // Update basket item
 export const updateBasketItem = async (
-  item: AddToBasketRequest
+  item: AddToBasketRequest,
 ): Promise<void> => {
   try {
     await api.put("/basket", item);
@@ -662,7 +685,7 @@ export const updateBasketItem = async (
 // Remove item from basket
 export const removeFromBasket = async (
   campaignId: number,
-  donationItem?: string
+  donationItem?: string,
 ): Promise<void> => {
   try {
     await api.delete("/basket", {
@@ -678,9 +701,8 @@ export const removeFromBasket = async (
   }
 };
 
-
 export const addSubscriber = async (
-  email: string
+  email: string,
 ): Promise<{ success?: boolean; message?: string }> => {
   const response = await api.post("/subscriber", { email });
   return response.data ?? {};
@@ -688,7 +710,7 @@ export const addSubscriber = async (
 
 // Bulk add items to basket
 export const bulkAddToBasket = async (
-  items: AddToBasketRequest[]
+  items: AddToBasketRequest[],
 ): Promise<void> => {
   try {
     await api.put("/basket/all", items);
