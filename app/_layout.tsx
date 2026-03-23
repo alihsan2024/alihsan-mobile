@@ -316,6 +316,10 @@ export default function RootLayout() {
                   name="thank-you"
                   options={{ headerShown: false }}
                 />
+                <Stack.Screen
+                  name="help"
+                  options={{ headerShown: false }}
+                />
               </Stack>
               <StatusBar style="auto" />
               </ToastProvider>

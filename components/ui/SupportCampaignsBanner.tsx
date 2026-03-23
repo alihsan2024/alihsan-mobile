@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
-  TextInput,
   ActivityIndicator,
   Keyboard,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image as ExpoImage } from "expo-image";
@@ -16,13 +16,12 @@ import { Ionicons } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
 import { router } from "expo-router";
 import { fetchCampaigns } from "@/utils/api";
+import CampaignSearchModal from "@/components/ui/CampaignSearchModal";
 
 const { width: screenWidth } = Dimensions.get("window");
 
-// Campaign pills under "Support Our Campaigns" (matches AU Next.js). Ramadan/Gaza navigate; others set quick-donate campaign.
+// Campaign pills under "Support Our Campaigns" (matches AU Next.js). Pills set quick-donate campaign; search can still open any campaign.
 const campaigns = [
-  { label: "Ramadan", name: "Ramadan", slug: "ramadan", icon: "crescent", isSpecial: true, navigateOnly: true },
-  { label: "Ramadan in Gaza", name: "Ramadan in Gaza", slug: "gaza-ramadan", icon: "palestine-flag", isSpecial: true, navigateOnly: true },
   { label: "Where Most Needed", name: "Where Most Needed In Ramadan", slug: "most-needed", icon: "megaphone", isSpecial: false },
   { label: "Zakat Al Maal", name: "Zakat Al Maal", slug: "zakat-al-maal", icon: "cash", isSpecial: false },
   { label: "Feed the Needy", name: "Feed the Needy", slug: "feed-the-needy", icon: "restaurant", isSpecial: false },
@@ -31,8 +30,6 @@ const campaigns = [
   { label: "Water", name: "Water Campaign", slug: "water-campaign", icon: "water", isSpecial: false },
   { label: "Emergency Appeal", name: "Emergency Appeal", slug: "emergency-appeal", icon: "warning", isSpecial: false },
 ];
-
-const PALESTINE_FLAG_URI = "https://purecatamphetamine.github.io/country-flag-icons/3x2/PS.svg";
 
 const amounts = [10, 25, 50, 200, 500, 1000];
 const frequencies = [
@@ -64,14 +61,10 @@ export default function SupportCampaignsBanner({
   const [selectedCampaign, setSelectedCampaign] = useState("most-needed");
   const [selectedAmount, setSelectedAmount] = useState(amounts[0]);
   const [selectedFrequency, setSelectedFrequency] = useState(frequencies[0].value);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [allCampaigns, setAllCampaigns] = useState<any[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(true);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
   const [pillsAtEnd, setPillsAtEnd] = useState(false);
-  const dropdownCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const searchInputRef = useRef<TextInput>(null);
 
   // Fetch all campaigns on mount
   useEffect(() => {
@@ -89,52 +82,11 @@ export default function SupportCampaignsBanner({
     loadCampaigns();
   }, []);
 
-  // Filter campaigns based on search query (show results from 1 character for better discoverability)
-  useEffect(() => {
-    const query = searchQuery.trim();
-    if (query.length >= 1) {
-      const lower = query.toLowerCase();
-      const filtered = allCampaigns.filter(
-        (campaign) =>
-          campaign.name?.toLowerCase().includes(lower) ||
-          campaign.description?.toLowerCase().includes(lower) ||
-          (campaign.slug && campaign.slug.toLowerCase().includes(lower))
-      );
-      setSearchResults(filtered.slice(0, 20));
-      setShowDropdown(true);
-    } else {
-      setSearchResults([]);
-      setShowDropdown(false);
-    }
-  }, [searchQuery, allCampaigns]);
-
-  useEffect(() => {
-    return () => {
-      if (dropdownCloseTimerRef.current) clearTimeout(dropdownCloseTimerRef.current);
-    };
-  }, []);
-
   const handlePillPress = (campaign: (typeof campaigns)[number]) => {
-    if (campaign.navigateOnly) {
-      if (campaign.slug === "ramadan") {
-        router.push("/(tabs)/ramadan");
-      } else if (campaign.slug === "gaza-ramadan") {
-        router.push("/(tabs)/gaza-ramadan");
-      } else {
-        router.push(`/campaign/${campaign.slug}`);
-      }
-    } else {
-      setSelectedCampaign(campaign.slug);
-    }
+    setSelectedCampaign(campaign.slug);
   };
 
-  const handleSearchResultPress = (campaign: any) => {
-    if (dropdownCloseTimerRef.current) {
-      clearTimeout(dropdownCloseTimerRef.current);
-      dropdownCloseTimerRef.current = null;
-    }
-    setSearchQuery("");
-    setShowDropdown(false);
+  const navigateToCampaign = (campaign: any) => {
     Keyboard.dismiss();
     if (campaign.slug === "gaza-ramadan") {
       router.push("/(tabs)/gaza-ramadan");
@@ -143,21 +95,6 @@ export default function SupportCampaignsBanner({
     } else {
       router.push(`/campaign/${campaign.slug}`);
     }
-  };
-
-  const handleSearchBlur = () => {
-    dropdownCloseTimerRef.current = setTimeout(() => {
-      setShowDropdown(false);
-      dropdownCloseTimerRef.current = null;
-    }, 350);
-  };
-
-  const handleSearchFocus = () => {
-    if (dropdownCloseTimerRef.current) {
-      clearTimeout(dropdownCloseTimerRef.current);
-      dropdownCloseTimerRef.current = null;
-    }
-    if (searchQuery.trim().length >= 1) setShowDropdown(true);
   };
 
   const handleDonate = () => {
@@ -177,6 +114,16 @@ export default function SupportCampaignsBanner({
 
   return (
     <View style={styles.container}>
+      <CampaignSearchModal
+        visible={searchModalVisible}
+        onClose={() => setSearchModalVisible(false)}
+        onSelectCampaign={(campaign) => {
+          setSearchModalVisible(false);
+          navigateToCampaign(campaign);
+        }}
+        campaigns={allCampaigns}
+        loading={campaignsLoading}
+      />
       {/* Background with gradient */}
       <View style={styles.backgroundContainer}>
         <ExpoImage
@@ -193,96 +140,44 @@ export default function SupportCampaignsBanner({
           end={{ x: 1, y: 0 }}
           style={[styles.gradient, { paddingTop: (topInset || 0) + 24 }]}
         >
-          {/* Search Bar - accessible, supports 1+ char search */}
+          {/* Search opens full-screen modal; Help opens policies & support */}
           <View style={styles.headerBar}>
-            <View style={styles.searchWrapper}>
-              <View style={styles.searchContainer}>
-                <Feather name="search" size={18} color="#fff" accessibilityLabel="Search icon" />
-                <TextInput
-                  ref={searchInputRef}
-                  placeholder="Search campaigns by name..."
-                  placeholderTextColor="rgba(255,255,255,0.7)"
-                  style={styles.searchInput}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  onFocus={handleSearchFocus}
-                  onBlur={handleSearchBlur}
-                  accessibilityLabel="Search campaigns"
-                  accessibilityHint="Type to find a campaign. Results appear below."
-                  returnKeyType="search"
-                />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setSearchQuery("");
-                      setShowDropdown(false);
-                      searchInputRef.current?.focus();
-                    }}
-                    style={styles.clearButton}
-                    accessibilityLabel="Clear search"
-                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                  >
-                    <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.9)" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-          </View>
-
-          {/* Dropdown - ScrollView (not FlatList) to avoid nesting inside parent ScrollView */}
-          {showDropdown && searchResults.length > 0 && (
-            <View style={[styles.dropdown, { top: (topInset || 0) + 24 + 44 + 8 }]}>
-              <View style={styles.dropdownHeader}>
-                <Text style={styles.dropdownHeaderText}>
-                  {searchResults.length} campaign{searchResults.length !== 1 ? "s" : ""} found
+            <TouchableOpacity
+              style={styles.searchTrigger}
+              onPress={() => setSearchModalVisible(true)}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Search campaigns"
+              accessibilityHint="Opens a full screen search to find campaigns by name or keyword"
+            >
+              <Feather name="search" size={16} color="#fff" importantForAccessibility="no" />
+              <View style={styles.searchTriggerTextWrap}>
+                <Text
+                  style={styles.searchTriggerText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  maxFontSizeMultiplier={1.15}
+                  {...(Platform.OS === "ios"
+                    ? { adjustsFontSizeToFit: true, minimumFontScale: 0.85 }
+                    : {})}
+                  {...(Platform.OS === "android" ? { textBreakStrategy: "simple" as const } : {})}
+                >
+                  Search campaigns
                 </Text>
               </View>
-              <ScrollView
-                style={styles.dropdownScrollView}
-                contentContainerStyle={styles.dropdownListContent}
-                showsVerticalScrollIndicator={true}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
-                bounces={true}
-                nestedScrollEnabled={true}
-              >
-                {searchResults.map((item, index) => (
-                  <React.Fragment key={item.id?.toString() ?? item.slug ?? index}>
-                    {index > 0 && <View style={styles.dropdownItemSeparator} />}
-                    <TouchableOpacity
-                      style={styles.dropdownItem}
-                      onPress={() => handleSearchResultPress(item)}
-                      activeOpacity={0.7}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Open ${item.name}`}
-                    >
-                      <ExpoImage
-                        source={
-                          item.coverImage || item.cover_image
-                            ? { uri: item.coverImage || item.cover_image }
-                            : require("../../assets/card1.png")
-                        }
-                        style={styles.dropdownItemImage}
-                        contentFit="cover"
-                      />
-                      <View style={styles.dropdownItemContent}>
-                        <Text style={styles.dropdownItemText} numberOfLines={2}>
-                          {item.name}
-                        </Text>
-                        {item.description ? (
-                          <Text style={styles.dropdownItemDescription} numberOfLines={1}>
-                            {item.description.replace(/<[^>]*>/g, "").trim().substring(0, 50)}
-                            {(item.description.replace(/<[^>]*>/g, "").trim().length > 50) ? "…" : ""}
-                          </Text>
-                        ) : null}
-                      </View>
-                      <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-                    </TouchableOpacity>
-                  </React.Fragment>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+              <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.85)" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.helpButton}
+              onPress={() => router.push("/help")}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Help and support"
+              accessibilityHint="Opens help, policies, and child safety information"
+            >
+              <Ionicons name="help-circle" size={26} color="#fff" />
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.content}>
             {/* Left Content */}
@@ -308,7 +203,7 @@ export default function SupportCampaignsBanner({
                   scrollEventThrottle={16}
                 >
                   {campaigns.map((campaign) => {
-                    const isActive = !campaign.navigateOnly && selectedCampaign === campaign.slug;
+                    const isActive = selectedCampaign === campaign.slug;
                     const isSpecial = campaign.isSpecial;
                     return (
                       <TouchableOpacity
@@ -321,32 +216,19 @@ export default function SupportCampaignsBanner({
                         onPress={() => handlePillPress(campaign)}
                         activeOpacity={0.85}
                       >
-                        {campaign.icon === "crescent" ? (
-                          <Ionicons
-                            name="moon"
-                            size={12}
-                            color={isSpecial ? "#010D26" : isActive ? "#010D26" : "#fff"}
-                          />
-                        ) : campaign.icon === "palestine-flag" ? (
-                          <ExpoImage
-                            source={{ uri: PALESTINE_FLAG_URI }}
-                            style={styles.pillFlag}
-                          />
-                        ) : (
-                          <Ionicons
-                            name={
-                              campaign.icon === "megaphone" ? "megaphone" :
-                              campaign.icon === "cash" ? "cash" :
-                              campaign.icon === "restaurant" ? "nutrition" :
-                              campaign.icon === "eye" ? "eye" :
-                              campaign.icon === "people" ? "people" :
-                              campaign.icon === "water" ? "water" :
-                              "warning"
-                            }
-                            size={12}
-                            color={isSpecial ? "#010D26" : isActive ? "#010D26" : "#fff"}
-                          />
-                        )}
+                        <Ionicons
+                          name={
+                            campaign.icon === "megaphone" ? "megaphone" :
+                            campaign.icon === "cash" ? "cash" :
+                            campaign.icon === "restaurant" ? "nutrition" :
+                            campaign.icon === "eye" ? "eye" :
+                            campaign.icon === "people" ? "people" :
+                            campaign.icon === "water" ? "water" :
+                            "warning"
+                          }
+                          size={12}
+                          color={isSpecial ? "#010D26" : isActive ? "#010D26" : "#fff"}
+                        />
                         <Text
                           style={[
                             styles.campaignPillText,
@@ -357,9 +239,6 @@ export default function SupportCampaignsBanner({
                         >
                           {campaign.label}
                         </Text>
-                        {campaign.navigateOnly && (
-                          <Ionicons name="open-outline" size={10} color={isSpecial ? "#010D26" : "#fff"} />
-                        )}
                       </TouchableOpacity>
                     );
                   })}
@@ -571,11 +450,6 @@ const styles = StyleSheet.create({
   campaignPillActive: {
     backgroundColor: "#fff",
   },
-  pillFlag: {
-    width: 12,
-    height: 12,
-    borderRadius: 2,
-  },
   campaignPillText: {
     fontSize: 11,
     fontWeight: "600",
@@ -696,120 +570,53 @@ const styles = StyleSheet.create({
   },
   headerBar: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 20,
-    gap: 12,
+    gap: 10,
     zIndex: 10,
   },
-  searchWrapper: {
-    flex: 1,
-    position: "relative",
-  },
-  searchContainer: {
-    flex: 1,
-    minHeight: 48,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.55)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
-  },
-  searchInput: {
-    flex: 1,
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "500",
-    fontFamily: "AlbertSans_500Medium",
-    minHeight: 44,
-    paddingVertical: 10,
-  },
-  clearButton: {
-    padding: 8,
-    minWidth: 44,
-    minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dropdown: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    backgroundColor: "#fff",
+  helpButton: {
+    width: 50,
+    height: 50,
     borderRadius: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 24,
-    elevation: 28,
-    height: 320,
-    overflow: "hidden",
-    zIndex: 99999,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.58)",
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: "rgba(255,255,255,0.45)",
   },
-  dropdownHeader: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    backgroundColor: "#FAFAFA",
-  },
-  dropdownHeaderText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#6B7280",
-    fontFamily: "AlbertSans_600SemiBold",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  dropdownScrollView: {
+  searchTrigger: {
     flex: 1,
-  },
-  dropdownListContent: {
-    paddingVertical: 8,
-    paddingBottom: 16,
-  },
-  dropdownItemSeparator: {
-    height: 1,
-    backgroundColor: "#F3F4F6",
-    marginHorizontal: 16,
-  },
-  dropdownItem: {
+    height: 50,
+    maxHeight: 50,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    minHeight: 56,
-    gap: 12,
+    gap: 8,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.58)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.45)",
+    overflow: "hidden",
   },
-  dropdownItemImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: "#F3F4F6",
-  },
-  dropdownItemContent: {
+  searchTriggerTextWrap: {
     flex: 1,
+    minWidth: 0,
+    height: 50,
     justifyContent: "center",
-    minHeight: 48,
+    overflow: "hidden",
   },
-  dropdownItemText: {
-    fontSize: 15,
-    color: "#111827",
+  searchTriggerText: {
+    color: "#fff",
+    fontSize: 13,
     fontWeight: "600",
     fontFamily: "AlbertSans_600SemiBold",
-    lineHeight: 20,
-  },
-  dropdownItemDescription: {
-    fontSize: 12,
-    color: "#6B7280",
-    fontWeight: "400",
-    fontFamily: "AlbertSans_400Regular",
-    lineHeight: 16,
-    marginTop: 2,
+    lineHeight: Platform.OS === "android" ? 18 : 16,
+    paddingVertical: 0,
+    ...Platform.select({
+      android: { includeFontPadding: false },
+      default: {},
+    }),
   },
 });

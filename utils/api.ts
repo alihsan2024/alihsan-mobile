@@ -44,9 +44,13 @@ const getApiUrl = (): string => {
     return (
       process.env.EXPO_PUBLIC_API_URL_DEV ||
       (Constants.expoConfig?.extra?.apiUrlDev as string | undefined) ||
-      "http://192.168.1.2:4000"
+      "http://localhost:4001"
     );
   }
+
+  console.log("process.env.EXPO_PUBLIC_API_URL", process.env.EXPO_PUBLIC_API_URL);
+  console.log("Constants.expoConfig?.extra?.apiUrl", Constants.expoConfig?.extra?.apiUrl);
+  console.log("https://api.alihsan.org.au", "https://api.alihsan.org.au");
 
   return (
     process.env.EXPO_PUBLIC_API_URL ||
