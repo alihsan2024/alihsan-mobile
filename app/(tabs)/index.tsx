@@ -6,9 +6,7 @@ import {
   Dimensions,
   TextInput,
   ScrollView,
-  Alert,
   Animated,
-  Linking,
   ActivityIndicator,
   RefreshControl,
   Keyboard,
@@ -301,25 +299,6 @@ export default function HomeScreen() {
     router.push(`/campaign/${item.slug}`);
   };
 
-  const handleOpenRamadanCalendar = async (city: "sydney" | "melbourne") => {
-    const urls = {
-      sydney: "https://alihsan.s3.ap-southeast-2.amazonaws.com/ramadan/1770279212586-alihsan-A3_RamadanCal_2026+Sydney+(1).pdf",
-      melbourne: "https://alihsan.s3.ap-southeast-2.amazonaws.com/ramadan/1770283804879-alihsan-A3_RamadanCal+2026+-+Melbourne+(1)_compressed+(1).pdf",
-    };
-
-    const url = urls[city];
-    try {
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert("Error", "Cannot open this URL");
-      }
-    } catch (error) {
-      Alert.alert("Error", "Failed to open calendar");
-    }
-  };
-
   const { height: windowHeight } = Dimensions.get("window");
 
   return (
@@ -599,42 +578,6 @@ export default function HomeScreen() {
                 onPress={handleCampaignPress}
               />
             ) : null}
-          </View>
-        </View>
-
-        {/* Ramadan Calendar Section */}
-        <View style={styles.ramadanSection}>
-          <View style={styles.ramadanSectionHeader}>
-            <Text style={styles.ramadanSectionTitle}>Ramadan Calendars</Text>
-            <Text style={styles.ramadanSectionSubtitle}>
-              Prayer & iftar times for your city
-            </Text>
-          </View>
-          <View style={styles.ramadanCards}>
-            <TouchableOpacity
-              style={styles.ramadanCard}
-              onPress={() => handleOpenRamadanCalendar("sydney")}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="location-outline" size={20} color="#2161CD" style={styles.ramadanCardIcon} />
-              <View style={styles.ramadanCardContent}>
-                <Text style={styles.ramadanCardCity}>Sydney</Text>
-                <Text style={styles.ramadanCardMeta}>PDF</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.ramadanCard}
-              onPress={() => handleOpenRamadanCalendar("melbourne")}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="location-outline" size={20} color="#2161CD" style={styles.ramadanCardIcon} />
-              <View style={styles.ramadanCardContent}>
-                <Text style={styles.ramadanCardCity}>Melbourne</Text>
-                <Text style={styles.ramadanCardMeta}>PDF</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -1031,57 +974,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontWeight: "700",
-  },
-  ramadanSection: {
-    paddingHorizontal: PADDING_HORIZONTAL,
-    marginTop: 28,
-    marginBottom: 24,
-  },
-  ramadanSectionHeader: {
-    marginBottom: 16,
-  },
-  ramadanSectionTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#010D26",
-    fontFamily: "AlbertSans_800ExtraBold",
-    marginBottom: 4,
-  },
-  ramadanSectionSubtitle: {
-    fontSize: 14,
-    color: "#6B7280",
-    fontFamily: "AlbertSans_400Regular",
-    lineHeight: 20,
-  },
-  ramadanCards: {
-    gap: 12,
-  },
-  ramadanCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  ramadanCardIcon: {
-    marginRight: 14,
-  },
-  ramadanCardContent: {
-    flex: 1,
-  },
-  ramadanCardCity: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#010D26",
-    fontFamily: "AlbertSans_700Bold",
-    marginBottom: 2,
-  },
-  ramadanCardMeta: {
-    fontSize: 12,
-    color: "#6B7280",
-    fontFamily: "AlbertSans_400Regular",
   },
 });
