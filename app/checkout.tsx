@@ -546,7 +546,7 @@ export default function CheckoutScreen() {
               cartItems: [{
                 label: "Al-Ihsan Foundation",
                 amount: checkoutSummary?.total.toFixed(2) ?? "0.00",
-                paymentType: PlatformPay.PaymentType.Final,
+                paymentType: PlatformPay.PaymentType.Immediate,
               }],
               merchantCountryCode: "AU",
               currencyCode: "AUD",

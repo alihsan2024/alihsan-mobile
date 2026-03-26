@@ -15,10 +15,15 @@ import { useSelector } from "react-redux";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
-import { loginUser } from "@/store/reduxSlice/authenticationSlice";
+import { loginUser, socialMediaLogin } from "@/store/reduxSlice/authenticationSlice";
 import LoadingScreen from "@/components/LoadingScreen";
 import { useToast } from "@/context/ToastContext";
-// Google / Apple social sign-in disabled — email and password only
+import * as AppleAuthentication from "expo-apple-authentication";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
+import { fetchGoogleUserInfo, getGoogleWebClientId, getGoogleIosClientId, getGoogleAndroidClientId } from "@/utils/googleAuth";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -37,12 +42,25 @@ export default function LoginScreen() {
   const emailInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
 
+  const [_request, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
+    webClientId: getGoogleWebClientId(),
+    iosClientId: getGoogleIosClientId() ?? getGoogleWebClientId(),
+    androidClientId: getGoogleAndroidClientId() ?? getGoogleWebClientId(),
+  });
+
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated) {
       router.replace("/(tabs)/profile");
     }
   }, [isAuthenticated, router]);
+
+  // Handle Google OAuth response
+  useEffect(() => {
+    if (googleResponse?.type === "success" && googleResponse.authentication?.accessToken) {
+      handleGoogleAuth(googleResponse.authentication.accessToken);
+    }
+  }, [googleResponse]);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -98,6 +116,93 @@ export default function LoginScreen() {
       
       showToast({
         message: toastMessage,
+        type: "error",
+        duration: 4000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    try {
+      setLoading(true);
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      console.log("[Apple] credential:", JSON.stringify({
+        user: credential.user,
+        email: credential.email,
+        fullName: credential.fullName,
+        hasIdentityToken: !!credential.identityToken,
+      }));
+
+      const result = await dispatch(
+        socialMediaLogin({
+          body: {
+            identityToken: credential.identityToken,
+            email: credential.email || "",
+            appleUserId: credential.user,
+            firstName: credential.fullName?.givenName || "",
+            lastName: credential.fullName?.familyName || "",
+          },
+          provider: "apple",
+          keepSession: true,
+        })
+      );
+
+      console.log("[Apple] dispatch result:", JSON.stringify(result));
+
+      if (socialMediaLogin.fulfilled.match(result)) {
+        router.replace("/(tabs)/profile");
+      } else {
+        const msg = result.error?.message || "Apple Sign In failed. Please try again.";
+        console.log("[Apple] error:", msg);
+        showToast({ message: msg, type: "error", duration: 6000 });
+      }
+    } catch (err: any) {
+      console.log("[Apple] catch error:", err?.code, err?.message);
+      if (err.code !== "ERR_REQUEST_CANCELED") {
+        showToast({
+          message: err?.message || "Apple Sign In failed. Please try again.",
+          type: "error",
+          duration: 6000,
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleAuth = async (accessToken: string) => {
+    try {
+      setLoading(true);
+      const { email: gEmail, firstName, lastName } = await fetchGoogleUserInfo(accessToken);
+
+      const result = await dispatch(
+        socialMediaLogin({
+          body: { email: gEmail, firstName, lastName, accessToken },
+          provider: "google",
+          keepSession: true,
+        })
+      );
+
+      if (socialMediaLogin.fulfilled.match(result)) {
+        router.replace("/(tabs)/profile");
+      } else {
+        showToast({
+          message: result.error?.message || "Google Sign In failed. Please try again.",
+          type: "error",
+          duration: 4000,
+        });
+      }
+    } catch (err: any) {
+      showToast({
+        message: "Google Sign In failed. Please try again.",
         type: "error",
         duration: 4000,
       });
@@ -245,6 +350,35 @@ export default function LoginScreen() {
               >
                 <Text style={styles.forgotText}>Forgot Password?</Text>
               </TouchableOpacity>
+
+              {/* Divider */}
+              <View style={styles.dividerRow}>
+                <View style={styles.divider} />
+                <Text style={styles.dividerText}>or continue with</Text>
+                <View style={styles.divider} />
+              </View>
+
+              {/* Social Login Buttons */}
+              <View style={styles.socialButtons}>
+                {Platform.OS === "ios" && (
+                  <TouchableOpacity
+                    style={styles.socialButton}
+                    onPress={handleAppleLogin}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="logo-apple" size={20} color="#010D26" />
+                    <Text style={styles.socialButtonText}>Apple</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={styles.socialButton}
+                  onPress={() => promptGoogleAsync()}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="logo-google" size={20} color="#EA4335" />
+                  <Text style={styles.socialButtonText}>Google</Text>
+                </TouchableOpacity>
+              </View>
 
               {/* Sign Up Link */}
               <View style={styles.signupLink}>
@@ -404,6 +538,45 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#264B8B",
     fontWeight: "600",
+    fontFamily: "AlbertSans_600SemiBold",
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+    gap: 8,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#E5E7EB",
+  },
+  dividerText: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    fontFamily: "AlbertSans_400Regular",
+  },
+  socialButtons: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  socialButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#fff",
+  },
+  socialButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#010D26",
     fontFamily: "AlbertSans_600SemiBold",
   },
   loggedInContainer: {

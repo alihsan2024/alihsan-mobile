@@ -43,3 +43,11 @@ export function getGoogleWebClientId(): string | undefined {
     undefined
   );
 }
+
+export function getGoogleIosClientId(): string | undefined {
+  return process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || undefined;
+}
+
+export function getGoogleAndroidClientId(): string | undefined {
+  return process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || undefined;
+}

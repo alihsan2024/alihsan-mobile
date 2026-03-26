@@ -70,7 +70,7 @@ module.exports = {
       [
         "@stripe/stripe-react-native",
         {
-          merchantIdentifier: "merchant.au.org.alihsan.www",
+          merchantIdentifier: "merchant.org.alihsan.mobile",
           enableGooglePay: true,
         },
       ],
@@ -82,9 +82,11 @@ module.exports = {
       },
       // API URL will be set via environment variables during build
       apiUrl: process.env.EXPO_PUBLIC_API_URL,
-      apiUrlDev: process.env.EXPO_PUBLIC_API_URL_DEV ,
-      EXPO_PUBLIC_STRIPE_KEY:
-        process.env.EXPO_PUBLIC_STRIPE_KEY 
+      apiUrlDev: process.env.EXPO_PUBLIC_API_URL_DEV,
+      EXPO_PUBLIC_STRIPE_KEY: process.env.EXPO_PUBLIC_STRIPE_KEY,
+      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+      EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+      EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
     },
   },
 };

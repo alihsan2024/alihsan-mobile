@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { Image as ExpoImage } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { formatPrice } from "@/utils/helper";
 import { Ionicons } from "@expo/vector-icons";
