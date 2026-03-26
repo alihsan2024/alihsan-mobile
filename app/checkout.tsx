@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { View, StyleSheet, ScrollView, Alert, Text, Platform, Linking } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { StripeProvider, useStripe, isPlatformPaySupported } from "@stripe/stripe-react-native";
+import { StripeProvider, useStripe, isPlatformPaySupported, usePlatformPay, PlatformPay } from "@stripe/stripe-react-native";
 import { useRouter } from "expo-router";
 import { useSelector, useDispatch } from "react-redux";
 import Constants from "expo-constants";
@@ -61,6 +61,7 @@ export default function CheckoutScreen() {
 
   const insets = useSafeAreaInsets();
   const stripe = useStripe();
+  const { confirmPlatformPayPayment } = usePlatformPay();
   const router = useRouter();
   const dispatch = useDispatch();
   const { showToast } = useToast();
@@ -328,7 +329,7 @@ export default function CheckoutScreen() {
   /* ---------- PREFETCH ON STEP 3 ---------- */
 
   useEffect(() => {
-    if (step === 3 && paymentState.paymentType === "card" && !clientSecret && !loadingIntent) {
+    if (step === 3 && (paymentState.paymentType === "card" || paymentState.paymentType === "applepay" || paymentState.paymentType === "googlepay") && !clientSecret && !loadingIntent) {
       ensureClientSecret();
     }
   }, [step, paymentState.paymentType, ensureClientSecret, clientSecret, loadingIntent]);
@@ -531,43 +532,129 @@ export default function CheckoutScreen() {
     }
 
     if (step === 3) {
-      // Handle Apple Pay payment
-      // Note: Apple Pay API methods may vary by Stripe React Native version
-      // For now, we'll show the option but handle it as card payment
-      // TODO: Implement proper Apple Pay when SDK version supports it
       // Handle Apple Pay payment (iOS)
       if (paymentState.paymentType === "applepay" && Platform.OS === "ios") {
-        setLoadingPayment(false);
-        Alert.alert(
-          "Apple Pay",
-          "Apple Pay is not yet fully implemented. Please use a credit card or PayPal to complete your payment.",
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                setPaymentState((s) => ({ ...s, paymentType: "card" }));
-              },
+        if (!clientSecret) {
+          Alert.alert("Error", "Payment not ready. Please try again.");
+          return;
+        }
+
+        setLoadingPayment(true);
+        try {
+          const { error, paymentIntent } = await confirmPlatformPayPayment(clientSecret, {
+            applePay: {
+              cartItems: [{
+                label: "Al-Ihsan Foundation",
+                amount: checkoutSummary?.total.toFixed(2) ?? "0.00",
+                paymentType: PlatformPay.PaymentType.Final,
+              }],
+              merchantCountryCode: "AU",
+              currencyCode: "AUD",
             },
-          ]
-        );
+          });
+
+          setLoadingPayment(false);
+
+          if (error) {
+            if (error.code !== "Canceled") {
+              Alert.alert("Apple Pay failed", error.message);
+            }
+            return;
+          }
+
+          if (paymentIntent && checkoutSummary) {
+            await AsyncStorage.setItem(
+              "checkoutSummary",
+              JSON.stringify({
+                ...checkoutSummary,
+                isAuthenticated,
+                createdAt: Date.now(),
+                paymentIntentId: paymentIntent.id,
+              })
+            );
+
+            setPaymentCompleted(true);
+
+            try {
+              if (isAuthenticated) {
+                await clearBasket();
+              } else {
+                await AsyncStorage.removeItem("guestBasket");
+              }
+            } catch {
+              // Continue with navigation even if basket clearing fails
+            }
+
+            setTimeout(() => {
+              router.replace("/thank-you");
+            }, 100);
+          }
+        } catch (err: any) {
+          setLoadingPayment(false);
+          Alert.alert("Apple Pay failed", err?.message || "An unexpected error occurred");
+        }
         return;
       }
 
       // Handle Google Pay payment (Android)
       if (paymentState.paymentType === "googlepay" && Platform.OS === "android") {
-        setLoadingPayment(false);
-        Alert.alert(
-          "Google Pay",
-          "Google Pay is not yet fully implemented. Please use a credit card or PayPal to complete your payment.",
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                setPaymentState((s) => ({ ...s, paymentType: "card" }));
-              },
+        if (!clientSecret) {
+          Alert.alert("Error", "Payment not ready. Please try again.");
+          return;
+        }
+
+        setLoadingPayment(true);
+        try {
+          const isTestEnv = stripePublishableKey?.startsWith("pk_test");
+          const { error, paymentIntent } = await confirmPlatformPayPayment(clientSecret, {
+            googlePay: {
+              testEnv: !!isTestEnv,
+              merchantName: "Al-Ihsan Foundation",
+              merchantCountryCode: "AU",
+              currencyCode: "AUD",
             },
-          ]
-        );
+          });
+
+          setLoadingPayment(false);
+
+          if (error) {
+            if (error.code !== "Canceled") {
+              Alert.alert("Google Pay failed", error.message);
+            }
+            return;
+          }
+
+          if (paymentIntent && checkoutSummary) {
+            await AsyncStorage.setItem(
+              "checkoutSummary",
+              JSON.stringify({
+                ...checkoutSummary,
+                isAuthenticated,
+                createdAt: Date.now(),
+                paymentIntentId: paymentIntent.id,
+              })
+            );
+
+            setPaymentCompleted(true);
+
+            try {
+              if (isAuthenticated) {
+                await clearBasket();
+              } else {
+                await AsyncStorage.removeItem("guestBasket");
+              }
+            } catch {
+              // Continue with navigation even if basket clearing fails
+            }
+
+            setTimeout(() => {
+              router.replace("/thank-you");
+            }, 100);
+          }
+        } catch (err: any) {
+          setLoadingPayment(false);
+          Alert.alert("Google Pay failed", err?.message || "An unexpected error occurred");
+        }
         return;
       }
 

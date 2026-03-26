@@ -17,11 +17,13 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
+import { setStatusBarStyle } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector, useDispatch } from "react-redux";
 import {
@@ -35,11 +37,12 @@ import {
   logoutUser,
 } from "@/store/reduxSlice/authenticationSlice";
 import LogoutConfirmationModal from "@/components/ui/Modals/LogoutConfirmationModal";
+import DeleteAccountConfirmationModal from "@/components/ui/Modals/DeleteAccountConfirmationModal";
+import { useToast } from "@/context/ToastContext";
 import { getPaymentsList } from "@/store/reduxSlice/paymentDetailsSlice";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "@/context/AuthContext";
-import { emptyBasket } from "@/store/reduxSlice/basketSlice";
 
 // Enable LayoutAnimation on Android
 if (
@@ -48,6 +51,45 @@ if (
 ) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
+
+/** Same hero asset as Help & campaign search for visual consistency */
+const GUEST_PROFILE_BANNER_URI =
+  "https://alihsan.s3.ap-southeast-2.amazonaws.com/gaza/1766470085564-alihsan-IMG_4983%20Congo%20Blog%202%20Large.jpeg";
+
+/** Must match `tabBarStyle.height` in `app/(tabs)/_layout.tsx` */
+const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 88 : 68;
+
+const GUEST_BENEFITS: {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  title: string;
+  description: string;
+}[] = [
+  {
+    icon: "receipt-outline",
+    title: "Donation history",
+    description: "Every gift, date, and campaign in one timeline.",
+  },
+  {
+    icon: "repeat-outline",
+    title: "Recurring gifts",
+    description: "Schedule weekly or monthly support you can change anytime.",
+  },
+  {
+    icon: "document-text-outline",
+    title: "Tax receipts",
+    description: "Download PDF invoices whenever you need them.",
+  },
+  {
+    icon: "notifications-outline",
+    title: "Project updates",
+    description: "Stories and impact from the programmes you support.",
+  },
+  {
+    icon: "settings-outline",
+    title: "Your profile",
+    description: "Update contact details and preferences in a tap.",
+  },
+];
 
 // Format currency
 const formatCurrency = (amount: number): string => {
@@ -88,6 +130,7 @@ const getStatusBadgeStyle = (status: string) => {
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const dispatch = useDispatch();
   const appDispatch = useAppDispatch();
 
@@ -115,6 +158,9 @@ export default function ProfileScreen() {
   const isAuthenticated = !!user || !!authUser;
   const currentUser = user || authUser;
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
+  const { showToast } = useToast();
   const [refreshing, setRefreshing] = useState(false);
   const [expandedOrders, setExpandedOrders] = useState<Set<string | number>>(
     new Set(),
@@ -180,6 +226,20 @@ export default function ProfileScreen() {
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
       notLoggedInScrollViewRef.current?.scrollTo({ y: 0, animated: false });
     }, []),
+  );
+
+  // Status bar: light on guest hero, dark when logged in; reset when leaving tab
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated) {
+        setStatusBarStyle("light");
+      } else {
+        setStatusBarStyle("dark");
+      }
+      return () => {
+        setStatusBarStyle("auto");
+      };
+    }, [isAuthenticated]),
   );
 
   const groupedOrders = useMemo(() => {
@@ -310,182 +370,188 @@ export default function ProfileScreen() {
     }
   };
 
-  // const handleDeleteAccount = async () => {
-  //   try {
-  //     dispatch(emptyBasket());
-  //     await deleteAccount(authUser.id);
-  //     await logout();
+  const handleDeleteAccountPress = () => {
+    setShowDeleteAccountModal(true);
+  };
 
-  //     router.replace("/(tabs)/");
-  //   } catch (error) {
-  //     console.error("Delete account failed:", error);
-  //   }
-  // };
-  const handleDeleteAccount = async () => {
+  const handleCancelDeleteAccount = () => {
+    if (!deleteAccountLoading) setShowDeleteAccountModal(false);
+  };
+
+  const handleConfirmDeleteAccount = async () => {
+    if (!authUser?.id) {
+      showToast({ message: "Unable to delete account. Please sign in again.", type: "error" });
+      return;
+    }
+    setDeleteAccountLoading(true);
     try {
-      await appDispatch(deleteAccount(authUser.id)).unwrap();
-
-      router.replace("/(tabs)/");
-    } catch (error) {
-      console.error("Delete account failed:", error);
+      await appDispatch(deleteAccount(String(authUser.id))).unwrap();
+      setShowDeleteAccountModal(false);
+      showToast({
+        message: "Your account has been deleted.",
+        type: "success",
+        duration: 2800,
+      });
+      setTimeout(() => {
+        router.replace("/(tabs)/");
+      }, 450);
+    } catch (error: unknown) {
+      const message =
+        typeof error === "string"
+          ? error
+          : error && typeof error === "object" && "message" in error
+            ? String((error as { message: string }).message)
+            : "Could not delete account. Please try again.";
+      showToast({ message, type: "error" });
+    } finally {
+      setDeleteAccountLoading(false);
     }
   };
 
   if (!isAuthenticated) {
+    /** Match visible tab scene height so the scroll body isn’t a short strip with a grey void below. */
+    const guestScrollMinHeight =
+      windowHeight - TAB_BAR_HEIGHT - insets.top;
+    /** Hero + overlap: sheet pulls up into hero; bottom is square to meet the tab bar. */
+    const GUEST_HERO_HEIGHT = 220;
+    const GUEST_HERO_OVERLAP = 18;
+    const guestSheetMinHeight = Math.max(
+      0,
+      guestScrollMinHeight - GUEST_HERO_HEIGHT + GUEST_HERO_OVERLAP,
+    );
+
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <ScrollView
-          ref={notLoggedInScrollViewRef}
-          style={styles.notLoggedInScroll}
-          contentContainerStyle={styles.notLoggedInContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Main Card */}
-          <View style={styles.authCard}>
-            {/* Top Gradient Section */}
-            <LinearGradient
-              colors={["#EEF4FF", "#FFFFFF"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.authCardTopSection}
-            >
-              <View style={styles.welcomeIconContainer}>
-                <Ionicons
-                  name="person-circle-outline"
-                  size={48}
-                  color="#246BE1"
-                />
-              </View>
-              <Text style={styles.guthenText}>Welcome</Text>
-              <Text style={styles.authTitle}>Join Our Community</Text>
-              <Text style={styles.authSubtitle}>
-                Sign in to access your profile, track your donations, and make a
-                lasting impact.
-              </Text>
-            </LinearGradient>
-
-            <View style={styles.authCardContent}>
-              {/* Sign In Button */}
-              <TouchableOpacity
-                style={styles.authPrimaryButton}
-                onPress={() => router.push("/login")}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="log-in-outline" size={18} color="#010D26" />
-                <Text style={styles.authPrimaryButtonText}>Sign In</Text>
-                <Ionicons name="chevron-forward" size={16} color="#010D26" />
-              </TouchableOpacity>
-
-              {/* Create Account Button */}
-              <TouchableOpacity
-                style={styles.authSecondaryButton}
-                onPress={() => router.push("/signup")}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="person-add-outline" size={18} color="#010D26" />
-                <Text style={styles.authSecondaryButtonText}>
-                  Create Account
+        <View style={styles.guestRoot}>
+          <ScrollView
+            ref={notLoggedInScrollViewRef}
+            style={styles.notLoggedInScroll}
+            contentContainerStyle={[
+              styles.notLoggedInContent,
+              {
+                flexGrow: 1,
+                backgroundColor: "#E8EDF2",
+                minHeight: guestScrollMinHeight,
+                paddingBottom: 0,
+              },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.guestHero}>
+              <ExpoImage
+                source={{ uri: GUEST_PROFILE_BANNER_URI }}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+              />
+              <LinearGradient
+                colors={[
+                  "rgba(1,13,38,0.2)",
+                  "rgba(38,75,139,0.65)",
+                  "rgba(1,13,38,0.92)",
+                ]}
+                locations={[0, 0.42, 1]}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              />
+              <View style={styles.guestHeroInner}>
+                <Text style={styles.guestHeroGuthen}>Together</Text>
+                <Text style={styles.guestHeroTitle}>
+                  Your generosity, in one place
                 </Text>
-                <Ionicons name="chevron-forward" size={16} color="#010D26" />
-              </TouchableOpacity>
+                <Text style={styles.guestHeroSubtitle}>
+                  Track gifts, receipts, and project news — synced with your web
+                  account.
+                </Text>
+              </View>
             </View>
-          </View>
 
-          {/* Features Section */}
-          <View style={styles.featuresSection}>
-            <View style={styles.featuresHeader}>
-              <Text style={styles.featuresTitle}>Why Sign In?</Text>
-              <View style={styles.featuresTitleUnderline} />
-            </View>
-            <View style={styles.featuresList}>
-              <View style={styles.featureItem}>
-                <LinearGradient
-                  colors={["#EFF6FF", "#F0F9FF"]}
-                  style={styles.featureIconGradient}
-                >
-                  <Ionicons name="receipt-outline" size={22} color="#246BE1" />
-                </LinearGradient>
-                <View style={styles.featureContent}>
-                  <Text style={styles.featureTitle}>Track Your Donations</Text>
-                  <Text style={styles.featureDescription}>
-                    Monitor all your contributions and their impact in one place
+            <View style={styles.guestSheetWrap}>
+              <View
+                style={[
+                  styles.guestSheet,
+                  {
+                    minHeight: guestSheetMinHeight,
+                    paddingBottom: 16 + insets.bottom,
+                  },
+                ]}
+              >
+                <Text style={styles.guestSheetIntro}>
+                  {`Sign in to see your donation history and manage your profile. New here? Create an account in a minute — it's free.`}
+                </Text>
+
+                <View style={styles.guestCtaRow}>
+                  <TouchableOpacity
+                    style={styles.guestSignInButton}
+                    onPress={() => router.push("/login")}
+                    activeOpacity={0.88}
+                  >
+                    <Ionicons name="log-in-outline" size={17} color="#010D26" />
+                    <Text style={styles.guestSignInButtonText} numberOfLines={1}>
+                      Sign in
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.guestCreateButton}
+                    onPress={() => router.push("/signup")}
+                    activeOpacity={0.88}
+                  >
+                    <Ionicons
+                      name="person-add-outline"
+                      size={17}
+                      color="#264B8B"
+                    />
+                    <Text style={styles.guestCreateButtonText} numberOfLines={1}>
+                      Sign up
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.guestDivider} />
+
+                <View style={styles.guestBenefitsHeader}>
+                  <Text style={styles.guestBenefitsTitle}>Member benefits</Text>
+                  <Text style={styles.guestBenefitsSub}>
+                    Everything below is included with your account.
                   </Text>
                 </View>
-              </View>
 
-              <View style={styles.featureItem}>
-                <LinearGradient
-                  colors={["#EFF6FF", "#F0F9FF"]}
-                  style={styles.featureIconGradient}
-                >
-                  <Ionicons name="repeat-outline" size={22} color="#246BE1" />
-                </LinearGradient>
-                <View style={styles.featureContent}>
-                  <Text style={styles.featureTitle}>Recurring Donations</Text>
-                  <Text style={styles.featureDescription}>
-                    Set up monthly or weekly donations to support causes you
-                    care about
-                  </Text>
+                <View style={styles.guestBenefitsPanel}>
+                  {GUEST_BENEFITS.map((item, index) => (
+                    <View
+                      key={item.title}
+                      style={[
+                        styles.guestBenefitRow,
+                        index === GUEST_BENEFITS.length - 1 &&
+                          styles.guestBenefitRowLast,
+                      ]}
+                    >
+                      <View style={styles.guestBenefitIconWrap}>
+                        <Ionicons name={item.icon} size={15} color="#2563EB" />
+                      </View>
+                      <View style={styles.guestBenefitText}>
+                        <Text style={styles.guestBenefitTitle}>{item.title}</Text>
+                        <Text style={styles.guestBenefitDescription}>
+                          {item.description}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
                 </View>
-              </View>
 
-              <View style={styles.featureItem}>
-                <LinearGradient
-                  colors={["#EFF6FF", "#F0F9FF"]}
-                  style={styles.featureIconGradient}
-                >
+                <View style={styles.guestTrustFooter}>
                   <Ionicons
-                    name="document-text-outline"
-                    size={22}
-                    color="#246BE1"
+                    name="shield-checkmark-outline"
+                    size={16}
+                    color="#64748B"
                   />
-                </LinearGradient>
-                <View style={styles.featureContent}>
-                  <Text style={styles.featureTitle}>Download Invoices</Text>
-                  <Text style={styles.featureDescription}>
-                    Access and download receipts for all your donations anytime
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.featureItem}>
-                <LinearGradient
-                  colors={["#EFF6FF", "#F0F9FF"]}
-                  style={styles.featureIconGradient}
-                >
-                  <Ionicons
-                    name="notifications-outline"
-                    size={22}
-                    color="#246BE1"
-                  />
-                </LinearGradient>
-                <View style={styles.featureContent}>
-                  <Text style={styles.featureTitle}>Project Updates</Text>
-                  <Text style={styles.featureDescription}>
-                    Stay informed about the impact of your contributions
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.featureItem}>
-                <LinearGradient
-                  colors={["#EFF6FF", "#F0F9FF"]}
-                  style={styles.featureIconGradient}
-                >
-                  <Ionicons name="settings-outline" size={22} color="#246BE1" />
-                </LinearGradient>
-                <View style={styles.featureContent}>
-                  <Text style={styles.featureTitle}>Manage Profile</Text>
-                  <Text style={styles.featureDescription}>
-                    Update your information and preferences anytime
+                  <Text style={styles.guestTrustText}>
+                    Secure sign-in · We never sell your data
                   </Text>
                 </View>
               </View>
             </View>
-          </View>
-        </ScrollView>
-      </View>
+          </ScrollView>
+        </View>
     );
   }
 
@@ -885,7 +951,7 @@ export default function ProfileScreen() {
 
             <TouchableOpacity
               style={styles.deleteAccountButton}
-              onPress={handleDeleteAccount}
+              onPress={handleDeleteAccountPress}
               activeOpacity={0.85}
             >
               <Ionicons name="trash-outline" size={18} color="#DC2626" />
@@ -903,6 +969,13 @@ export default function ProfileScreen() {
             visible={showLogoutModal}
             onCancel={() => setShowLogoutModal(false)}
             onConfirm={handleConfirmSignOut}
+          />
+
+          <DeleteAccountConfirmationModal
+            visible={showDeleteAccountModal}
+            loading={deleteAccountLoading}
+            onCancel={handleCancelDeleteAccount}
+            onConfirm={handleConfirmDeleteAccount}
           />
         </View>
       </ScrollView>
@@ -962,188 +1035,221 @@ const styles = StyleSheet.create({
     fontFamily: "AlbertSans_400Regular",
   },
 
-  // Not Logged In Content
+  // Not Logged In Content (compact buttons + fuller layout)
+  guestRoot: {
+    flex: 1,
+    backgroundColor: "#E8EDF2",
+  },
   notLoggedInScroll: {
     flex: 1,
+    backgroundColor: "#E8EDF2",
   },
   notLoggedInContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 32,
-    paddingBottom: 40,
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
-  authCard: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 8,
+  guestHero: {
     width: "100%",
-    maxWidth: 420,
-    alignSelf: "center",
-    marginBottom: 32,
+    height: 220,
+    position: "relative",
+    overflow: "hidden",
   },
-  authCardTopSection: {
-    paddingTop: 32,
-    paddingBottom: 24,
-    paddingHorizontal: 24,
-    alignItems: "center",
+  guestHeroInner: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 26,
+    paddingTop: 12,
   },
-  welcomeIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#EFF6FF",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: "#DBEAFE",
-  },
-  guthenText: {
+  guestHeroGuthen: {
     fontSize: 24,
     fontFamily: "Guthen Bloots",
     color: "#FFD602",
-    marginBottom: 6,
+    marginBottom: 4,
   },
-  authTitle: {
-    fontSize: 26,
+  guestHeroTitle: {
+    fontSize: 22,
     fontWeight: "800",
-    color: "#010D26",
+    color: "#FFFFFF",
     fontFamily: "AlbertSans_800ExtraBold",
     marginBottom: 8,
-    textAlign: "center",
+    lineHeight: 28,
+    letterSpacing: -0.2,
   },
-  authSubtitle: {
+  guestHeroSubtitle: {
     fontSize: 14,
-    color: "#6B7280",
+    color: "rgba(255,255,255,0.9)",
     fontFamily: "AlbertSans_400Regular",
-    textAlign: "center",
     lineHeight: 20,
-    paddingHorizontal: 8,
+    maxWidth: 360,
   },
-  authCardContent: {
-    padding: 20,
-    gap: 10,
-  },
-  authPrimaryButton: {
-    backgroundColor: "#FFD602",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    shadowColor: "#FFD602",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  authPrimaryButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#010D26",
-    fontFamily: "AlbertSans_700Bold",
-    flex: 1,
-    textAlign: "center",
-    marginLeft: 8,
-  },
-  authSecondaryButton: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  authSecondaryButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#010D26",
-    fontFamily: "AlbertSans_700Bold",
-    flex: 1,
-    textAlign: "center",
-    marginLeft: 8,
-  },
-  featuresSection: {
+  guestSheetWrap: {
+    marginTop: -18,
+    marginHorizontal: 0,
+    marginBottom: 0,
     width: "100%",
-    maxWidth: 420,
-    alignSelf: "center",
+    alignSelf: "stretch",
+    zIndex: 2,
   },
-  featuresHeader: {
+  guestSheet: {
+    flexDirection: "column",
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    paddingHorizontal: 22,
+    paddingTop: 24,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 0,
+    borderColor: "#E5E7EB",
+  },
+  guestSheetIntro: {
+    fontSize: 14,
+    color: "#475569",
+    fontFamily: "AlbertSans_400Regular",
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  guestCtaRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 4,
+  },
+  guestDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "#E2E8F0",
+    marginVertical: 22,
+  },
+  guestBenefitsHeader: {
+    marginBottom: 14,
+  },
+  guestBenefitsTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#0F172A",
+    fontFamily: "AlbertSans_700Bold",
+    marginBottom: 4,
+    letterSpacing: -0.2,
+  },
+  guestBenefitsSub: {
+    fontSize: 13,
+    color: "#64748B",
+    fontFamily: "AlbertSans_400Regular",
+    lineHeight: 19,
+  },
+  guestSignInButton: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: "#FFD602",
+    borderRadius: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 10,
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 24,
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "rgba(1,13,38,0.06)",
   },
-  featuresTitle: {
-    fontSize: 20,
+  guestSignInButtonText: {
+    fontSize: 14,
     fontWeight: "700",
     color: "#010D26",
     fontFamily: "AlbertSans_700Bold",
-    marginBottom: 8,
-    textAlign: "center",
   },
-  featuresTitleUnderline: {
-    width: 40,
-    height: 3,
-    backgroundColor: "#FFD602",
-    borderRadius: 2,
+  guestCreateButton: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
   },
-  featuresList: {
-    gap: 14,
+  guestCreateButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#264B8B",
+    fontFamily: "AlbertSans_600SemiBold",
   },
-  featureItem: {
+  guestBenefitsPanel: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    paddingVertical: 4,
+  },
+  guestBenefitRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#E2E8F0",
+    gap: 12,
   },
-  featureIconGradient: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+  guestBenefitRowLast: {
+    borderBottomWidth: 0,
+  },
+  guestBenefitIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: "#F1F5F9",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 14,
     flexShrink: 0,
-    borderWidth: 1,
-    borderColor: "#DBEAFE",
+    marginTop: 1,
   },
-  featureContent: {
+  guestBenefitText: {
     flex: 1,
-    paddingTop: 2,
+    minWidth: 0,
   },
-  featureTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#010D26",
-    fontFamily: "AlbertSans_600SemiBold",
-    marginBottom: 6,
-    lineHeight: 20,
-  },
-  featureDescription: {
+  guestBenefitTitle: {
     fontSize: 13,
-    color: "#6B7280",
+    fontWeight: "600",
+    color: "#0F172A",
+    fontFamily: "AlbertSans_600SemiBold",
+    marginBottom: 2,
+    lineHeight: 17,
+  },
+  guestBenefitDescription: {
+    fontSize: 12,
+    color: "#64748B",
     fontFamily: "AlbertSans_400Regular",
-    lineHeight: 18,
+    lineHeight: 16,
+  },
+  guestTrustFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: "auto",
+    paddingTop: 18,
+    paddingHorizontal: 4,
+    paddingBottom: 2,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#E2E8F0",
+  },
+  guestTrustText: {
+    fontSize: 12,
+    color: "#64748B",
+    fontFamily: "AlbertSans_400Regular",
+    textAlign: "center",
+    lineHeight: 17,
+    flexShrink: 1,
   },
 
   header: {

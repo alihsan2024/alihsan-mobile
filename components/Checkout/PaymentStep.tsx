@@ -160,27 +160,24 @@ export default function PaymentStep({ paymentState, setPaymentState, isPlatformP
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Select Payment Method</Text>
 
-      {/* APPLE PAY (iOS only) - Disabled for now */}
+      {/* APPLE PAY (iOS only) */}
       {isPlatformPaySupported && isIOS && (
         <TouchableOpacity
           style={[
             styles.card,
-            styles.cardDisabled,
             paymentState.paymentType === "applepay" && styles.cardSelected,
           ]}
-          onPress={() => {
-            showToast({
-              message: "Apple Pay will be available when released",
-              type: "info",
-              duration: 3000,
-            });
-          }}
+          onPress={() =>
+            setPaymentState((s) => ({
+              ...s,
+              paymentType: "applepay",
+            }))
+          }
           activeOpacity={0.7}
-          disabled={true}
         >
           <View style={styles.cardHeader}>
-            <Ionicons name="logo-apple" size={18} color="#9CA3AF" />
-            <Text style={[styles.cardTitle, styles.cardTitleDisabled]}>Apple Pay</Text>
+            <Ionicons name="logo-apple" size={18} color="#264B8B" />
+            <Text style={styles.cardTitle}>Apple Pay</Text>
             {paymentState.paymentType === "applepay" && (
               <View style={styles.selectedIndicator}>
                 <Ionicons name="checkmark-circle" size={20} color="#264B8B" />
@@ -188,33 +185,30 @@ export default function PaymentStep({ paymentState, setPaymentState, isPlatformP
             )}
           </View>
 
-          <Text style={[styles.checkboxText, styles.textDisabled]}>
+          <Text style={styles.checkboxText}>
             Pay securely with Touch ID or Face ID
           </Text>
         </TouchableOpacity>
       )}
 
-      {/* GOOGLE PAY (Android only) - Disabled for now */}
+      {/* GOOGLE PAY (Android only) */}
       {isPlatformPaySupported && isAndroid && (
         <TouchableOpacity
           style={[
             styles.card,
-            styles.cardDisabled,
             paymentState.paymentType === "googlepay" && styles.cardSelected,
           ]}
-          onPress={() => {
-            showToast({
-              message: "Google Pay will be available when released",
-              type: "info",
-              duration: 3000,
-            });
-          }}
+          onPress={() =>
+            setPaymentState((s) => ({
+              ...s,
+              paymentType: "googlepay",
+            }))
+          }
           activeOpacity={0.7}
-          disabled={true}
         >
           <View style={styles.cardHeader}>
-            <Ionicons name="logo-google" size={18} color="#9CA3AF" />
-            <Text style={[styles.cardTitle, styles.cardTitleDisabled]}>Google Pay</Text>
+            <Ionicons name="logo-google" size={18} color="#264B8B" />
+            <Text style={styles.cardTitle}>Google Pay</Text>
             {paymentState.paymentType === "googlepay" && (
               <View style={styles.selectedIndicator}>
                 <Ionicons name="checkmark-circle" size={20} color="#264B8B" />
@@ -222,7 +216,7 @@ export default function PaymentStep({ paymentState, setPaymentState, isPlatformP
             )}
           </View>
 
-          <Text style={[styles.checkboxText, styles.textDisabled]}>
+          <Text style={styles.checkboxText}>
             Pay securely with your Google account
           </Text>
         </TouchableOpacity>

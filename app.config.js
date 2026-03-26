@@ -7,7 +7,7 @@ try {
 
 module.exports = {
   expo: {
-    name: "Al-Ihsan Foundation App",
+    name: "Al-Ihsan Zakat & Charity App",
     slug: "alihsan-mobile",
     owner: "alihsan2025s-organization",
     version: "1.0.0",
@@ -61,7 +61,20 @@ module.exports = {
       bundler: "metro",
     },
     scheme: "alihsan",
-    plugins: ["expo-router", "expo-font", "expo-web-browser", "expo-secure-store", "expo-apple-authentication"],
+    plugins: [
+      "expo-router",
+      "expo-font",
+      "expo-web-browser",
+      "expo-secure-store",
+      "expo-apple-authentication",
+      [
+        "@stripe/stripe-react-native",
+        {
+          merchantIdentifier: "merchant.au.org.alihsan.www",
+          enableGooglePay: true,
+        },
+      ],
+    ],
     extra: {
       router: {},
       eas: {

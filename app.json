@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Al-Ihsan Foundation App",
+    "name": "Al-Ihsan Zakat & Charity App",
     "slug": "alihsan-mobile",
     "owner": "alihsan2025s-organization",
     "icon": "./assets/app-icon.png",
@@ -11,7 +11,9 @@
       "backgroundColor": "#264B8B",
       "resizeMode": "contain"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "org.alihsan.mobile",
@@ -38,7 +40,10 @@
               "scheme": "alihsan"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -46,7 +51,10 @@
       "bundler": "metro"
     },
     "scheme": "alihsan",
-    "plugins": ["expo-router", "expo-font"],
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ],
     "extra": {
       "router": {},
       "eas": {
