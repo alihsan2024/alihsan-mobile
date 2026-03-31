@@ -45,6 +45,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [appleAvailable, setAppleAvailable] = useState(false);
   const emailInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
 
@@ -53,6 +54,13 @@ export default function LoginScreen() {
     iosClientId: getGoogleIosClientId() ?? getGoogleWebClientId(),
     androidClientId: getGoogleAndroidClientId() ?? getGoogleWebClientId(),
   });
+
+  // Check Apple Sign In availability (not available on Simulator)
+  useEffect(() => {
+    if (Platform.OS === "ios") {
+      AppleAuthentication.isAvailableAsync().then(setAppleAvailable);
+    }
+  }, []);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -146,6 +154,15 @@ export default function LoginScreen() {
         fullName: credential.fullName,
         hasIdentityToken: !!credential.identityToken,
       }));
+
+      if (!credential.identityToken) {
+        showToast({
+          message: "Apple did not return a sign-in token. Please try again.",
+          type: "error",
+          duration: 6000,
+        });
+        return;
+      }
 
       const result = await dispatch(
         socialMediaLogin({
@@ -372,7 +389,7 @@ export default function LoginScreen() {
 
               {/* Social Login Buttons */}
               <View style={styles.socialButtons}>
-                {Platform.OS === "ios" && (
+                {appleAvailable && (
                   <TouchableOpacity
                     style={styles.socialButton}
                     onPress={handleAppleLogin}

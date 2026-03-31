@@ -5,6 +5,7 @@ import * as AppleAuthentication from "expo-apple-authentication";
 export interface AppleLoginButtonProps {
   onPressStart: () => void;
   onSuccess: (userInfo: {
+    identityToken: string;
     appleId: string;
     email: string | null;
     firstName: string;
@@ -56,7 +57,12 @@ export function AppleLoginButton({
         credential.email && credential.email.trim()
           ? credential.email.trim()
           : null;
+      if (!credential.identityToken) {
+        onError("Apple did not return a sign-in token. Please try again.");
+        return;
+      }
       await onSuccess({
+        identityToken: credential.identityToken,
         appleId: credential.user,
         email,
         firstName,

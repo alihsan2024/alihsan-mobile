@@ -70,7 +70,7 @@ module.exports = {
       [
         "@stripe/stripe-react-native",
         {
-          merchantIdentifier: "merchant.org.alihsan.mobile",
+          merchantIdentifier: "merchant.au.org.alihsan.www",
           enableGooglePay: true,
         },
       ],

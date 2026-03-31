@@ -4,10 +4,12 @@
   <dict>
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
+    <key>CFBundleAllowMixedLocalizations</key>
+    <true/>
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>Al-Ihsan Zakat & Charity App</string>
+    <string>Al-Ihsan Zakat &amp; Charity App</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -57,6 +59,8 @@
     </dict>
     <key>NSCameraUsageDescription</key>
     <string>This app needs access to your camera to allow you to take photos for your profile or upload images.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to access your Face ID biometric data.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>This app uses your location to show nearby campaigns and provide location-based services.</string>
     <key>NSPhotoLibraryAddUsageDescription</key>

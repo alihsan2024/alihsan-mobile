@@ -58,7 +58,7 @@ const SLIDER_DATA = [
   },
   {
     id: 3,
-    title: "Winter Appeal",
+    title: "Gaza Winter",
     image: require("../../assets/FeaturedIcons/WinterAppeal.png"),
   },
   {
@@ -506,13 +506,13 @@ export default function HomeScreen() {
             onPress={(item) => {
               switch (item.title) {
                 case "Food Packs":
-                  router.push("/(tabs)/ramadan");
+                  router.push("/campaign/gaza");
                   break;
                 case "Sponsorship":
                   router.push("/orphans-list");
                   break;
-                case "Winter Appeal":
-                  router.push("/campaign/winter-appeal");
+                case "Gaza Winter":
+                  router.push("/campaign/gaza-winter");
                   break;
                 case "Gift of Sight":
                   router.push("/campaign/eye-project");
