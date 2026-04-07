@@ -47,7 +47,33 @@ import {
 } from "@expo-google-fonts/albert-sans";
 import DeviceRegistrationManager from "@/utils/DeviceRegistrationManager";
 import { DonationAppealModal } from "../components/ui/Modals/DonationAppealModal";
-import { fetchFeaturedCampaigns } from "@/utils/api";
+import { fetchFeaturedCampaigns, getCampaignDetails } from "@/utils/api";
+
+/** Featured list + modal: primary campaign slug is `gaza` (/project/details/gaza). */
+function isGazaAppealCampaign(c: any): boolean {
+  if (!c) return false;
+  const slug = String(c.slug ?? "").toLowerCase().trim();
+  const name = String(c.name ?? "").toLowerCase();
+  if (slug === "gaza") return true;
+  if (slug.includes("gaza") && (slug.includes("ramadan") || slug.includes("starv")))
+    return true;
+  if (name.includes("gaza") && (name.includes("ramadan") || name.includes("starv")))
+    return true;
+  return false;
+}
+
+function raisedAndGoalFromCampaign(gaza: any): { raised: number; goal: number } {
+  const raised = Number(
+    gaza.amount_donated ?? gaza.amountDonated ?? 0
+  );
+  const goal = Number(
+    gaza.fundraiserGoal ??
+      gaza.mobileGoalAmount ??
+      gaza.fundraiser_goal ??
+      0
+  );
+  return { raised, goal };
+}
 import AuthGate from "../components/AuthGate";
 
 const introSlides = [
@@ -175,26 +201,23 @@ export default function RootLayout() {
         setShowSplash(false);
         // Use same API as home (featured campaigns) so modal shows when Gaza Ramadan 2026 is loaded
         fetchFeaturedCampaigns()
-          .then((campaigns) => {
-            const gaza = campaigns.find(
-              (c: any) =>
-                (c.slug && c.slug === "gaza-ramadan") ||
-                (c.name && String(c.name).toLowerCase().includes("gaza") && String(c.name).toLowerCase().includes("ramadan"))
-            );
-            if (gaza) {
-              const raised = Number(
-                (gaza as any).amount_donated ?? (gaza as any).amountDonated ?? 0
-              );
-              const goal = Number(
-                (gaza as any).fundraiserGoal ??
-                  (gaza as any).mobileGoalAmount ??
-                  (gaza as any).fundraiser_goal ??
-                  0
-              );
-              if (goal > 0) {
-                setGazaCampaignData({ raised, goal });
-                setShowGazaModal(true);
+          .then(async (campaigns) => {
+            let gaza: any = campaigns.find((c: any) => isGazaAppealCampaign(c));
+            if (!gaza) {
+              try {
+                const payload = await getCampaignDetails("gaza", {
+                  allowBmt: true,
+                });
+                const c = payload?.campaign ?? payload;
+                if (c?.id && isGazaAppealCampaign(c)) gaza = c;
+              } catch {
+                // keep gaza undefined
               }
+            }
+            if (gaza) {
+              const { raised, goal } = raisedAndGoalFromCampaign(gaza);
+              setGazaCampaignData({ raised, goal });
+              setShowGazaModal(true);
             }
           })
           .catch(() => {
