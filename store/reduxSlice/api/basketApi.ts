@@ -80,7 +80,9 @@ export const basketApi = createApi({
 
               draft.payload.push({
                 ...body,
-                total: body.amount,
+                total:
+                  body.total ??
+                  body.amount,
                 quantity: body.quantity ?? 1,
               });
             }

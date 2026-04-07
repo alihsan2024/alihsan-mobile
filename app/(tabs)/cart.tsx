@@ -244,7 +244,9 @@ export default function BasketScreen() {
         );
       }
     } else {
-      // Guest user: use amount * quantity
+      if (checkoutType === "ADEEQAH_GENERAL_SACRIFICE") {
+        return sum + parseFloat(item.total?.toString() || "0");
+      }
       const quantity = parseFloat(item.quantity?.toString() || "1");
       const amount = parseFloat(item.amount?.toString() || "0");
       return sum + amount * quantity;
@@ -332,7 +334,7 @@ export default function BasketScreen() {
                   item.checkoutType || item.Campaign?.checkoutType;
                 const isAdeeqah = checkoutType === "ADEEQAH_GENERAL_SACRIFICE";
                 const quantity = isAdeeqah
-                  ? parseInt(item.riceQuantity?.toString() || "1")
+                  ? parseInt(item.quantity?.toString() || "1", 10)
                   : item.quantity || 1;
                 const price = parseFloat(
                   item.amount?.toString() || item.ricePrice?.toString() || "0"
@@ -340,7 +342,9 @@ export default function BasketScreen() {
                 const itemTotal =
                   item.total !== undefined && item.total !== null
                     ? parseFloat(item.total?.toString() || "0")
-                    : price * quantity;
+                    : isAdeeqah
+                      ? price
+                      : price * quantity;
                 const isOrphan = !!item.orphanId;
                 const itemName =
                   item.name ||

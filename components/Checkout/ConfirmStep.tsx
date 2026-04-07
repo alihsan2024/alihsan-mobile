@@ -125,10 +125,18 @@ const ConfirmStep = ({ summary }: Props) => {
               item.name || item.Campaign?.name || item.Orphan?.name || "Campaign";
             const quantity = parseInt(item.quantity?.toString() || "1");
             const amount = parseFloat(item.amount?.toString() || "0");
+            const checkoutType =
+              item.checkoutType || item.Campaign?.checkoutType;
             const computedTotal =
-              item.total !== undefined && item.total !== null
-                ? parseFloat(item.total?.toString() || "0")
-                : amount * quantity;
+              checkoutType === "ADEEQAH_GENERAL_SACRIFICE"
+                ? parseFloat(
+                    item.total?.toString() ??
+                      item.amount?.toString() ??
+                      "0"
+                  )
+                : item.total !== undefined && item.total !== null
+                  ? parseFloat(item.total?.toString() || "0")
+                  : amount * quantity;
             const amountLabel = `$${formatPrice(computedTotal)}`;
             const isOrphan = !!item.orphanId;
             const recurringLabel = getRecurringLabel(item.periodDays);

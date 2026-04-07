@@ -11,7 +11,6 @@ import {
   Dimensions,
   Animated,
   Easing,
-  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -377,10 +376,6 @@ export default function GazaDonationScreen() {
 
   const isAqeeqah = campaign?.checkoutType === "ADEEQAH_GENERAL_SACRIFICE";
 
-  const openAqeeqahOnWeb = () => {
-    Linking.openURL("https://www.alihsan.org.au/project/aqeeqah");
-  };
-
   const handleAqeeqahAddToBasket = async (basketItem: any) => {
     let currentBasketItems: any[] = [];
     if (isAuthenticated) {
@@ -460,7 +455,8 @@ export default function GazaDonationScreen() {
   });
 
   const expandedContentHeight = 400;
-  const closedBarHeight = 140;
+  /** Shorter closed strip for sacrifice (title + chip + one CTA) vs amount chips + donate */
+  const closedBarHeight = isAqeeqah ? 100 : 140;
   const animatedHeight = expandAnimation.interpolate({
     inputRange: [0, 1],
     outputRange: [0, expandedContentHeight],
@@ -477,6 +473,7 @@ export default function GazaDonationScreen() {
   console.log(campaign.name);
 
   const windowHeight = Dimensions.get("window").height;
+  const aqeeqahSheetMaxHeight = Math.min(windowHeight * 0.72, 620);
 
   return (
     <View style={[styles.screenWrapper, { height: windowHeight }]}>
@@ -486,7 +483,9 @@ export default function GazaDonationScreen() {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{
         paddingBottom: donationCardExpanded
-          ? expandedContentHeight
+          ? isAqeeqah
+            ? Math.max(expandedContentHeight, aqeeqahSheetMaxHeight)
+            : expandedContentHeight
           : closedBarHeight + 24,
       }}
     >
@@ -981,15 +980,28 @@ export default function GazaDonationScreen() {
       >
         <View style={[styles.bottomDonationClosed, isAqeeqah && styles.bottomDonationClosedAqeeqah]}>
           {isAqeeqah ? (
-            <TouchableOpacity
-              style={styles.bottomDonateBtnClosed}
-              onPress={openAqeeqahOnWeb}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.bottomDonateTextClosed}>
-                Complete on website
-              </Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={[styles.bottomClosedTitleRow, styles.bottomClosedTitleRowAqeeqah]}
+                onPress={toggleDonationCard}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.bottomClosedTitle}>Choose donation</Text>
+                <View style={styles.bottomExpandChip}>
+                  <Text style={styles.bottomExpandChipText}>Goat or sheep</Text>
+                  <Ionicons name="chevron-up" size={16} color="#246BE1" />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.bottomDonateBtnClosed, styles.bottomDonateBtnClosedAqeeqah]}
+                onPress={toggleDonationCard}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.bottomDonateTextClosed}>
+                  Choose your animal
+                </Text>
+              </TouchableOpacity>
+            </>
           ) : (
             <>
               {/* Closed: title row with expand affordance */}
@@ -1050,7 +1062,7 @@ export default function GazaDonationScreen() {
           styles.bottomDonationExpanded,
           {
             opacity: animatedOpacity,
-            maxHeight: isAqeeqah ? 450 : animatedHeight,
+            maxHeight: isAqeeqah ? aqeeqahSheetMaxHeight : animatedHeight,
             overflow: "hidden",
           },
         ]}
@@ -1061,7 +1073,7 @@ export default function GazaDonationScreen() {
             <View style={styles.bottomExpandedHandle} />
             <View style={styles.bottomExpandedHeader}>
               <Text style={styles.bottomExpandedTitle}>
-                {isAqeeqah ? "Aqeeqah donation" : "Choose donation"}
+                {isAqeeqah ? "Sacrifice options" : "Choose donation"}
               </Text>
               <TouchableOpacity
                 onPress={toggleDonationCard}
@@ -1919,10 +1931,20 @@ const styles = StyleSheet.create({
     color: "#246BE1",
     fontFamily: "AlbertSans_600SemiBold",
   },
-  /* Aqeeqah closed: compact padding around button */
+  /* Aqeeqah / sadaqah sacrifice closed: tighter vertical rhythm */
   bottomDonationClosedAqeeqah: {
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  bottomClosedTitleRowAqeeqah: {
+    marginBottom: 6,
+  },
+  bottomDonateBtnClosedAqeeqah: {
+    paddingVertical: 10,
+    marginTop: 0,
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 3,
   },
   /* Card when Aqeeqah closed only */
   bottomDonationCardAqeeqahOnly: {

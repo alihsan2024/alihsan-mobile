@@ -117,6 +117,24 @@ const slice = createSlice({
       if (existingIndex !== -1) arrayToUpdate[existingIndex] = action.payload;
       else arrayToUpdate.push(action.payload);
     },
+    /** Removes one gold or silver line by key; keeps at least one empty row. */
+    zakatMetalRemove: (
+      state,
+      action: {
+        payload: { name: "gold" | "silver"; key: number };
+      }
+    ) => {
+      const name = action.payload.name;
+      const arr = (state.amounts as any)[name] as Array<any>;
+      const filtered = arr.filter((item: any) => item.key !== action.payload.key);
+      if (filtered.length === 0) {
+        (state.amounts as any)[name] = [
+          { karat: "1", unit: "gram", weight: 0, value: 0, key: 0 },
+        ];
+      } else {
+        (state.amounts as any)[name] = filtered;
+      }
+    },
     zakatResetInput: (state) => {
       state.amounts = initialState.amounts;
     },
@@ -155,6 +173,7 @@ export const {
   zakatStep,
   zakatInput,
   zakatMetalInput,
+  zakatMetalRemove,
   zakatResetInput,
   resetZakatInput,
 } = slice.actions;

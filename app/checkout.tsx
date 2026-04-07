@@ -159,10 +159,22 @@ export default function CheckoutScreen() {
       const processingFee = 0.03;
 
       const subtotal = items.reduce((sum, item) => {
+        const checkoutType =
+          item.checkoutType || item.Campaign?.checkoutType;
+        /** Line total is precomputed (incl. rice + Waleemah); do not multiply amount × qty. */
+        if (checkoutType === "ADEEQAH_GENERAL_SACRIFICE") {
+          return (
+            sum +
+            Number(item.total ?? item.amount ?? 0)
+          );
+        }
         if (isAuthenticated) {
           return sum + Number(item.total ?? item.amount ?? 0);
         }
-        return sum + Number(item.amount ?? 0) * Number(item.quantity ?? 1);
+        return (
+          sum +
+          Number(item.amount ?? 0) * Number(item.quantity ?? 1)
+        );
       }, 0);
 
       const adminFee = subtotal * processingFee;
@@ -280,7 +292,17 @@ export default function CheckoutScreen() {
           
           // Add optional fields if they exist
           if (item.donationItem) mappedItem.donationItem = item.donationItem;
-          if (item.isWaleemah) mappedItem.isWaleemah = item.isWaleemah;
+          if (item.checkoutType) mappedItem.checkoutType = item.checkoutType;
+          if (item.total != null && item.total !== "")
+            mappedItem.total = parseFloat(String(item.total));
+          if (item.checkoutType === "ADEEQAH_GENERAL_SACRIFICE") {
+            mappedItem.isWaleemah = !!item.isWaleemah;
+          } else if (item.isWaleemah) {
+            mappedItem.isWaleemah = item.isWaleemah;
+          }
+          if (item.riceQuantity != null && item.riceQuantity !== "")
+            mappedItem.riceQuantity = parseFloat(String(item.riceQuantity));
+          if (item.country) mappedItem.country = item.country;
           if (item.behalfOf) mappedItem.behalfOf = item.behalfOf;
           if (item.notes) mappedItem.notes = item.notes;
           if (item.name) mappedItem.name = item.name;
@@ -725,7 +747,17 @@ export default function CheckoutScreen() {
               };
               
               if (item.donationItem) mappedItem.donationItem = item.donationItem;
-              if (item.isWaleemah) mappedItem.isWaleemah = item.isWaleemah;
+              if (item.checkoutType) mappedItem.checkoutType = item.checkoutType;
+              if (item.total != null && item.total !== "")
+                mappedItem.total = parseFloat(String(item.total));
+              if (item.checkoutType === "ADEEQAH_GENERAL_SACRIFICE") {
+                mappedItem.isWaleemah = !!item.isWaleemah;
+              } else if (item.isWaleemah) {
+                mappedItem.isWaleemah = item.isWaleemah;
+              }
+              if (item.riceQuantity != null && item.riceQuantity !== "")
+                mappedItem.riceQuantity = parseFloat(String(item.riceQuantity));
+              if (item.country) mappedItem.country = item.country;
               if (item.behalfOf) mappedItem.behalfOf = item.behalfOf;
               if (item.notes) mappedItem.notes = item.notes;
               if (item.name) mappedItem.name = item.name;
