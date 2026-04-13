@@ -40,6 +40,9 @@ module.exports = {
         backgroundColor: "#264B8B",
       },
       package: "org.alihsan.mobile",
+      // expo-auth-session Google uses `${applicationId}:/oauthredirect`. iOS auto-adds the
+      // bundle id as a URL scheme; Android does not—without this, the OAuth redirect never opens the app.
+      scheme: "org.alihsan.mobile",
       config: {
         googleMaps: {
           apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
