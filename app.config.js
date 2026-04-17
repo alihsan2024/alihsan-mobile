@@ -70,6 +70,7 @@ module.exports = {
       "expo-web-browser",
       "expo-secure-store",
       "expo-apple-authentication",
+      "expo-video",
       [
         "@stripe/stripe-react-native",
         {

@@ -37,6 +37,8 @@ import CommunityImpactVideo from "@/components/ui/CommunityImpactVideo";
 import StayConnectedSection, {
   type StayConnectedSectionRef,
 } from "@/components/ui/StayConnectedSection";
+import StoryRing from "@/components/stories/StoryRing";
+import SideMenu from "@/components/ui/SideMenu";
 import { useToast } from "@/context/ToastContext";
 
 const ICON_SIZE = 16;
@@ -181,6 +183,7 @@ export default function HomeScreen() {
   const [replaceModalVisible, setReplaceModalVisible] = useState(false);
   const [pendingBasketItem, setPendingBasketItem] = useState<any>(null);
   const [existingCartItem, setExistingCartItem] = useState<any>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const { showToast } = useToast();
 
   // Load guest basket helper
@@ -302,6 +305,7 @@ export default function HomeScreen() {
   const { height: windowHeight } = Dimensions.get("window");
 
   return (
+    <>
     <ScrollView
       ref={scrollViewRef}
       style={{
@@ -335,6 +339,7 @@ export default function HomeScreen() {
       {/* Top Banner Section - "Making a Difference Together" / "Support Our Campaigns" */}
       <SupportCampaignsBanner
         topInset={insets.top}
+        onMenuPress={() => setMenuOpen(true)}
         onCampaignPress={(campaign) => {
           router.push(`/campaign/${campaign.slug}`);
         }}
@@ -492,6 +497,9 @@ export default function HomeScreen() {
 
       {/* Main content */}
       <View style={{ paddingTop: 10 }}>
+        {/* Stories Ring - Instagram-style story row */}
+        <StoryRing />
+
         {/* Categories Section - Below Banner */}
         <View
           style={{
@@ -587,7 +595,7 @@ export default function HomeScreen() {
         {/* Community Impact Video Section */}
         <View style={{ paddingHorizontal: PADDING_HORIZONTAL, marginTop: 24, marginBottom: 24 }}>
           <CommunityImpactVideo
-            videoUrl="https://alihsan.s3.ap-southeast-2.amazonaws.com/homepage-videos/1763512297065-alihsan-winter+appeal+16x9.mp4"
+            videoUrl="https://alihsan.s3.ap-southeast-2.amazonaws.com/Ramadan+sadaqah+2+16x9.mp4"
             backgroundImage="https://alihsan.s3.ap-southeast-2.amazonaws.com/projects/dac1a675d19a0d43be37299aebb6dd02.jpg"
             coverImage="https://alihsan.s3.ap-southeast-2.amazonaws.com/media/1765499530018-alihsan-Sri%20Lanka%20Flood.jpeg"
             title="Community Impact"
@@ -600,6 +608,9 @@ export default function HomeScreen() {
         <StayConnectedSection ref={stayConnectedRef} />
       </View>
     </ScrollView>
+
+    <SideMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
+    </>
   );
 }
 

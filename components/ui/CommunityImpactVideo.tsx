@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import * as Linking from "expo-linking";
+import { useVideoPlayer, VideoView } from "expo-video";
 
 interface CommunityImpactVideoProps {
   videoUrl?: string;
@@ -27,19 +27,14 @@ export default function CommunityImpactVideo({
   subheadline = "Meet the passionate individuals working together to bring kindness, care, and impact to every community we touch.",
 }: CommunityImpactVideoProps) {
   const isYouTubeUrl =
-    videoUrl && (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be"));
+    !!videoUrl && (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be"));
+  const canPlayInline = !!videoUrl && !isYouTubeUrl;
 
-  const handlePlay = async () => {
-    if (videoUrl) {
-      if (isYouTubeUrl) {
-        // Open YouTube video in browser
-        await Linking.openURL(videoUrl);
-      } else {
-        // For direct video URLs, could open in browser or use a video player
-        await Linking.openURL(videoUrl);
-      }
-    }
-  };
+  const player = useVideoPlayer(canPlayInline ? videoUrl! : null, (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.play();
+  });
 
   const imageSource = coverImage || backgroundImage;
 
@@ -47,17 +42,25 @@ export default function CommunityImpactVideo({
     <View style={styles.container}>
       <TouchableOpacity
         style={styles.videoContainer}
-        onPress={handlePlay}
         activeOpacity={0.9}
         disabled={!videoUrl}
       >
         <View style={styles.videoWrapper}>
-          <ExpoImage
-            source={{ uri: imageSource }}
-            style={styles.backgroundImage}
-            contentFit="cover"
-          />
-          
+          {canPlayInline ? (
+            <VideoView
+              style={styles.backgroundVideo}
+              player={player}
+              contentFit="cover"
+              nativeControls={false}
+            />
+          ) : (
+            <ExpoImage
+              source={{ uri: imageSource }}
+              style={styles.backgroundImage}
+              contentFit="cover"
+            />
+          )}
+
           {/* Gradient Overlay */}
           <LinearGradient
             colors={["transparent", "rgba(1, 13, 38, 0.3)", "rgba(1, 13, 38, 0.7)", "rgba(1, 13, 38, 0.855)"]}
@@ -101,6 +104,11 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   backgroundImage: {
+    width: "100%",
+    height: "100%",
+    position: "absolute",
+  },
+  backgroundVideo: {
     width: "100%",
     height: "100%",
     position: "absolute",

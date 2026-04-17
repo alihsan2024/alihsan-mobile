@@ -196,9 +196,11 @@ interface CampaignsResponse {
 // In-memory cache for campaigns (reduces slow repeated requests on TestFlight/production)
 const CACHE_TTL_FEATURED_MS = 30 * 60 * 1000; // 30 min
 const CACHE_TTL_CAMPAIGNS_MS = 30 * 60 * 1000; // 30 min
+const CACHE_TTL_STORIES_MS = 5 * 60 * 1000; // 5 min — stories expire fast (7d), cache short
 let featuredCampaignsCache: { data: Campaign[]; ts: number } | null = null;
 const campaignsCacheByKey: Record<string, { data: Campaign[]; ts: number }> =
   {};
+let storiesCache: { data: StoryPayload[]; ts: number } | null = null;
 
 /** Clear campaigns caches (e.g. after pull-to-refresh or when data may be stale). */
 export const invalidateCampaignsCache = () => {
@@ -206,6 +208,57 @@ export const invalidateCampaignsCache = () => {
   Object.keys(campaignsCacheByKey).forEach(
     (k) => delete campaignsCacheByKey[k],
   );
+};
+
+/** Clear the stories cache — called by home-screen pull-to-refresh. */
+export const invalidateStoriesCache = () => {
+  storiesCache = null;
+};
+
+// Shape returned by GET /stories. Mirrors the `stories` table columns
+// the backend exposes via PUBLIC_ATTRIBUTES in components/stories/domain/story.js.
+export type StoryPayload = {
+  id: string;
+  title: string | null;
+  caption: string | null;
+  media_url: string;
+  media_type: "image" | "video";
+  thumbnail_url: string | null;
+  cta_label: string | null;
+  cta_url: string | null;
+  campaign_tag: string | null;
+  display_order: number;
+  status: string;
+  published_at: string | null;
+  expires_at: string | null;
+};
+
+/**
+ * Fetch all active, non-expired stories. Backed by a 5-minute in-memory
+ * cache so the home screen, story ring, and featured bubble share one
+ * network call per mount cycle.
+ */
+export const fetchStories = async (
+  forceRefresh?: boolean,
+): Promise<StoryPayload[]> => {
+  if (
+    !forceRefresh &&
+    storiesCache &&
+    Date.now() - storiesCache.ts < CACHE_TTL_STORIES_MS
+  ) {
+    return storiesCache.data;
+  }
+  try {
+    const response = await api.get("/stories");
+    const stories: StoryPayload[] = response.data?.payload ?? [];
+    storiesCache = { data: stories, ts: Date.now() };
+    return stories;
+  } catch (error) {
+    if (__DEV__) {
+      console.error("Error fetching stories:", error);
+    }
+    throw error;
+  }
 };
 
 // Fetch all campaigns

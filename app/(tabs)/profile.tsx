@@ -946,6 +946,25 @@ export default function ProfileScreen() {
             </View>
           </View>
 
+          <View style={styles.helpSection}>
+            <Text style={styles.helpSectionTitle}>Help & Support</Text>
+
+            <TouchableOpacity
+              style={styles.helpRow}
+              onPress={() => router.push("/help")}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Help and support"
+              accessibilityHint="Opens help, policies, and child safety information"
+            >
+              <View style={styles.helpRowLeft}>
+                <Ionicons name="help-circle-outline" size={22} color="#2161CD" />
+                <Text style={styles.helpRowLabel}>Help, policies & safety</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.deleteSection}>
             <Text style={styles.deleteSectionTitle}>Danger Zone</Text>
 
@@ -1689,6 +1708,44 @@ const styles = StyleSheet.create({
     fontFamily: "AlbertSans_500Medium",
     textAlign: "right",
   },
+  helpSection: {
+    marginTop: 30,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+  },
+
+  helpSectionTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#010D26",
+    marginBottom: 10,
+  },
+
+  helpRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+
+  helpRowLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  helpRowLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#010D26",
+  },
+
   deleteSection: {
     marginTop: 30,
     paddingTop: 20,

@@ -17,6 +17,7 @@ import Feather from "@expo/vector-icons/Feather";
 import { router } from "expo-router";
 import { fetchCampaigns } from "@/utils/api";
 import CampaignSearchModal from "@/components/ui/CampaignSearchModal";
+import FeaturedStoryBubble from "@/components/stories/FeaturedStoryBubble";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -50,12 +51,14 @@ export type SupportCampaignForDonate = {
 interface SupportCampaignsBannerProps {
   onDonate?: (amount: number, frequency: string, campaignSlug: string, campaign?: SupportCampaignForDonate | null) => void;
   onCampaignPress?: (campaign: any) => void;
+  onMenuPress?: () => void;
   topInset?: number;
 }
 
 export default function SupportCampaignsBanner({
   onDonate,
   onCampaignPress,
+  onMenuPress,
   topInset = 0,
 }: SupportCampaignsBannerProps) {
   const [selectedCampaign, setSelectedCampaign] = useState("most-needed");
@@ -140,8 +143,20 @@ export default function SupportCampaignsBanner({
           end={{ x: 1, y: 0 }}
           style={[styles.gradient, { paddingTop: (topInset || 0) + 24 }]}
         >
-          {/* Search opens full-screen modal; Help opens policies & support */}
+          {/* Hamburger opens the side menu; search opens the campaign
+              search modal; featured bubble opens last-24h stories. */}
           <View style={styles.headerBar}>
+            {onMenuPress ? (
+              <TouchableOpacity
+                style={styles.menuButton}
+                onPress={onMenuPress}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Open menu"
+              >
+                <Ionicons name="menu" size={24} color="#fff" />
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
               style={styles.searchTrigger}
               onPress={() => setSearchModalVisible(true)}
@@ -167,16 +182,7 @@ export default function SupportCampaignsBanner({
               </View>
               <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.85)" />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.helpButton}
-              onPress={() => router.push("/help")}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel="Help and support"
-              accessibilityHint="Opens help, policies, and child safety information"
-            >
-              <Ionicons name="help-circle" size={26} color="#fff" />
-            </TouchableOpacity>
+            <FeaturedStoryBubble />
           </View>
 
           <View style={styles.content}>
@@ -577,6 +583,16 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   helpButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.58)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.45)",
+  },
+  menuButton: {
     width: 50,
     height: 50,
     borderRadius: 14,
