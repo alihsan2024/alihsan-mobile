@@ -218,7 +218,7 @@ export const invalidateStoriesCache = () => {
 // Shape returned by GET /stories. Mirrors the `stories` table columns
 // the backend exposes via PUBLIC_ATTRIBUTES in components/stories/domain/story.js.
 export type StoryPayload = {
-  id: string;
+  id: number;
   title: string | null;
   caption: string | null;
   media_url: string;

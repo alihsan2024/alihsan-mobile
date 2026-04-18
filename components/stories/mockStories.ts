@@ -45,7 +45,7 @@ const hoursAgo = (h: number) => new Date(now - h * 60 * 60 * 1000).toISOString()
 
 export const MOCK_STORIES: Story[] = [
   {
-    id: "11111111-1111-1111-1111-111111111111",
+    id: "1",
     title: "Sri Lanka Flood",
     caption: "Families are displaced by rising waters. Your help reaches them today.",
     media_url:
@@ -60,7 +60,7 @@ export const MOCK_STORIES: Story[] = [
     duration_ms: 5000,
   },
   {
-    id: "22222222-2222-2222-2222-222222222222",
+    id: "2",
     title: "Ramadan Sadaqah",
     caption: "A single meal. A single blessing. Multiply it this Ramadan.",
     media_url:
@@ -75,7 +75,7 @@ export const MOCK_STORIES: Story[] = [
     duration_ms: 15000,
   },
   {
-    id: "33333333-3333-3333-3333-333333333333",
+    id: "3",
     title: "Water Wells",
     caption: "Clean water for communities who've waited too long.",
     media_url:
@@ -90,7 +90,7 @@ export const MOCK_STORIES: Story[] = [
     duration_ms: 5000,
   },
   {
-    id: "44444444-4444-4444-4444-444444444444",
+    id: "4",
     title: "Orphan Sponsorship",
     caption: "Consistency changes a life. Become a monthly sponsor.",
     media_url:
@@ -105,7 +105,7 @@ export const MOCK_STORIES: Story[] = [
     duration_ms: 15000,
   },
   {
-    id: "55555555-5555-5555-5555-555555555555",
+    id: "5",
     title: "Gift of Sight",
     caption: "A 10-minute surgery restores a lifetime of vision.",
     media_url:
@@ -120,7 +120,7 @@ export const MOCK_STORIES: Story[] = [
     duration_ms: 5000,
   },
   {
-    id: "66666666-6666-6666-6666-666666666666",
+    id: "6",
     title: "Emergency Appeal",
     caption: "Every second counts. Tap to see how your donation moves now.",
     media_url:

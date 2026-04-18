@@ -5,7 +5,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import StoryViewer from "./StoryViewer";
 import { getRecentStories, type Story } from "./mockStories";
-import { fetchStories, type StoryPayload } from "@/utils/api";
+import { fetchStories } from "@/utils/api";
+import { apiToStory } from "./storyUtils";
+import { prefetchVideoThumbnail } from "./videoThumbnailCache";
 
 const SEEN_KEY = "seen_story_ids";
 const SIZE = 50;
@@ -49,6 +51,22 @@ export default function FeaturedStoryBubble({ hours = 24, style }: Props) {
     };
   }, []);
 
+  // Prefetch all image URLs and generate first-frame thumbnails for videos
+  // as soon as the list lands — well before the viewer opens.
+  useEffect(() => {
+    if (!fetched.length) return;
+    const imageUrls = fetched
+      .flatMap((s) => [
+        s.media_type === "image" ? s.media_url : null,
+        s.thumbnail_url ?? null,
+      ])
+      .filter((u): u is string => !!u);
+    if (imageUrls.length) ExpoImage.prefetch(imageUrls);
+    fetched
+      .filter((s) => s.media_type === "video")
+      .forEach((s) => prefetchVideoThumbnail(s.media_url));
+  }, [fetched]);
+
   useEffect(() => {
     (async () => {
       try {
@@ -71,6 +89,13 @@ export default function FeaturedStoryBubble({ hours = 24, style }: Props) {
   }, []);
 
   const allSeen = stories.length > 0 && stories.every((s) => seenIds.has(s.id));
+
+  // Resume from the first story that hasn't been seen yet. Falls back to 0
+  // if somehow every story is already seen (wraps around to the beginning).
+  const initialIndex = useMemo(() => {
+    const firstUnseen = stories.findIndex((s) => !seenIds.has(s.id));
+    return firstUnseen === -1 ? 0 : firstUnseen;
+  }, [stories, seenIds]);
 
   // Hide the bubble entirely when the last-N-hours window is empty.
   if (!stories.length) return null;
@@ -107,28 +132,12 @@ export default function FeaturedStoryBubble({ hours = 24, style }: Props) {
       <StoryViewer
         visible={open}
         stories={stories}
-        initialIndex={0}
+        initialIndex={initialIndex}
         onClose={() => setOpen(false)}
         onStoryViewed={markSeen}
       />
     </>
   );
-}
-
-function apiToStory(s: StoryPayload): Story {
-  return {
-    id: s.id,
-    title: s.title,
-    caption: s.caption,
-    media_url: s.media_url,
-    media_type: s.media_type,
-    thumbnail_url: s.thumbnail_url ?? undefined,
-    cta_label: s.cta_label,
-    cta_url: s.cta_url,
-    campaign_tag: s.campaign_tag,
-    published_at: s.published_at,
-    duration_ms: s.media_type === "video" ? 15000 : 5000,
-  };
 }
 
 const styles = StyleSheet.create({
