@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { View, StyleSheet, TouchableOpacity, StyleProp, ViewStyle } from "react-native";
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  StyleProp,
+  ViewStyle,
+  Alert,
+} from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -8,6 +15,8 @@ import { getRecentStories, type Story } from "./mockStories";
 import { fetchStories } from "@/utils/api";
 import { apiToStory } from "./storyUtils";
 import { prefetchVideoThumbnail } from "./videoThumbnailCache";
+import { prepareStoryMediaReady } from "./prepareStoryMedia";
+import { StoryIconLoadingRing } from "./StoryIconLoadingRing";
 
 const SEEN_KEY = "seen_story_ids";
 const SIZE = 50;
@@ -17,6 +26,8 @@ type Props = {
   /** Window in hours for the Featured feed. Default 24h. */
   hours?: number;
   style?: StyleProp<ViewStyle>;
+  /** Increment when `/stories` should refetch (version poll or pull-to-refresh). */
+  refreshSignal?: number;
 };
 
 /**
@@ -25,22 +36,29 @@ type Props = {
  * regardless of category. Shares the same AsyncStorage "seen" set as the
  * category rings below, so viewing here also greys out the ring.
  *
- * Fetches from `/stories` (cached 5 min via fetchStories) on mount.
+ * Fetches from `/stories`; refetches when `refreshSignal` increments (cheap version poll).
  */
-export default function FeaturedStoryBubble({ hours = 24, style }: Props) {
+export default function FeaturedStoryBubble({
+  hours = 24,
+  style,
+  refreshSignal = 0,
+}: Props) {
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   const [fetched, setFetched] = useState<Story[]>([]);
   const [open, setOpen] = useState(false);
+  const [preparingOpen, setPreparingOpen] = useState(false);
+  /** Stories with measured duration for the viewer (set after prepare completes). */
+  const [viewerStories, setViewerStories] = useState<Story[] | null>(null);
 
   const stories = useMemo(() => getRecentStories(fetched, hours), [fetched, hours]);
 
-  // Fetch once on mount; the API layer caches so this is cheap even if
-  // the category ring below also fetches.
+  // Fetch on mount and whenever refreshSignal bumps (version poll).
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetchStories();
+        const forceFullFetch = refreshSignal > 0;
+        const res = await fetchStories(forceFullFetch);
         if (!cancelled) setFetched(res.map(apiToStory));
       } catch {
         if (!cancelled) setFetched([]);
@@ -49,7 +67,7 @@ export default function FeaturedStoryBubble({ hours = 24, style }: Props) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshSignal]);
 
   // Prefetch all image URLs and generate first-frame thumbnails for videos
   // as soon as the list lands — well before the viewer opens.
@@ -97,20 +115,50 @@ export default function FeaturedStoryBubble({ hours = 24, style }: Props) {
     return firstUnseen === -1 ? 0 : firstUnseen;
   }, [stories, seenIds]);
 
+  const handleOpen = async () => {
+    if (!stories.length || preparingOpen) return;
+    const first = stories[initialIndex];
+    setPreparingOpen(true);
+    try {
+      const meta = await prepareStoryMediaReady(first);
+      const augmented = stories.map((s, i) =>
+        i === initialIndex ? { ...s, duration_ms: meta.durationMs } : s
+      );
+      setViewerStories(augmented);
+      setOpen(true);
+    } catch {
+      Alert.alert(
+        "Couldn't open story",
+        "Please check your connection and try again.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setPreparingOpen(false);
+    }
+  };
+
+  const closeViewer = () => {
+    setOpen(false);
+    setViewerStories(null);
+  };
+
   // Hide the bubble entirely when the last-N-hours window is empty.
   if (!stories.length) return null;
 
   return (
     <>
       <TouchableOpacity
-        onPress={() => setOpen(true)}
+        onPress={handleOpen}
         activeOpacity={0.85}
         style={[styles.container, style]}
         accessibilityRole="button"
         accessibilityLabel="Latest stories"
         accessibilityHint="Opens the latest Al-Ihsan stories from the last 24 hours"
+        disabled={preparingOpen}
       >
-        {allSeen ? (
+        {preparingOpen ? (
+          <View style={[styles.ring, styles.ringLoading]} />
+        ) : allSeen ? (
           <View style={[styles.ring, styles.ringSeen]} />
         ) : (
           <LinearGradient
@@ -119,6 +167,11 @@ export default function FeaturedStoryBubble({ hours = 24, style }: Props) {
             end={{ x: 1, y: 1 }}
             style={styles.ring}
           />
+        )}
+        {preparingOpen && (
+          <View style={styles.loadingRingOverlay} pointerEvents="none">
+            <StoryIconLoadingRing size={SIZE} strokeWidth={2.5} />
+          </View>
         )}
         <View style={styles.innerMask}>
           <ExpoImage
@@ -131,9 +184,9 @@ export default function FeaturedStoryBubble({ hours = 24, style }: Props) {
 
       <StoryViewer
         visible={open}
-        stories={stories}
+        stories={viewerStories ?? stories}
         initialIndex={initialIndex}
-        onClose={() => setOpen(false)}
+        onClose={closeViewer}
         onStoryViewed={markSeen}
       />
     </>
@@ -156,6 +209,15 @@ const styles = StyleSheet.create({
   ringSeen: {
     backgroundColor: "rgba(255,255,255,0.4)",
   },
+  ringLoading: {
+    backgroundColor: "#E8E8EA",
+  },
+  loadingRingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   innerMask: {
     width: INNER,
     height: INNER,

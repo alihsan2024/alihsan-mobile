@@ -9,6 +9,9 @@ import {
   Animated,
   StatusBar,
   Linking,
+  Platform,
+  PanResponder,
+  useWindowDimensions,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -19,21 +22,51 @@ import { VideoView, useVideoPlayer } from "expo-video";
 import { router } from "expo-router";
 import type { Story } from "./mockStories";
 import { getVideoThumbnail } from "./videoThumbnailCache";
+import {
+  getSegmentDurationsMs,
+  STORY_SEGMENT_MS,
+} from "./storyUtils";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
-const DEFAULT_IMAGE_DURATION_MS = 5000;
+const DEFAULT_IMAGE_DURATION_MS = STORY_SEGMENT_MS;
+/** Horizontal inset from screen edges for caption + CTA row */
+const CAPTION_EDGE_INSET = 16;
+
+/** Progress fill 0–1 within one segment from overall playback ratio (0–1). */
+function segmentFillRatio(
+  overallRatio: number,
+  totalMs: number,
+  segmentIndex: number,
+  segmentDurations: number[]
+): number {
+  if (totalMs <= 0 || !segmentDurations.length) return 0;
+  const elapsed = overallRatio * totalMs;
+  let start = 0;
+  for (let i = 0; i < segmentIndex; i++) start += segmentDurations[i];
+  const dur = segmentDurations[segmentIndex];
+  if (elapsed <= start) return 0;
+  if (elapsed >= start + dur) return 1;
+  return (elapsed - start) / dur;
+}
 
 type Props = {
   visible: boolean;
   stories: Story[];
   initialIndex: number;
   onClose: () => void;
-  /** Fired when the user fully advances past a story (auto-complete or right-tap).
-   *  Closing the viewer mid-story does NOT fire this, so the viewer resumes there. */
   onStoryViewed?: (story: Story) => void;
-  /** Fired when user taps the CTA button. */
   onCTAPress?: (story: Story) => void;
 };
+
+const DISMISS_DRAG_THRESHOLD = 110;
+/** Require real drag distance before velocity can dismiss — avoids taps registering high vy and closing the viewer. */
+const DISMISS_MIN_DRAG_FOR_FLICK = 52;
+const DISMISS_VELOCITY = 1.35;
+/** Drag distance over which the story scales down ~20% (scale → 0.8). */
+const DRAG_SCALE_DISTANCE = SCREEN_H * 0.38;
+/** Corner radius grows with drag so the card feels more “sheet-like” as it moves down. */
+const DRAG_RADIUS_MAX_EARLY = 26;
+const DRAG_RADIUS_MAX_DEEP = 42;
 
 export default function StoryViewer({
   visible,
@@ -44,64 +77,182 @@ export default function StoryViewer({
   onCTAPress,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  /** Never wider than the screen minus margins (caps at 560 on large phones/tablets). */
+  const captionBlockMaxWidth = Math.min(
+    560,
+    windowWidth - CAPTION_EDGE_INSET * 2,
+  );
   const [index, setIndex] = useState(initialIndex);
   const [paused, setPaused] = useState(false);
   const progress = useRef(new Animated.Value(0)).current;
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const translateY = useRef(new Animated.Value(0)).current;
+  const dragOffsetRef = useRef(0);
   const indexRef = useRef(index);
   indexRef.current = index;
 
-  const story = stories[index];
+  /**
+   * Story ring closes with `stories=[]`, which would unmount this tree and destroy video players.
+   * Keep the last non-empty list so `StoryVideo` / `useVideoPlayer` stay mounted — reopen reuses buffers.
+   */
+  const storiesSnapshotRef = useRef<Story[]>([]);
+  useEffect(() => {
+    if (stories.length > 0) {
+      storiesSnapshotRef.current = stories;
+    }
+  }, [stories]);
 
-  // Refs so goNext can read the current story and callback without being
-  // listed in its dependency array (avoids recreating the callback on every
-  // story change, which would restart the animation).
+  const storyList =
+    stories.length > 0 ? stories : storiesSnapshotRef.current;
+
+  const storyListLenRef = useRef(0);
+  storyListLenRef.current = storyList.length;
+
+  const story = storyList[index];
+
+  /** Measured from the active video player; drives full-length playback and 5s segment layout. */
+  const [videoDurationMs, setVideoDurationMs] = useState<number | null>(null);
+  /** 0–1 elapsed / duration for the current video story. */
+  const [videoRatio, setVideoRatio] = useState(0);
+
   const storyRef = useRef(story);
   storyRef.current = story;
   const onStoryViewedRef = useRef(onStoryViewed);
   onStoryViewedRef.current = onStoryViewed;
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
-  // Reset when the modal opens or jumps to a new initial index
   useEffect(() => {
     if (visible) {
       setIndex(initialIndex);
       setPaused(false);
+      translateY.setValue(0);
+      dragOffsetRef.current = 0;
     }
   }, [visible, initialIndex]);
 
-  // Prefetch every image URL (media + thumbnail) the moment the viewer opens so
-  // subsequent stories display instantly. Videos are streamed and can't be
-  // pre-downloaded this way, but their thumbnails can.
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      /** Higher dy threshold so light finger noise does not steal taps from left/right story navigation. */
+      onMoveShouldSetPanResponder: (_, g) =>
+        g.dy > 22 &&
+        Math.abs(g.dy) > Math.abs(g.dx) * 1.08 &&
+        Math.abs(g.dx) < 64,
+      onMoveShouldSetPanResponderCapture: (_, g) =>
+        g.dy > 22 &&
+        Math.abs(g.dy) > Math.abs(g.dx) * 1.08 &&
+        Math.abs(g.dx) < 64,
+      onPanResponderGrant: () => {
+        translateY.stopAnimation((v) => {
+          dragOffsetRef.current = v;
+        });
+      },
+      onPanResponderMove: (_, g) => {
+        const y = Math.max(0, dragOffsetRef.current + g.dy);
+        translateY.setValue(y);
+      },
+      onPanResponderRelease: (_, g) => {
+        const y = dragOffsetRef.current + g.dy;
+        const shouldClose =
+          y > DISMISS_DRAG_THRESHOLD ||
+          (y > DISMISS_MIN_DRAG_FOR_FLICK && g.vy > DISMISS_VELOCITY);
+        if (shouldClose) {
+          Animated.timing(translateY, {
+            toValue: SCREEN_H,
+            duration: 220,
+            useNativeDriver: true,
+          }).start(() => {
+            onCloseRef.current();
+            translateY.setValue(0);
+            dragOffsetRef.current = 0;
+          });
+        } else {
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            friction: 9,
+            tension: 80,
+          }).start(() => {
+            dragOffsetRef.current = 0;
+          });
+        }
+      },
+    })
+  ).current;
+
+  /** Shrinks with downward drag (≈20% at full range). */
+  const dragShrinkScale = translateY.interpolate({
+    inputRange: [0, DRAG_SCALE_DISTANCE],
+    outputRange: [1, 0.8],
+    extrapolate: "clamp",
+  });
+
+  /** Corners start sharp at rest and round further the more you drag (and a bit more near full dismiss). */
+  const dragCornerRadius = translateY.interpolate({
+    inputRange: [0, DRAG_SCALE_DISTANCE, SCREEN_H * 0.55],
+    outputRange: [0, DRAG_RADIUS_MAX_EARLY, DRAG_RADIUS_MAX_DEEP],
+    extrapolate: "clamp",
+  });
+
   useEffect(() => {
-    if (!visible || !stories.length) return;
-    const urls = stories
+    setVideoRatio(0);
+    if (
+      story?.media_type === "video" &&
+      typeof story.duration_ms === "number" &&
+      story.duration_ms > 0
+    ) {
+      setVideoDurationMs(story.duration_ms);
+    } else {
+      setVideoDurationMs(null);
+    }
+  }, [story?.id, story?.media_type, story?.duration_ms]);
+
+  useEffect(() => {
+    if (!visible || !storyList.length) return;
+    const urls = storyList
       .flatMap((s) => [
         s.media_type === "image" ? s.media_url : null,
         s.thumbnail_url ?? null,
       ])
       .filter((u): u is string => !!u);
     if (urls.length) ExpoImage.prefetch(urls);
-  }, [visible]);
+  }, [visible, storyList]);
 
-  // Mark the current story as seen only when the user actually advances past it
-  // (either the progress bar finishes naturally, or they tap the right zone).
-  // Closing mid-story does NOT mark it seen, so reopening resumes here.
   const goNext = useCallback(() => {
     if (storyRef.current) onStoryViewedRef.current?.(storyRef.current);
-    if (indexRef.current >= stories.length - 1) {
+    const n = storyListLenRef.current;
+    if (n === 0) return;
+    if (indexRef.current >= n - 1) {
       onClose();
     } else {
-      setIndex((i) => Math.min(i + 1, stories.length - 1));
+      setIndex((i) => Math.min(i + 1, n - 1));
     }
-  }, [stories.length, onClose]);
+  }, [onClose]);
+
+  const goNextRef = useRef(goNext);
+  goNextRef.current = goNext;
 
   const goPrev = useCallback(() => {
     setIndex((i) => Math.max(i - 1, 0));
   }, []);
 
-  // Drive the progress bar for the current story
+  const handleVideoDuration = useCallback((ms: number) => {
+    if (ms > 0) setVideoDurationMs(ms);
+  }, []);
+
+  const handleVideoRatio = useCallback((r: number) => {
+    setVideoRatio(Math.min(1, Math.max(0, r)));
+  }, []);
+
+  const handleVideoEnd = useCallback(() => {
+    goNext();
+  }, [goNext]);
+
   useEffect(() => {
     if (!visible || !story) return;
+    if (story.media_type === "video") return;
 
     progress.setValue(0);
     const duration = story.duration_ms ?? DEFAULT_IMAGE_DURATION_MS;
@@ -114,28 +265,24 @@ export default function StoryViewer({
 
     if (!paused) {
       animationRef.current.start(({ finished }) => {
-        if (finished) goNext();
+        if (finished) goNextRef.current();
       });
     }
 
     return () => {
       animationRef.current?.stop();
     };
-    // We intentionally re-run only on story change or visibility toggle.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, story?.id]);
+  }, [visible, story?.id, story?.media_type]);
 
-  // Pause/resume — stop or continue the in-flight animation
   useEffect(() => {
     if (!visible || !story) return;
+    if (story.media_type === "video") return;
     if (paused) {
       animationRef.current?.stop();
       return;
     }
 
-    // Resume from current value
     const duration = story.duration_ms ?? DEFAULT_IMAGE_DURATION_MS;
-    // @ts-ignore Animated.Value._value is internal but widely used
     const current = (progress as any)._value ?? 0;
     const remaining = Math.max(0, duration * (1 - current));
 
@@ -145,57 +292,65 @@ export default function StoryViewer({
       useNativeDriver: false,
     });
     animationRef.current.start(({ finished }) => {
-      if (finished) goNext();
+      if (finished) goNextRef.current();
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paused]);
+  }, [paused, story?.media_type, visible, story?.id]);
 
   const handleCTA = () => {
     if (!story) return;
     onCTAPress?.(story);
     if (!story.cta_url) return;
 
-    // Close the viewer first so the navigation target is visible.
     onClose();
 
-    // Internal routes start with "/" — navigate via expo-router.
-    // Anything else (http(s), mailto, tel) falls through to Linking.
     if (story.cta_url.startsWith("/")) {
-      // Small delay lets the modal finish dismissing before we push.
       setTimeout(() => router.push(story.cta_url as any), 50);
     } else {
-      Linking.openURL(story.cta_url).catch(() => {
-        // Silently ignore — unknown scheme.
-      });
+      Linking.openURL(story.cta_url).catch(() => {});
     }
   };
 
-  if (!story) return null;
+  if (!storyList.length || !story) return null;
 
   return (
     <Modal
       visible={visible}
+      transparent
       animationType="fade"
-      presentationStyle="fullScreen"
+      presentationStyle={Platform.OS === "ios" ? "overFullScreen" : "fullScreen"}
       onRequestClose={onClose}
       statusBarTranslucent
     >
       <StatusBar barStyle="light-content" />
-      <View style={styles.container}>
-        {/* Media */}
+      {/* Transparent shell so the route underneath (homepage) shows around the shrinking story card */}
+      <View style={styles.modalRoot}>
+        <Animated.View
+          style={[
+            styles.container,
+            {
+              borderRadius: dragCornerRadius,
+              overflow: "hidden",
+              transform: [
+                { translateY },
+                { scale: dragShrinkScale },
+              ],
+            },
+          ]}
+          {...panResponder.panHandlers}
+        >
+        {/* Pass-through so taps hit tap zones / navigation — VideoView can otherwise sit above RN siblings on some devices. */}
         {story.media_type === "image" && (
-          <ExpoImage
-            source={{ uri: story.media_url }}
-            style={styles.media}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-          />
+          <View style={styles.media} pointerEvents="none">
+            <ExpoImage
+              source={{ uri: story.media_url }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+          </View>
         )}
         {story.media_type === "video" && (
-          <View style={styles.media}>
-            {/* Auto-generated first-frame poster — eliminates the black flash
-                while the player buffers. Generated by prefetchVideoThumbnail
-                in the ring/bubble components before the viewer ever opens. */}
+          <View style={styles.media} pointerEvents="none">
             {!!getVideoThumbnail(story.media_url) && (
               <ExpoImage
                 source={{ uri: getVideoThumbnail(story.media_url)! }}
@@ -207,26 +362,41 @@ export default function StoryViewer({
             <StoryVideo
               key={story.id}
               source={story.media_url}
-              paused={paused}
+              paused={paused || !visible}
+              viewerVisible={visible}
+              style={StyleSheet.absoluteFill}
+              onSourceDurationMs={handleVideoDuration}
+              onPlaybackRatio={handleVideoRatio}
+              onPlayToEnd={handleVideoEnd}
+            />
+          </View>
+        )}
+
+        {storyList[index + 1]?.media_type === "video" && (
+          <View pointerEvents="none" style={styles.preloadHidden}>
+            <StoryVideo
+              key={`preload_${storyList[index + 1].id}`}
+              source={storyList[index + 1].media_url}
+              paused
+              viewerVisible={visible}
               style={StyleSheet.absoluteFill}
             />
           </View>
         )}
 
-        {/* Pre-buffer the next video off-screen so it's ready before the
-            user taps forward. Rendered at 1×1 with opacity 0; the player
-            starts buffering immediately but never audibly plays. */}
-        {stories[index + 1]?.media_type === "video" && (
-          <StoryVideo
-            key={`preload_${stories[index + 1].id}`}
-            source={stories[index + 1].media_url}
-            paused
-            style={styles.preloadHidden}
-          />
-        )}
+        <LinearGradient
+          colors={["rgba(0,0,0,0.78)", "rgba(0,0,0,0.18)", "transparent"]}
+          locations={[0, 0.42, 1]}
+          style={[styles.gradientTop, { height: 180 + insets.top }]}
+          pointerEvents="none"
+        />
+        <LinearGradient
+          colors={["transparent", "rgba(0,0,0,0.22)", "rgba(0,0,0,0.82)"]}
+          locations={[0, 0.38, 1]}
+          style={styles.gradientBottom}
+          pointerEvents="none"
+        />
 
-        {/* Tap zones — rendered early so header/CTA sit on top and
-            receive their own taps. Long-press pauses playback. */}
         <View style={styles.tapRow} pointerEvents="box-none">
           <TouchableWithoutFeedback
             onPress={goPrev}
@@ -246,119 +416,240 @@ export default function StoryViewer({
           </TouchableWithoutFeedback>
         </View>
 
-        {/* Dark gradients top & bottom for legibility */}
-        <LinearGradient
-          colors={["rgba(0,0,0,0.6)", "transparent"]}
-          style={[styles.gradientTop, { height: 140 + insets.top }]}
+        <View
+          style={[styles.progressRow, { top: insets.top + 10 }]}
           pointerEvents="none"
-        />
-        <LinearGradient
-          colors={["transparent", "rgba(0,0,0,0.7)"]}
-          style={styles.gradientBottom}
-          pointerEvents="none"
-        />
-
-        {/* Progress bars */}
-        <View style={[styles.progressRow, { top: insets.top + 8 }]}>
-          {stories.map((_, i) => {
+        >
+          {storyList.map((s, i) => {
+            const isPast = i < index;
             const isActive = i === index;
-            const width =
-              i < index
-                ? "100%"
-                : isActive
-                ? progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ["0%", "100%"],
-                  })
-                : "0%";
+
+            if (isPast) {
+              return (
+                <View key={s.id} style={styles.progressTrack}>
+                  <View style={[styles.progressFill, { width: "100%" }]} />
+                </View>
+              );
+            }
+
+            if (!isActive) {
+              return (
+                <View key={s.id} style={styles.progressTrack}>
+                  <View style={[styles.progressFill, { width: "0%" }]} />
+                </View>
+              );
+            }
+
+            if (s.media_type === "image") {
+              const width = progress.interpolate({
+                inputRange: [0, 1],
+                outputRange: ["0%", "100%"],
+              });
+              return (
+                <View key={s.id} style={styles.progressTrack}>
+                  <Animated.View
+                    style={[styles.progressFill, { width: width as any }]}
+                  />
+                </View>
+              );
+            }
+
+            const totalMs =
+              videoDurationMs ??
+              (s.duration_ms && s.duration_ms > 0
+                ? s.duration_ms
+                : STORY_SEGMENT_MS);
+            const segs = getSegmentDurationsMs(totalMs);
+            const sumMs = segs.reduce((a, b) => a + b, 0);
+
             return (
-              <View key={i} style={styles.progressTrack}>
-                <Animated.View
-                  style={[styles.progressFill, { width: width as any }]}
-                />
+              <View key={s.id} style={styles.activeVideoSegmentRow}>
+                {segs.map((_, segIdx) => {
+                  const fill = segmentFillRatio(
+                    videoRatio,
+                    sumMs,
+                    segIdx,
+                    segs
+                  );
+                  return (
+                    <View key={segIdx} style={styles.progressTrack}>
+                      <View
+                        style={[styles.progressFill, { width: `${fill * 100}%` }]}
+                      />
+                    </View>
+                  );
+                })}
               </View>
             );
           })}
         </View>
 
-        {/* Header: avatar + close */}
-        <View style={[styles.header, { top: insets.top + 18 }]}>
-          <View style={styles.headerLeft}>
+        <View
+          style={[styles.header, { top: insets.top + 20 }]}
+          pointerEvents="box-none"
+        >
+          <View style={styles.headerLeft} pointerEvents="none">
             <ExpoImage
               source={require("../../assets/app-icon.png")}
               style={styles.avatar}
               contentFit="cover"
             />
-            <Text style={styles.brand}>Al-Ihsan Foundation Team</Text>
+            <View style={styles.headerTitles}>
+              <Text style={styles.brand}>Al-Ihsan Foundation</Text>
+              <Text style={styles.subBrand}>Stories</Text>
+            </View>
           </View>
-          <TouchableOpacity onPress={onClose} hitSlop={12}>
-            <Ionicons name="close" size={28} color="#fff" />
+          <TouchableOpacity
+            onPress={onClose}
+            hitSlop={12}
+            style={styles.closeFab}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
-        {/* Caption */}
         {!!story.caption && (
-          <View style={[styles.captionWrap, { bottom: insets.bottom + 92 }]}>
-            <Text style={styles.caption} numberOfLines={2}>
-              {story.caption}
-            </Text>
+          <View
+            style={[styles.captionOuter, { bottom: insets.bottom + 112 }]}
+            pointerEvents="none"
+          >
+            <View
+              style={[
+                styles.captionPanel,
+                { maxWidth: captionBlockMaxWidth },
+              ]}
+            >
+              <Text style={styles.caption} numberOfLines={5}>
+                {story.caption}
+              </Text>
+            </View>
           </View>
         )}
 
-        {/* CTA */}
         {!!story.cta_url && (
           <TouchableOpacity
-            style={[styles.cta, { bottom: insets.bottom + 24 }]}
+            style={[
+              styles.cta,
+              {
+                bottom: insets.bottom + 28,
+                maxWidth: captionBlockMaxWidth,
+              },
+            ]}
             onPress={handleCTA}
             activeOpacity={0.85}
           >
             <Text style={styles.ctaText}>{story.cta_label ?? "Learn More"}</Text>
-            <Ionicons name="arrow-forward" size={18} color="#010D26" />
+            <Ionicons name="arrow-forward" size={20} color="#010D26" />
           </TouchableOpacity>
         )}
+      </Animated.View>
       </View>
     </Modal>
   );
 }
 
-/**
- * Isolated video subcomponent — useVideoPlayer is a hook that must run
- * unconditionally. Keying this by story.id on the parent guarantees a
- * fresh player per story rather than a stale source binding.
- */
 function StoryVideo({
   source,
   paused,
+  viewerVisible = true,
   style,
+  onSourceDurationMs,
+  onPlaybackRatio,
+  onPlayToEnd,
 }: {
   source: string;
   paused: boolean;
+  /** When false (modal closed), playback must stop — keeps mounted players from decoding in the background. */
+  viewerVisible?: boolean;
   style: any;
+  onSourceDurationMs?: (ms: number) => void;
+  onPlaybackRatio?: (ratio: number) => void;
+  onPlayToEnd?: () => void;
 }) {
-  // Capture initial paused state so the setup callback never auto-plays a
-  // preloaded (hidden) video — avoids an audio blip on preload mount.
   const initialPausedRef = useRef(paused);
+  const durationCbRef = useRef(onSourceDurationMs);
+  const ratioCbRef = useRef(onPlaybackRatio);
+  const endCbRef = useRef(onPlayToEnd);
+  durationCbRef.current = onSourceDurationMs;
+  ratioCbRef.current = onPlaybackRatio;
+  endCbRef.current = onPlayToEnd;
+  const reportPlayback = Boolean(
+    onSourceDurationMs || onPlaybackRatio || onPlayToEnd
+  );
 
   const player = useVideoPlayer(source, (p) => {
     p.loop = false;
-    // Preload players (initially paused) stay muted so they never touch the
-    // CoreAudio device stack — prevents the "AudioDeviceGetCurrentTime: no
-    // device with given ID" spam in logs.
     p.muted = initialPausedRef.current;
     if (!initialPausedRef.current) p.play();
   });
+
+  const durationSeenRef = useRef(false);
+
+  useEffect(() => {
+    durationSeenRef.current = false;
+  }, [player]);
+
+  /** Re-open from the start so replays don’t resume mid-buffer. */
+  useEffect(() => {
+    if (!viewerVisible) return;
+    try {
+      player.currentTime = 0;
+    } catch {
+      /* player may not be ready yet */
+    }
+  }, [viewerVisible, player]);
+
+  useEffect(() => {
+    if (!reportPlayback) {
+      try {
+        player.timeUpdateEventInterval = 0;
+      } catch {}
+      return;
+    }
+    try {
+      player.timeUpdateEventInterval = 0.05;
+    } catch {}
+
+    const reportDurationOnce = (seconds: number) => {
+      if (seconds <= 0 || durationSeenRef.current) return;
+      durationSeenRef.current = true;
+      durationCbRef.current?.(seconds * 1000);
+    };
+
+    const subSource = player.addListener("sourceLoad", ({ duration }) => {
+      reportDurationOnce(duration);
+    });
+    const subTime = player.addListener("timeUpdate", ({ currentTime }) => {
+      const d = player.duration;
+      if (d > 0) {
+        reportDurationOnce(d);
+        ratioCbRef.current?.(currentTime / d);
+      }
+    });
+    const subEnd = player.addListener("playToEnd", () => {
+      endCbRef.current?.();
+    });
+
+    return () => {
+      try {
+        subSource.remove();
+        subTime.remove();
+        subEnd.remove();
+        player.timeUpdateEventInterval = 0;
+      } catch {}
+    };
+  }, [player, reportPlayback]);
 
   useEffect(() => {
     try {
       if (paused) {
         player.pause();
       } else {
-        player.muted = false; // unmute when this instance becomes the active story
+        player.muted = false;
         player.play();
       }
-    } catch {
-      // Player may be torn down mid-transition; ignore.
-    }
+    } catch {}
   }, [paused, player]);
 
   return (
@@ -372,6 +663,10 @@ function StoryVideo({
 }
 
 const styles = StyleSheet.create({
+  modalRoot: {
+    flex: 1,
+    backgroundColor: "transparent",
+  },
   container: {
     flex: 1,
     backgroundColor: "#000",
@@ -398,25 +693,35 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 220,
+    height: 280,
   },
   progressRow: {
     position: "absolute",
-    left: 8,
-    right: 8,
+    left: 14,
+    right: 14,
     flexDirection: "row",
-    gap: 4,
+    gap: 6,
+  },
+  activeVideoSegmentRow: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 6,
   },
   progressTrack: {
     flex: 1,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.3)",
+    height: 5,
+    borderRadius: 5,
+    backgroundColor: "rgba(255,255,255,0.28)",
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
+    borderRadius: 5,
     backgroundColor: "#fff",
+    shadowColor: "#fff",
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
   },
   header: {
     position: "absolute",
@@ -429,21 +734,48 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 8,
+  },
+  headerTitles: {
+    flex: 1,
+    minWidth: 0,
   },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "#fff",
-    borderWidth: 2,
-    borderColor: "#fff",
+    borderWidth: 3,
+    borderColor: "rgba(255,255,255,0.95)",
   },
   brand: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "700",
     fontFamily: "AlbertSans_700Bold",
+    textShadowColor: "rgba(0,0,0,0.45)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  subBrand: {
+    color: "rgba(255,255,255,0.82)",
+    fontSize: 13,
+    fontWeight: "600",
+    fontFamily: "AlbertSans_500Medium",
+    marginTop: 1,
+  },
+  closeFab: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(0,0,0,0.38)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   tapRow: {
     position: "absolute",
@@ -456,33 +788,60 @@ const styles = StyleSheet.create({
   tapZone: {
     flex: 1,
   },
-  captionWrap: {
+  captionOuter: {
     position: "absolute",
-    left: 16,
-    right: 16,
+    left: CAPTION_EDGE_INSET,
+    right: CAPTION_EDGE_INSET,
+    alignItems: "center",
+  },
+  captionPanel: {
+    width: "100%",
+    borderRadius: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    backgroundColor: "rgba(0,0,0,0.48)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.14)",
+    overflow: "hidden",
   },
   caption: {
     color: "#fff",
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "500",
-    lineHeight: 20,
+    lineHeight: 24,
     fontFamily: "AlbertSans_500Medium",
+    flexShrink: 1,
   },
   cta: {
     position: "absolute",
     alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     backgroundColor: "#FFD602",
-    paddingHorizontal: 22,
-    height: 44,
-    borderRadius: 22,
+    paddingHorizontal: 28,
+    minHeight: 50,
+    paddingVertical: 12,
+    borderRadius: 25,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0,0,0,0.06)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.35,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 10,
+      },
+      default: {},
+    }),
   },
   ctaText: {
     color: "#010D26",
     fontWeight: "700",
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: "AlbertSans_700Bold",
   },
 });

@@ -10,7 +10,7 @@ module.exports = {
     name: "Al-Ihsan Zakat & Charity App",
     slug: "alihsan-mobile",
     owner: "alihsan2025s-organization",
-    version: "1.0.2",
+    version: "1.0.3",
     orientation: "portrait",
     icon: "./assets/app-icon.png",
     userInterfaceStyle: "light",

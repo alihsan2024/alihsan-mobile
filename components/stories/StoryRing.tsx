@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Pressable,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -23,14 +16,16 @@ import {
   getVideoThumbnail,
   subscribeToThumbnails,
 } from "./videoThumbnailCache";
+import { prepareStoryMediaReady } from "./prepareStoryMedia";
+import { StoryIconLoadingRing } from "./StoryIconLoadingRing";
 
 const SEEN_KEY = "seen_story_ids";
 
-// Ring geometry
-const RING_SIZE = 72;       // outer diameter incl. gradient border
-const RING_BORDER = 2.5;    // gradient / seen ring thickness
-const RING_GAP = 2.5;       // white gap between border and image
-const AVATAR_SIZE = RING_SIZE - 2 * (RING_BORDER + RING_GAP); // ≈ 62 px
+// Ring geometry — compact row (modern story-strip density)
+const RING_SIZE = 62;
+const RING_BORDER = 2;
+const RING_GAP = 2;
+const AVATAR_SIZE = RING_SIZE - 2 * (RING_BORDER + RING_GAP);
 
 // Per-category fallback background when no thumbnail is available yet.
 const CATEGORY_COLOR: Record<string, readonly [string, string]> = {
@@ -50,6 +45,8 @@ type Props = {
   /** Pass explicit groups for tests / Storybook. Omit to fetch from the API. */
   groups?: CategoryGroup[];
   onCTAPress?: (story: Story) => void;
+  /** Increment when `/stories` should refetch (version poll or pull-to-refresh). */
+  refreshSignal?: number;
 };
 
 /** Returns the best available cover URI for a category's first story. */
@@ -61,10 +58,16 @@ function getCoverUri(stories: Story[]): string | null {
   return getVideoThumbnail(s.media_url); // null until extracted
 }
 
-export default function StoryRing({ groups: groupsProp, onCTAPress }: Props) {
+export default function StoryRing({
+  groups: groupsProp,
+  onCTAPress,
+  refreshSignal = 0,
+}: Props) {
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   const [openStories, setOpenStories] = useState<Story[] | null>(null);
   const [initialStoryIndex, setInitialStoryIndex] = useState(0);
+  /** Which category ring is currently preparing media (Instagram-style arc on that icon only). */
+  const [preparingSlug, setPreparingSlug] = useState<string | null>(null);
   const [fetchedStories, setFetchedStories] = useState<Story[]>([]);
   // Bumped whenever a video thumbnail lands so rings re-render with the new poster.
   const [, setThumbnailTick] = useState(0);
@@ -85,14 +88,17 @@ export default function StoryRing({ groups: groupsProp, onCTAPress }: Props) {
     let cancelled = false;
     (async () => {
       try {
-        const stories = await fetchStories();
+        const forceFullFetch = refreshSignal > 0;
+        const stories = await fetchStories(forceFullFetch);
         if (!cancelled) setFetchedStories(stories.map(apiToStory));
       } catch {
         if (!cancelled) setFetchedStories([]);
       }
     })();
-    return () => { cancelled = true; };
-  }, [groupsProp]);
+    return () => {
+      cancelled = true;
+    };
+  }, [groupsProp, refreshSignal]);
 
   // Re-render rings when a video first-frame thumbnail finishes extracting
   useEffect(() => subscribeToThumbnails(() => setThumbnailTick((n) => n + 1)), []);
@@ -132,21 +138,39 @@ export default function StoryRing({ groups: groupsProp, onCTAPress }: Props) {
     [seenIds]
   );
 
-  const openCategory = (stories: Story[]) => {
-    if (!stories.length) return;
-    const firstUnseen = stories.findIndex((s) => !seenIds.has(s.id));
-    setInitialStoryIndex(firstUnseen === -1 ? 0 : firstUnseen);
-    setOpenStories(stories);
+  const openCategory = async (categoryStories: Story[], slug: string) => {
+    if (!categoryStories.length || preparingSlug !== null) return;
+    const firstUnseen = categoryStories.findIndex((s) => !seenIds.has(s.id));
+    const idx = firstUnseen === -1 ? 0 : firstUnseen;
+    const first = categoryStories[idx];
+    setPreparingSlug(slug);
+    try {
+      const meta = await prepareStoryMediaReady(first);
+      const augmented = categoryStories.map((s, i) =>
+        i === idx ? { ...s, duration_ms: meta.durationMs } : s
+      );
+      setInitialStoryIndex(idx);
+      setOpenStories(augmented);
+    } catch {
+      Alert.alert(
+        "Couldn't open story",
+        "Please check your connection and try again.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setPreparingSlug(null);
+    }
   };
 
   if (!groups.length) return null;
 
   return (
-    <View style={styles.wrapper}>
-      {/* Section header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Latest Stories</Text>
-        <Text style={styles.headerSub}>{groups.length} categories</Text>
+    <View style={styles.section}>
+      <View style={styles.headerRow}>
+        <Text style={styles.sectionTitle}>Stories</Text>
+        <Text style={styles.headerMeta}>
+          {groups.length} {groups.length === 1 ? "topic" : "topics"}
+        </Text>
       </View>
 
       <ScrollView
@@ -159,16 +183,20 @@ export default function StoryRing({ groups: groupsProp, onCTAPress }: Props) {
           const coverUri = getCoverUri(stories);
           const fallbackColors = CATEGORY_COLOR[category.slug] ?? ["#010D26", "#1e293b"];
           const unseenCount = stories.filter((s) => !seenIds.has(s.id)).length;
+          const loadingThis = preparingSlug === category.slug;
 
           return (
             <Pressable
               key={category.slug}
               style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
-              onPress={() => openCategory(stories)}
+              onPress={() => openCategory(stories, category.slug)}
+              disabled={preparingSlug !== null}
             >
               <View style={styles.ringOuter}>
-                {/* Gradient ring (unseen) or muted ring (seen) */}
-                {seen ? (
+                {/* Gradient ring (unseen) or muted ring (seen), or neutral while loading */}
+                {loadingThis ? (
+                  <View style={[styles.ringCircle, styles.ringCircleLoading]} />
+                ) : seen ? (
                   <View style={[styles.ringCircle, styles.ringCircleSeen]} />
                 ) : (
                   <LinearGradient
@@ -177,6 +205,15 @@ export default function StoryRing({ groups: groupsProp, onCTAPress }: Props) {
                     end={{ x: 1, y: 0 }}
                     style={styles.ringCircle}
                   />
+                )}
+
+                {loadingThis && (
+                  <View
+                    style={styles.ringLoadingOverlay}
+                    pointerEvents="none"
+                  >
+                    <StoryIconLoadingRing size={RING_SIZE} strokeWidth={2.5} />
+                  </View>
                 )}
 
                 {/* White gap + avatar */}
@@ -232,43 +269,41 @@ export default function StoryRing({ groups: groupsProp, onCTAPress }: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    paddingTop: 16,
-    paddingBottom: 4,
+  section: {
+    marginTop: 12,
+    marginBottom: 2,
+    paddingHorizontal: 20,
     backgroundColor: "#fff",
   },
-
-  // ── Section header ──────────────────────────────────────────
-  header: {
+  headerRow: {
     flexDirection: "row",
-    alignItems: "baseline",
-    gap: 8,
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
   },
-  headerTitle: {
+  sectionTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#010D26",
+    color: "#0F172A",
     fontFamily: "AlbertSans_700Bold",
+    letterSpacing: -0.2,
   },
-  headerSub: {
+  headerMeta: {
     fontSize: 12,
-    color: "#9CA3AF",
-    fontFamily: "AlbertSans_400Regular",
+    fontWeight: "500",
+    color: "#94A3B8",
+    fontFamily: "AlbertSans_500Medium",
   },
 
-  // ── Scroll row ───────────────────────────────────────────────
   scroll: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    gap: 16,
+    paddingRight: 4,
+    paddingBottom: 2,
+    gap: 11,
   },
 
-  // ── Individual ring item ─────────────────────────────────────
   item: {
     alignItems: "center",
-    width: RING_SIZE + 10,
+    width: RING_SIZE + 8,
   },
   itemPressed: {
     opacity: 0.75,
@@ -279,12 +314,11 @@ const styles = StyleSheet.create({
     height: RING_SIZE,
     alignItems: "center",
     justifyContent: "center",
-    // Subtle drop shadow for depth
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 3,
+    elevation: 2,
   },
 
   ringCircle: {
@@ -295,6 +329,14 @@ const styles = StyleSheet.create({
   },
   ringCircleSeen: {
     backgroundColor: "#E5E7EB",
+  },
+  ringCircleLoading: {
+    backgroundColor: "#E8E8EA",
+  },
+  ringLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   // White gap between ring and image
@@ -319,13 +361,13 @@ const styles = StyleSheet.create({
   // ── Unseen count badge ───────────────────────────────────────
   badge: {
     position: "absolute",
-    bottom: 1,
-    right: 1,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: "#F58529",
-    borderWidth: 2,
+    bottom: 0,
+    right: 0,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#EA580C",
+    borderWidth: 1.5,
     borderColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
@@ -333,20 +375,19 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: "#fff",
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "700",
     fontFamily: "AlbertSans_700Bold",
-    lineHeight: 12,
+    lineHeight: 10,
   },
 
-  // ── Label ────────────────────────────────────────────────────
   label: {
-    marginTop: 7,
-    fontSize: 11,
+    marginTop: 5,
+    fontSize: 10,
     fontWeight: "600",
-    color: "#010D26",
+    color: "#334155",
     fontFamily: "AlbertSans_600SemiBold",
-    maxWidth: RING_SIZE + 8,
+    maxWidth: RING_SIZE + 10,
     textAlign: "center",
   },
   labelSeen: {

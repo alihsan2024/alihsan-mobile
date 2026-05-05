@@ -53,6 +53,8 @@ interface SupportCampaignsBannerProps {
   onCampaignPress?: (campaign: any) => void;
   onMenuPress?: () => void;
   topInset?: number;
+  /** Bump when `/stories` was invalidated — Featured bubble refetches full list. */
+  storyRefreshSignal?: number;
 }
 
 export default function SupportCampaignsBanner({
@@ -60,6 +62,7 @@ export default function SupportCampaignsBanner({
   onCampaignPress,
   onMenuPress,
   topInset = 0,
+  storyRefreshSignal = 0,
 }: SupportCampaignsBannerProps) {
   const [selectedCampaign, setSelectedCampaign] = useState("most-needed");
   const [selectedAmount, setSelectedAmount] = useState(amounts[0]);
@@ -182,7 +185,7 @@ export default function SupportCampaignsBanner({
               </View>
               <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.85)" />
             </TouchableOpacity>
-            <FeaturedStoryBubble />
+            <FeaturedStoryBubble refreshSignal={storyRefreshSignal} />
           </View>
 
           <View style={styles.content}>

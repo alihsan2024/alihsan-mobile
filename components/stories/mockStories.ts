@@ -16,7 +16,7 @@ export type Story = {
   campaign_tag?: string | null;
   /** ISO timestamp — drives the 24-hour Featured bubble. Null for drafts. */
   published_at: string | null;
-  /** Fixed duration for images in ms. Videos use their natural duration capped at 60s. */
+  /** Image stories use 5s in the viewer. Optional fallback for video until metadata loads. */
   duration_ms?: number;
 };
 

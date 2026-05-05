@@ -36,6 +36,7 @@ import {
   secureGetItem,
   secureRemoveItem,
 } from "./secureStorage";
+import { clearPreparedStoryMediaCache } from "@/components/stories/prepareStoryMedia";
 
 // Configure API URLs for different environments
 // Priority: __DEV__ -> dev env/config -> fallback, otherwise prod env/config -> fallback
@@ -213,6 +214,27 @@ export const invalidateCampaignsCache = () => {
 /** Clear the stories cache — called by home-screen pull-to-refresh. */
 export const invalidateStoriesCache = () => {
   storiesCache = null;
+  clearPreparedStoryMediaCache();
+};
+
+/** Tiny payload for cheap polling — compare with last known version before calling {@link fetchStories}. */
+export type StoriesVersionPayload = {
+  version: string;
+  count: number;
+};
+
+/**
+ * GET /stories/version — one aggregate query, no story rows. Not cached (always hits network).
+ */
+export const fetchStoriesVersion = async (): Promise<string> => {
+  const response = await api.get<{ payload?: StoriesVersionPayload }>(
+    "/stories/version",
+  );
+  const version = response.data?.payload?.version;
+  if (typeof version !== "string") {
+    throw new Error("Invalid stories version response");
+  }
+  return version;
 };
 
 // Shape returned by GET /stories. Mirrors the `stories` table columns

@@ -23,7 +23,12 @@ import ImageSlider from "@/components/ui/sliders/ImageSlider";
 import CampaignSlider from "@/components/ui/sliders/CampaignSlider";
 import ReplaceOrRemoveModal from "@/components/ui/Modals/ReplaceOrRemoveModal";
 import { router } from "expo-router";
-import { fetchFeaturedCampaigns, getCampaignDetails } from "@/utils/api";
+import {
+  fetchFeaturedCampaigns,
+  getCampaignDetails,
+  invalidateStoriesCache,
+} from "@/utils/api";
+import { useStoriesVersionPoll } from "@/hooks/useStoriesVersionPoll";
 import {
   useAddToBasketMutation,
   useGetBasketQuery,
@@ -184,7 +189,10 @@ export default function HomeScreen() {
   const [pendingBasketItem, setPendingBasketItem] = useState<any>(null);
   const [existingCartItem, setExistingCartItem] = useState<any>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [storiesRefreshSignal, setStoriesRefreshSignal] = useState(0);
   const { showToast } = useToast();
+
+  useStoriesVersionPoll(() => setStoriesRefreshSignal((n) => n + 1));
 
   // Load guest basket helper
   const loadGuestBasket = useCallback(async () => {
@@ -276,9 +284,12 @@ export default function HomeScreen() {
     setRefreshing(true);
 
     try {
+      invalidateStoriesCache();
+      setStoriesRefreshSignal((n) => n + 1);
+
       // Add minimum delay to ensure indicator is visible
       const minDelay = new Promise((resolve) => setTimeout(resolve, 1500));
-      
+
       // Refresh featured campaigns and basket in parallel
       await Promise.all([
         loadFeaturedCampaigns(),
@@ -339,6 +350,7 @@ export default function HomeScreen() {
       {/* Top Banner Section - "Making a Difference Together" / "Support Our Campaigns" */}
       <SupportCampaignsBanner
         topInset={insets.top}
+        storyRefreshSignal={storiesRefreshSignal}
         onMenuPress={() => setMenuOpen(true)}
         onCampaignPress={(campaign) => {
           router.push(`/campaign/${campaign.slug}`);
@@ -497,9 +509,6 @@ export default function HomeScreen() {
 
       {/* Main content */}
       <View style={{ paddingTop: 10 }}>
-        {/* Stories Ring - Instagram-style story row */}
-        <StoryRing />
-
         {/* Categories Section - Below Banner */}
         <View
           style={{
@@ -531,6 +540,10 @@ export default function HomeScreen() {
             }}
           />
         </View>
+
+        {/* Latest Stories — below categories */}
+        <StoryRing refreshSignal={storiesRefreshSignal} />
+
         <View
           style={{
             height: 1,
