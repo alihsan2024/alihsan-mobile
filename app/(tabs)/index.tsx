@@ -442,7 +442,7 @@ export default function HomeScreen() {
           }
         }}
       />
-      
+
       <ReplaceOrRemoveModal
         visible={replaceModalVisible}
         campaignName={pendingBasketItem?.name}
@@ -508,12 +508,12 @@ export default function HomeScreen() {
       />
 
       {/* Main content */}
-      <View style={{ paddingTop: 10 }}>
+      <View style={{ paddingTop: 8 }}>
         {/* Categories Section - Below Banner */}
         <View
           style={{
             backgroundColor: "#fff",
-            paddingTop: 16,
+            paddingTop: 12,
             paddingHorizontal: PADDING_HORIZONTAL,
             marginTop: 0,
           }}

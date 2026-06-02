@@ -46,6 +46,8 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [appleAvailable, setAppleAvailable] = useState(false);
+  const showGoogleLogin = Platform.OS !== "android";
+  const hasSocialLogin = appleAvailable || showGoogleLogin;
   const emailInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
 
@@ -380,34 +382,40 @@ export default function LoginScreen() {
                 <Text style={styles.forgotText}>Forgot Password?</Text>
               </TouchableOpacity>
 
-              {/* Divider */}
-              <View style={styles.dividerRow}>
-                <View style={styles.divider} />
-                <Text style={styles.dividerText}>or continue with</Text>
-                <View style={styles.divider} />
-              </View>
+              {hasSocialLogin && (
+                <>
+                  {/* Divider */}
+                  <View style={styles.dividerRow}>
+                    <View style={styles.divider} />
+                    <Text style={styles.dividerText}>or continue with</Text>
+                    <View style={styles.divider} />
+                  </View>
 
-              {/* Social Login Buttons */}
-              <View style={styles.socialButtons}>
-                {appleAvailable && (
-                  <TouchableOpacity
-                    style={styles.socialButton}
-                    onPress={handleAppleLogin}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="logo-apple" size={20} color="#010D26" />
-                    <Text style={styles.socialButtonText}>Apple</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={styles.socialButton}
-                  onPress={() => promptGoogleAsync()}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="logo-google" size={20} color="#EA4335" />
-                  <Text style={styles.socialButtonText}>Google</Text>
-                </TouchableOpacity>
-              </View>
+                  {/* Social Login Buttons */}
+                  <View style={styles.socialButtons}>
+                    {appleAvailable && (
+                      <TouchableOpacity
+                        style={styles.socialButton}
+                        onPress={handleAppleLogin}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="logo-apple" size={20} color="#010D26" />
+                        <Text style={styles.socialButtonText}>Apple</Text>
+                      </TouchableOpacity>
+                    )}
+                    {showGoogleLogin && (
+                      <TouchableOpacity
+                        style={styles.socialButton}
+                        onPress={() => promptGoogleAsync()}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="logo-google" size={20} color="#EA4335" />
+                        <Text style={styles.socialButtonText}>Google</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </>
+              )}
 
               {/* Sign Up Link */}
               <View style={styles.signupLink}>

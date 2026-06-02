@@ -49,7 +49,6 @@ export default function CheckoutScreen() {
     paymentType: "card",
     cardDetails: null,
     cardComplete: false,
-    saveCardForLater: false,
   });
 
   const [detailsForm, setDetailsForm] = useState({
@@ -618,67 +617,67 @@ export default function CheckoutScreen() {
         return;
       }
 
-      // Handle Google Pay payment (Android)
-      if (paymentState.paymentType === "googlepay" && Platform.OS === "android") {
-        if (!clientSecret) {
-          Alert.alert("Error", "Payment not ready. Please try again.");
-          return;
-        }
-
-        setLoadingPayment(true);
-        try {
-          const isTestEnv = stripePublishableKey?.startsWith("pk_test");
-          const { error, paymentIntent } = await confirmPlatformPayPayment(clientSecret, {
-            googlePay: {
-              testEnv: !!isTestEnv,
-              merchantName: "Al-Ihsan Foundation",
-              merchantCountryCode: "AU",
-              currencyCode: "AUD",
-            },
-          });
-
-          setLoadingPayment(false);
-
-          if (error) {
-            if (error.code !== "Canceled") {
-              Alert.alert("Google Pay failed", error.message);
-            }
-            return;
-          }
-
-          if (paymentIntent && checkoutSummary) {
-            await AsyncStorage.setItem(
-              "checkoutSummary",
-              JSON.stringify({
-                ...checkoutSummary,
-                isAuthenticated,
-                createdAt: Date.now(),
-                paymentIntentId: paymentIntent.id,
-              })
-            );
-
-            setPaymentCompleted(true);
-
-            try {
-              if (isAuthenticated) {
-                await clearBasket();
-              } else {
-                await AsyncStorage.removeItem("guestBasket");
-              }
-            } catch {
-              // Continue with navigation even if basket clearing fails
-            }
-
-            setTimeout(() => {
-              router.replace("/thank-you");
-            }, 100);
-          }
-        } catch (err: any) {
-          setLoadingPayment(false);
-          Alert.alert("Google Pay failed", err?.message || "An unexpected error occurred");
-        }
-        return;
-      }
+      // Handle Google Pay payment (Android) — disabled until Google Pay is re-enabled
+      // if (paymentState.paymentType === "googlepay" && Platform.OS === "android") {
+      //   if (!clientSecret) {
+      //     Alert.alert("Error", "Payment not ready. Please try again.");
+      //     return;
+      //   }
+      //
+      //   setLoadingPayment(true);
+      //   try {
+      //     const isTestEnv = stripePublishableKey?.startsWith("pk_test");
+      //     const { error, paymentIntent } = await confirmPlatformPayPayment(clientSecret, {
+      //       googlePay: {
+      //         testEnv: !!isTestEnv,
+      //         merchantName: "Al-Ihsan Foundation",
+      //         merchantCountryCode: "AU",
+      //         currencyCode: "AUD",
+      //       },
+      //     });
+      //
+      //     setLoadingPayment(false);
+      //
+      //     if (error) {
+      //       if (error.code !== "Canceled") {
+      //         Alert.alert("Google Pay failed", error.message);
+      //       }
+      //       return;
+      //     }
+      //
+      //     if (paymentIntent && checkoutSummary) {
+      //       await AsyncStorage.setItem(
+      //         "checkoutSummary",
+      //         JSON.stringify({
+      //           ...checkoutSummary,
+      //           isAuthenticated,
+      //           createdAt: Date.now(),
+      //           paymentIntentId: paymentIntent.id,
+      //         })
+      //       );
+      //
+      //       setPaymentCompleted(true);
+      //
+      //       try {
+      //         if (isAuthenticated) {
+      //           await clearBasket();
+      //         } else {
+      //           await AsyncStorage.removeItem("guestBasket");
+      //         }
+      //       } catch {
+      //         // Continue with navigation even if basket clearing fails
+      //       }
+      //
+      //       setTimeout(() => {
+      //         router.replace("/thank-you");
+      //       }, 100);
+      //     }
+      //   } catch (err: any) {
+      //     setLoadingPayment(false);
+      //     Alert.alert("Google Pay failed", err?.message || "An unexpected error occurred");
+      //   }
+      //   return;
+      // }
 
       // Handle PayPal payment
       if (paymentState.paymentType === "paypal") {

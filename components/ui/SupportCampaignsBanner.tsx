@@ -20,8 +20,11 @@ import CampaignSearchModal from "@/components/ui/CampaignSearchModal";
 import FeaturedStoryBubble from "@/components/stories/FeaturedStoryBubble";
 
 const { width: screenWidth } = Dimensions.get("window");
+/** Inner width under gradient (16) + card (16) horizontal padding; two 8px gaps between 3 columns. */
+const AMOUNT_GRID_INNER = screenWidth - 64;
+const AMOUNT_CELL_WIDTH = Math.floor((AMOUNT_GRID_INNER - 16) / 3);
 
-// Campaign pills under "Support Our Campaigns" (matches AU Next.js). Pills set quick-donate campaign; search can still open any campaign.
+// Campaign pills under "Support Our Campaigns". Pills set quick-donate campaign; search can still open any campaign.
 const campaigns = [
   { label: "Where Most Needed", name: "Where Most Needed In Ramadan", slug: "most-needed", icon: "megaphone", isSpecial: false },
   { label: "Zakat Al Maal", name: "Zakat Al Maal", slug: "zakat-al-maal", icon: "cash", isSpecial: false },
@@ -32,6 +35,7 @@ const campaigns = [
   { label: "Emergency Appeal", name: "Emergency Appeal", slug: "emergency-appeal", icon: "warning", isSpecial: false },
 ];
 
+/** Max six presets — 3 per row × 2 rows (Group A uses fixed price in own card). */
 const amounts = [10, 25, 50, 200, 500, 1000];
 const frequencies = [
   { label: "One-time", value: "onetime" },
@@ -65,7 +69,7 @@ export default function SupportCampaignsBanner({
   storyRefreshSignal = 0,
 }: SupportCampaignsBannerProps) {
   const [selectedCampaign, setSelectedCampaign] = useState("most-needed");
-  const [selectedAmount, setSelectedAmount] = useState(amounts[0]);
+  const [selectedAmount, setSelectedAmount] = useState(50);
   const [selectedFrequency, setSelectedFrequency] = useState(frequencies[0].value);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [allCampaigns, setAllCampaigns] = useState<any[]>([]);
@@ -90,6 +94,7 @@ export default function SupportCampaignsBanner({
 
   const handlePillPress = (campaign: (typeof campaigns)[number]) => {
     setSelectedCampaign(campaign.slug);
+    setSelectedAmount((prev) => (amounts.includes(prev) ? prev : 50));
   };
 
   const navigateToCampaign = (campaign: any) => {
@@ -98,6 +103,8 @@ export default function SupportCampaignsBanner({
       router.push("/(tabs)/gaza-ramadan");
     } else if (campaign.slug === "ramadan") {
       router.push("/(tabs)/ramadan");
+    } else if (campaign.slug === "qurban" || campaign.slug === "qurban-2026") {
+      router.push("/(tabs)/qurban-2026");
     } else {
       router.push(`/campaign/${campaign.slug}`);
     }
@@ -221,12 +228,14 @@ export default function SupportCampaignsBanner({
                           styles.campaignPill,
                           isSpecial && styles.campaignPillSpecial,
                           isActive && !isSpecial && styles.campaignPillActive,
+                          isActive && isSpecial && styles.campaignPillSpecialActive,
                         ]}
                         onPress={() => handlePillPress(campaign)}
                         activeOpacity={0.85}
                       >
                         <Ionicons
                           name={
+                            campaign.icon === "flame" ? "flame" :
                             campaign.icon === "megaphone" ? "megaphone" :
                             campaign.icon === "cash" ? "cash" :
                             campaign.icon === "restaurant" ? "nutrition" :
@@ -264,98 +273,98 @@ export default function SupportCampaignsBanner({
               </View>
             </View>
 
-            {/* Right Content - Donation Card */}
+            {/* Right Content — quick donate */}
             <View style={styles.donationCard}>
-              {/* Frequency Tabs */}
-              <View style={styles.frequencyTabs}>
-                {frequencies.map((freq) => {
-                  const isSelected = selectedFrequency === freq.value;
-                  return (
-                    <TouchableOpacity
-                      key={freq.value}
-                      style={styles.frequencyTab}
-                      onPress={() => setSelectedFrequency(freq.value)}
-                      activeOpacity={0.85}
-                    >
-                      {isSelected ? (
-                        <LinearGradient
-                          colors={["#246BE1", "#064DC3"]}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 0, y: 1 }}
-                          style={styles.frequencyTabGradient}
+                  {/* Frequency Tabs */}
+                  <View style={styles.frequencyTabs}>
+                    {frequencies.map((freq) => {
+                      const isSelected = selectedFrequency === freq.value;
+                      return (
+                        <TouchableOpacity
+                          key={freq.value}
+                          style={styles.frequencyTab}
+                          onPress={() => setSelectedFrequency(freq.value)}
+                          activeOpacity={0.85}
                         >
-                          <Text style={styles.frequencyTabTextActive}>
-                            {freq.label}
-                          </Text>
-                        </LinearGradient>
-                      ) : (
-                        <Text style={styles.frequencyTabText}>
-                          {freq.label}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {/* Amount Selection */}
-              <View style={styles.amountContainer}>
-                <Text style={styles.amountLabel}>Choose an amount</Text>
-                <View style={styles.amountGrid}>
-                  {amounts.map((amount) => {
-                    const isSelected = selectedAmount === amount;
-                    return (
-                      <TouchableOpacity
-                        key={amount}
-                        style={styles.amountButton}
-                        onPress={() => setSelectedAmount(amount)}
-                        activeOpacity={0.85}
-                      >
-                        {isSelected ? (
-                          <LinearGradient
-                            colors={["#246BE1", "#064DC3"]}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 0, y: 1 }}
-                            style={styles.amountGradient}
-                          >
-                            <Text style={styles.amountTextActive}>
-                              ${amount}
+                          {isSelected ? (
+                            <LinearGradient
+                              colors={["#246BE1", "#064DC3"]}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 0, y: 1 }}
+                              style={styles.frequencyTabGradient}
+                            >
+                              <Text style={styles.frequencyTabTextActive}>
+                                {freq.label}
+                              </Text>
+                            </LinearGradient>
+                          ) : (
+                            <Text style={styles.frequencyTabText}>
+                              {freq.label}
                             </Text>
-                          </LinearGradient>
-                        ) : (
-                          <Text style={styles.amountText}>
-                            ${amount}
-                          </Text>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
 
-              {/* Donate Button */}
-              <TouchableOpacity
-                style={[styles.donateButton, campaignsLoading && styles.donateButtonDisabled]}
-                onPress={handleDonate}
-                activeOpacity={0.8}
-                disabled={campaignsLoading}
-              >
-                {campaignsLoading ? (
-                  <>
-                    <ActivityIndicator size="small" color="#2161CD" />
-                    <Text style={styles.donateButtonText} numberOfLines={1}>
-                      Loading...
-                    </Text>
-                  </>
-                ) : (
-                  <>
-                    <Ionicons name="heart" size={16} color="#010D26" />
-                    <Text style={styles.donateButtonText} numberOfLines={1}>
-                      Donate to {campaigns.find((c) => c.slug === selectedCampaign)?.label ?? "Campaign"}
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
+                  {/* Amount Selection */}
+                  <View style={styles.amountContainer}>
+                    <Text style={styles.amountLabel}>Choose an amount</Text>
+                    <View style={styles.amountGrid}>
+                      {amounts.map((amount) => {
+                        const isSelected = selectedAmount === amount;
+                        return (
+                          <TouchableOpacity
+                            key={amount}
+                            style={styles.amountButton}
+                            onPress={() => setSelectedAmount(amount)}
+                            activeOpacity={0.85}
+                          >
+                            {isSelected ? (
+                              <LinearGradient
+                                colors={["#246BE1", "#064DC3"]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 0, y: 1 }}
+                                style={styles.amountGradient}
+                              >
+                                <Text style={styles.amountTextActive}>
+                                  ${amount}
+                                </Text>
+                              </LinearGradient>
+                            ) : (
+                              <Text style={styles.amountText}>
+                                ${amount}
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Donate Button */}
+                  <TouchableOpacity
+                    style={[styles.donateButton, campaignsLoading && styles.donateButtonDisabled]}
+                    onPress={handleDonate}
+                    activeOpacity={0.8}
+                    disabled={campaignsLoading}
+                  >
+                    {campaignsLoading ? (
+                      <>
+                        <ActivityIndicator size="small" color="#2161CD" />
+                        <Text style={styles.donateButtonText} numberOfLines={1}>
+                          Loading...
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Ionicons name="heart" size={16} color="#010D26" />
+                        <Text style={styles.donateButtonText} numberOfLines={1}>
+                          Donate to {campaigns.find((c) => c.slug === selectedCampaign)?.label ?? "Campaign"}
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
             </View>
           </View>
         </LinearGradient>
@@ -456,6 +465,15 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "rgba(230, 194, 0, 0.8)",
   },
+  campaignPillSpecialActive: {
+    borderWidth: 2,
+    borderColor: "#fff",
+    shadowColor: "#fff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 4,
+  },
   campaignPillActive: {
     backgroundColor: "#fff",
   },
@@ -530,9 +548,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+    justifyContent: "flex-start",
   },
   amountButton: {
-    width: (screenWidth - 80) / 3,
+    width: AMOUNT_CELL_WIDTH,
     borderRadius: 10,
     overflow: "hidden",
     backgroundColor: "#F3F4F6",

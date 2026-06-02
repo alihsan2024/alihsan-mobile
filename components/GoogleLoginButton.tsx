@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { TouchableOpacity, Text, StyleSheet } from "react-native";
+import { TouchableOpacity, Text, StyleSheet, Platform } from "react-native";
 import { useAuthRequest } from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import Google from "@/assets/google.svg";
@@ -47,6 +47,10 @@ export function GoogleLoginButton({
       .then(onSuccess)
       .catch(() => onError("Failed to get your Google profile"));
   }, [fullResult]);
+
+  if (Platform.OS === "android") {
+    return null;
+  }
 
   const handlePress = async () => {
     onPressStart();

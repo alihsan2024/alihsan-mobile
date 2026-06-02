@@ -23,6 +23,12 @@ import {
 } from "@/store/reduxSlice/api/basketApi";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { getAnyZakatCampaign } from "@/utils/api";
+import {
+  areMetalPricesReady,
+  computeNisabAud,
+  computeTotalWealth,
+  computeZakatDue,
+} from "@/utils/zakatCalculator";
 
 type Props = {
   visible: boolean;
@@ -126,30 +132,18 @@ export default function ZakatSummaryModal({ visible, onClose, overrideZakatAmoun
     })}`;
   };
 
-  const sumArray = (arr: any[] = []) =>
-    arr.reduce((s, i) => s + (i.value || 0), 0);
-
-  const totalAssets =
-    (amounts.cash || 0) +
-    (amounts.bank || 0) +
-    sumArray(amounts.gold) +
-    sumArray(amounts.silver) +
-    (amounts.investmentProfit || 0) +
-    (amounts.shareResale || 0) +
-    (amounts.merchandise || 0) +
-    (amounts.loan || 0) +
-    (amounts.other || 0);
-
-  const totalLiabilities = 0;
-  const zakatableWealth = totalAssets - totalLiabilities;
-
+  const pricesReady = areMetalPricesReady(prices);
   const goldPriceAud = Number(prices.price?.goldPriceInAud || 0);
   const silverPriceAud = Number(prices.silverFinePriceInAud || 0);
+  const { goldNisabAud: goldNisab, silverNisabAud: silverNisab } = computeNisabAud(
+    goldPriceAud,
+    silverPriceAud
+  );
 
-  const goldNisab = 87.48 * goldPriceAud;
-  const silverNisab = 612.36 * silverPriceAud;
-
-  const calculatedZakat = zakatableWealth >= silverNisab ? zakatableWealth / 40 : 0;
+  const totalAssets = computeTotalWealth(amounts);
+  const totalLiabilities = 0;
+  const zakatableWealth = totalAssets - totalLiabilities;
+  const calculatedZakat = computeZakatDue(zakatableWealth, silverNisab, pricesReady);
   const zakatOwed = overrideZakatAmount != null && overrideZakatAmount > 0
     ? overrideZakatAmount
     : calculatedZakat;
@@ -161,7 +155,9 @@ export default function ZakatSummaryModal({ visible, onClose, overrideZakatAmoun
         "Invalid Amount",
         isKnownAmountMode
           ? "Please enter an amount greater than 0."
-          : "You are not required to pay Zakat as your wealth is below the Nisab."
+          : !pricesReady
+            ? "Live gold and silver prices are still loading. Please wait and try again."
+            : "You are not required to pay Zakat — your wealth is below the silver nisab threshold."
       );
       return;
     }
@@ -284,6 +280,11 @@ export default function ZakatSummaryModal({ visible, onClose, overrideZakatAmoun
                 <Text style={styles.amountValue}>
                   {formatCurrency(zakatOwed)}
                 </Text>
+                {!isKnownAmountMode && pricesReady && calculatedZakat <= 0 && zakatableWealth > 0 && (
+                  <Text style={styles.belowNisabNote}>
+                    Your wealth is below the silver nisab — no Zakat is due on this calculation.
+                  </Text>
+                )}
               </View>
 
               {!isKnownAmountMode && (
@@ -312,7 +313,7 @@ export default function ZakatSummaryModal({ visible, onClose, overrideZakatAmoun
               <TouchableOpacity
                 style={styles.payButton}
                 onPress={handlePayZakat}
-                disabled={loading || zakatOwed <= 0}
+                disabled={loading || zakatOwed <= 0 || (!isKnownAmountMode && !pricesReady)}
                 activeOpacity={0.8}
               >
                 <Text style={styles.payButtonText}>
@@ -479,6 +480,14 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#fff",
     fontFamily: "AlbertSans_800ExtraBold",
+  },
+  belowNisabNote: {
+    marginTop: 10,
+    fontSize: 13,
+    lineHeight: 18,
+    color: "rgba(255,255,255,0.92)",
+    fontFamily: "AlbertSans_500Medium",
+    textAlign: "center",
   },
   summaryDivider: {
     height: 1,

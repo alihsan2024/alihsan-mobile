@@ -43,12 +43,27 @@ const categories = [
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { fetchCampaigns, Campaign } from "../../utils/api";
-import { Link, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 
 export default function ActiveAppealsScreen() {
   const router = useRouter();
+
+  const navigateToCampaign = (c: Campaign) => {
+    const slug = (c.slug || "").toLowerCase().trim();
+    const nameLower = (c.name || "").toLowerCase();
+    if (
+      slug === "qurban" ||
+      slug === "qurban-2026" ||
+      slug.endsWith("qurban-2026") ||
+      nameLower.includes("qurban 2026")
+    ) {
+      router.push("/(tabs)/qurban-2026");
+      return;
+    }
+    router.push(`/campaign/${c.slug}` as any);
+  };
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -317,8 +332,12 @@ export default function ActiveAppealsScreen() {
           const progressPercent = hasGoal ? Math.min((raised / goal) * 100, 100) : 0;
 
           return (
-            <Link key={c.id} href={`/campaign/${c.slug}`} asChild>
-              <TouchableOpacity activeOpacity={0.9} style={styles.card}>
+            <TouchableOpacity
+                key={c.id}
+                activeOpacity={0.9}
+                style={styles.card}
+                onPress={() => navigateToCampaign(c)}
+              >
                 <ExpoImage
                   source={{ uri: c.coverImage }}
                   style={styles.cardImage}
@@ -349,7 +368,6 @@ export default function ActiveAppealsScreen() {
                   </View>
                 </LinearGradient>
               </TouchableOpacity>
-            </Link>
           );
         })}
       </View>

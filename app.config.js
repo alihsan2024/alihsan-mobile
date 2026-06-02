@@ -10,7 +10,7 @@ module.exports = {
     name: "Al-Ihsan Zakat & Charity App",
     slug: "alihsan-mobile",
     owner: "alihsan2025s-organization",
-    version: "1.0.3",
+    version: "1.0.5",
     orientation: "portrait",
     icon: "./assets/app-icon.png",
     userInterfaceStyle: "light",
@@ -20,6 +20,7 @@ module.exports = {
     },
     assetBundlePatterns: ["**/*"],
     ios: {
+      buildNumber: "5",
       supportsTablet: true,
       bundleIdentifier: "org.alihsan.mobile",
       usesAppleSignIn: true,
@@ -35,6 +36,7 @@ module.exports = {
       },
     },
     android: {
+      versionCode: 2,
       googleServicesFile: "./google-services.json",
       adaptiveIcon: {
         backgroundColor: "#264B8B",
@@ -75,7 +77,7 @@ module.exports = {
         "@stripe/stripe-react-native",
         {
           merchantIdentifier: "merchant.au.org.alihsan.www",
-          enableGooglePay: true,
+          // enableGooglePay: true,
         },
       ],
     ],

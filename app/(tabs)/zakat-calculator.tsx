@@ -8,6 +8,7 @@ import {
   TextInput,
   Image,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,6 +27,17 @@ import {
 
 import ZakatSummaryModal from "@/components/ui/Modals/ZakatSummaryModal";
 import HeroBackground from "@/components/ui/GradientImage";
+import {
+  areMetalPricesReady,
+  calculateMetalValueAud,
+  computeNisabAud,
+  computeTotalWealth,
+  computeZakatDue,
+  getZakatFooterStatus,
+  resolveGoldPricePerGram,
+  resolveSilverPricePerGram,
+  type GoldCaratPrice,
+} from "@/utils/zakatCalculator";
 
 const STEPS = [
   { key: 1, label: "Cash & Bank" },
@@ -60,6 +72,8 @@ export default function ZakatCalculatorScreen() {
   /** Which gold/silver row’s unit dropdown is open (null = closed). */
   const [goldDropdownKey, setGoldDropdownKey] = useState<number | null>(null);
   const [silverDropdownKey, setSilverDropdownKey] = useState<number | null>(null);
+  const [goldKaratDropdownKey, setGoldKaratDropdownKey] = useState<number | null>(null);
+  const [silverTypeDropdownKey, setSilverTypeDropdownKey] = useState<number | null>(null);
   const [knownAmountModalVisible, setKnownAmountModalVisible] = useState(false);
   const [knownAmount, setKnownAmount] = useState("");
   const [overrideZakatAmount, setOverrideZakatAmount] = useState<number | null>(null);
@@ -78,7 +92,20 @@ export default function ZakatCalculatorScreen() {
     scrollRef.current?.scrollTo({ y: 0, animated: true });
     setGoldDropdownKey(null);
     setSilverDropdownKey(null);
+    setGoldKaratDropdownKey(null);
+    setSilverTypeDropdownKey(null);
   }, [step]);
+
+  const pricesReady = areMetalPricesReady(prices);
+  const goldPriceAud = Number(prices.price?.goldPriceInAud || 0);
+  const silverFineAud = Number(prices.silverFinePriceInAud || 0);
+  const silverSterlingAud = Number(prices.silverSterlingPriceInAud || 0);
+  const goldCaratPrices = (prices.goldPriceInAud || []) as GoldCaratPrice[];
+
+  const { goldNisabAud, silverNisabAud } = computeNisabAud(goldPriceAud, silverFineAud);
+  const totalWealth = computeTotalWealth(amounts);
+  const zakat = computeZakatDue(totalWealth, silverNisabAud, pricesReady);
+  const footerStatus = getZakatFooterStatus(totalWealth, zakat, pricesReady);
 
   const sumArray = (arr: any[] = []) =>
     arr.reduce((s, i) => {
@@ -86,41 +113,56 @@ export default function ZakatCalculatorScreen() {
       return s + (isNaN(value) ? 0 : value);
     }, 0);
 
-  // Total zakatable wealth
-  const totalWealth = (() => {
-    const cash = isNaN(amounts.cash) ? 0 : (amounts.cash || 0);
-    const bank = isNaN(amounts.bank) ? 0 : (amounts.bank || 0);
-    const gold = sumArray(amounts.gold);
-    const silver = sumArray(amounts.silver);
-    const investmentProfit = isNaN(amounts.investmentProfit) ? 0 : (amounts.investmentProfit || 0);
-    const shareResale = isNaN(amounts.shareResale) ? 0 : (amounts.shareResale || 0);
-    const merchandise = isNaN(amounts.merchandise) ? 0 : (amounts.merchandise || 0);
-    const loan = isNaN(amounts.loan) ? 0 : (amounts.loan || 0);
-    const other = isNaN(amounts.other) ? 0 : (amounts.other || 0);
-    
-    const total = cash + bank + gold + silver + investmentProfit + shareResale + merchandise + loan + other;
-    return isNaN(total) ? 0 : total;
-  })();
+  const goldPriceForEntry = (karat: string | number | undefined) =>
+    resolveGoldPricePerGram(karat, goldCaratPrices, goldPriceAud);
 
-  const goldPriceAud = isNaN(Number(prices.price?.goldPriceInAud)) ? 0 : Number(prices.price?.goldPriceInAud || 0);
-  const silverPriceAud = isNaN(Number(prices.silverFinePriceInAud)) ? 0 : Number(prices.silverFinePriceInAud || 0);
+  const silverPriceForEntry = (karat: string | number | undefined) =>
+    resolveSilverPricePerGram(karat, silverFineAud, silverSterlingAud);
 
-  const goldNisabAud = isNaN(87.48 * goldPriceAud) ? 0 : 87.48 * goldPriceAud;
-  const silverNisabAud = isNaN(612.36 * silverPriceAud) ? 0 : 612.36 * silverPriceAud;
+  /** Re-value metal rows when live prices load (avoids nisab = 0 / wrong totals). */
+  useEffect(() => {
+    if (!pricesReady) return;
 
-  const zakat = totalWealth >= silverNisabAud ? (isNaN(totalWealth / 40) ? 0 : totalWealth / 40) : 0;
+    (amounts.gold || []).forEach((g: any) => {
+      const weight = g.weight || 0;
+      if (weight <= 0) return;
+      const unit = g.unit || "gram";
+      const price = goldPriceForEntry(g.karat);
+      const value = calculateMetalValueAud(weight, unit, price);
+      if (Math.abs((g.value || 0) - value) < 0.01) return;
+      dispatch(
+        zakatMetalInput({
+          name: "gold",
+          key: g.key ?? 0,
+          karat: g.karat || "24",
+          weight,
+          value,
+          unit,
+          type: "gold",
+        })
+      );
+    });
 
-  // Helper function to calculate metal value in AUD
-  const calculateMetalValue = (
-    weight: number,
-    unit: string,
-    pricePerGram: number
-  ): number => {
-    if (!weight || !pricePerGram || isNaN(weight) || isNaN(pricePerGram)) return 0;
-    const weightInGrams = unit === "ounce" ? weight * 31.1035 : weight;
-    const result = weightInGrams * pricePerGram;
-    return isNaN(result) ? 0 : result;
-  };
+    (amounts.silver || []).forEach((s: any) => {
+      const weight = s.weight || 0;
+      if (weight <= 0) return;
+      const unit = s.unit || "gram";
+      const price = silverPriceForEntry(s.karat);
+      const value = calculateMetalValueAud(weight, unit, price);
+      if (Math.abs((s.value || 0) - value) < 0.01) return;
+      dispatch(
+        zakatMetalInput({
+          name: "silver",
+          key: s.key ?? 0,
+          karat: s.karat || "fine",
+          weight,
+          value,
+          unit,
+          type: "silver",
+        })
+      );
+    });
+  }, [pricesReady, goldPriceAud, silverFineAud, silverSterlingAud, dispatch]);
 
   const nextMetalKey = (items: { key?: number }[] = []) => {
     if (!items.length) return 0;
@@ -244,10 +286,12 @@ export default function ZakatCalculatorScreen() {
         );
 
       case 3: {
-        const goldList = amounts.gold?.length ? amounts.gold : [{ karat: "1", unit: "gram", weight: 0, value: 0, key: 0 }];
+        const goldList = amounts.gold?.length
+          ? amounts.gold
+          : [{ karat: "24", unit: "gram", weight: 0, value: 0, key: 0 }];
         const silverList = amounts.silver?.length
           ? amounts.silver
-          : [{ karat: "1", unit: "gram", weight: 0, value: 0, key: 0 }];
+          : [{ karat: "fine", unit: "gram", weight: 0, value: 0, key: 0 }];
 
         const goldTotal = sumArray(goldList);
         const silverTotal = sumArray(silverList);
@@ -255,6 +299,10 @@ export default function ZakatCalculatorScreen() {
         return (
           <>
             <Text style={styles.sectionTitle}>Gold & Silver</Text>
+            <Text style={styles.tip}>
+              Totals use live rates by karat (gold) and type (silver). Zakat is due only when
+              your combined wealth exceeds the silver nisab threshold.
+            </Text>
 
             <Text style={styles.label}>Zakatable Gold</Text>
             <Text style={styles.tip}>Add separate lines for different holdings (e.g. jewelry vs coins). Values sum for Zakat.</Text>
@@ -264,9 +312,74 @@ export default function ZakatCalculatorScreen() {
               const unit = g.unit || "gram";
               const weight = isNaN(g.weight) ? 0 : (g.weight || 0);
               const dropdownOpen = goldDropdownKey === rowKey;
+              const karatDropdownOpen = goldKaratDropdownKey === rowKey;
+              const karatKey = String(g.karat === "1" ? "24" : g.karat || "24");
+              const karatLabel =
+                goldCaratPrices.find((p) => String(p.key) === karatKey)?.label ??
+                `${karatKey} Carat`;
 
               return (
                 <View key={`gold-${rowKey}`} style={styles.metalEntryBlock}>
+                  <Text style={styles.metalSubLabel}>Karat</Text>
+                  <View style={[styles.row, { marginBottom: 8, zIndex: karatDropdownOpen ? 20 : 1 }]}>
+                    <View style={[styles.dropdownContainer, { flex: 1 }]}>
+                      <TouchableOpacity
+                        style={styles.dropdownButton}
+                        onPress={() => {
+                          setGoldDropdownKey(null);
+                          setGoldKaratDropdownKey(karatDropdownOpen ? null : rowKey);
+                        }}
+                        activeOpacity={0.7}
+                        disabled={!pricesReady}
+                      >
+                        <Text style={styles.dropdownText} numberOfLines={1}>
+                          {pricesReady ? karatLabel : "Loading rates…"}
+                        </Text>
+                        <Ionicons
+                          name={karatDropdownOpen ? "chevron-up" : "chevron-down"}
+                          size={16}
+                          color="#264B8B"
+                        />
+                      </TouchableOpacity>
+                      {karatDropdownOpen && pricesReady && (
+                        <ScrollView style={styles.dropdownMenuScroll} nestedScrollEnabled>
+                          {goldCaratPrices.map((carat) => (
+                            <TouchableOpacity
+                              key={`gold-k-${rowKey}-${carat.key}`}
+                              style={[styles.dropdownItem, { borderBottomWidth: 1 }]}
+                              onPress={() => {
+                                const price = carat.value;
+                                const calculatedValue = calculateMetalValueAud(weight, unit, price);
+                                dispatch(
+                                  zakatMetalInput({
+                                    name: "gold",
+                                    key: rowKey,
+                                    karat: String(carat.key),
+                                    weight,
+                                    value: isNaN(calculatedValue) ? 0 : calculatedValue,
+                                    unit,
+                                    type: "gold",
+                                  })
+                                );
+                                setGoldKaratDropdownKey(null);
+                              }}
+                            >
+                              <Text
+                                style={[
+                                  styles.dropdownItemText,
+                                  karatKey === String(carat.key) && styles.dropdownItemTextActive,
+                                ]}
+                              >
+                                {carat.label}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      )}
+                    </View>
+                  </View>
+
+                  <Text style={styles.metalSubLabel}>Weight</Text>
                   <View style={[styles.row, styles.metalInputRowWrap, { alignItems: "stretch" }]}>
                     <View
                       style={[
@@ -282,12 +395,13 @@ export default function ZakatCalculatorScreen() {
                         placeholder="0"
                         onChangeText={(v) => {
                           const w = isNaN(Number(v)) ? 0 : (Number(v) || 0);
-                          const calculatedValue = calculateMetalValue(w, unit, goldPriceAud);
+                          const price = goldPriceForEntry(g.karat);
+                          const calculatedValue = calculateMetalValueAud(w, unit, price);
                           dispatch(
                             zakatMetalInput({
                               name: "gold",
                               key: rowKey,
-                              karat: g.karat || "1",
+                              karat: g.karat || "24",
                               weight: w,
                               value: isNaN(calculatedValue) ? 0 : calculatedValue,
                               unit,
@@ -319,16 +433,13 @@ export default function ZakatCalculatorScreen() {
                           <TouchableOpacity
                             style={[styles.dropdownItem, { borderBottomWidth: 1 }]}
                             onPress={() => {
-                              const calculatedValue = calculateMetalValue(
-                                weight,
-                                "gram",
-                                goldPriceAud
-                              );
+                              const price = goldPriceForEntry(g.karat);
+                              const calculatedValue = calculateMetalValueAud(weight, "gram", price);
                               dispatch(
                                 zakatMetalInput({
                                   name: "gold",
                                   key: rowKey,
-                                  karat: g.karat || "1",
+                                  karat: g.karat || "24",
                                   weight,
                                   value: isNaN(calculatedValue) ? 0 : calculatedValue,
                                   unit: "gram",
@@ -350,16 +461,13 @@ export default function ZakatCalculatorScreen() {
                           <TouchableOpacity
                             style={styles.dropdownItem}
                             onPress={() => {
-                              const calculatedValue = calculateMetalValue(
-                                weight,
-                                "ounce",
-                                goldPriceAud
-                              );
+                              const price = goldPriceForEntry(g.karat);
+                              const calculatedValue = calculateMetalValueAud(weight, "ounce", price);
                               dispatch(
                                 zakatMetalInput({
                                   name: "gold",
                                   key: rowKey,
-                                  karat: g.karat || "1",
+                                  karat: g.karat || "24",
                                   weight,
                                   value: isNaN(calculatedValue) ? 0 : calculatedValue,
                                   unit: "ounce",
@@ -386,6 +494,7 @@ export default function ZakatCalculatorScreen() {
                         style={styles.metalDeleteInline}
                         onPress={() => {
                           setGoldDropdownKey(null);
+                          setGoldKaratDropdownKey(null);
                           dispatch(zakatMetalRemove({ name: "gold", key: rowKey }));
                         }}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -409,12 +518,13 @@ export default function ZakatCalculatorScreen() {
               style={styles.addMetalRow}
               onPress={() => {
                 setGoldDropdownKey(null);
+                setGoldKaratDropdownKey(null);
                 const key = nextMetalKey(amounts.gold || []);
                 dispatch(
                   zakatMetalInput({
                     name: "gold",
                     key,
-                    karat: "1",
+                    karat: "24",
                     unit: "gram",
                     weight: 0,
                     value: 0,
@@ -445,9 +555,73 @@ export default function ZakatCalculatorScreen() {
               const unit = s.unit || "gram";
               const weight = isNaN(s.weight) ? 0 : (s.weight || 0);
               const dropdownOpen = silverDropdownKey === rowKey;
+              const typeDropdownOpen = silverTypeDropdownKey === rowKey;
+              const silverType = s.karat === "sterling" ? "sterling" : "fine";
+              const silverTypeLabel = silverType === "sterling" ? "Sterling" : "Fine";
 
               return (
                 <View key={`silver-${rowKey}`} style={styles.metalEntryBlock}>
+                  <Text style={styles.metalSubLabel}>Silver type</Text>
+                  <View style={[styles.row, { marginBottom: 8, zIndex: typeDropdownOpen ? 20 : 1 }]}>
+                    <View style={[styles.dropdownContainer, { flex: 1 }]}>
+                      <TouchableOpacity
+                        style={styles.dropdownButton}
+                        onPress={() => {
+                          setSilverDropdownKey(null);
+                          setSilverTypeDropdownKey(typeDropdownOpen ? null : rowKey);
+                        }}
+                        activeOpacity={0.7}
+                        disabled={!pricesReady}
+                      >
+                        <Text style={styles.dropdownText}>{silverTypeLabel}</Text>
+                        <Ionicons
+                          name={typeDropdownOpen ? "chevron-up" : "chevron-down"}
+                          size={16}
+                          color="#264B8B"
+                        />
+                      </TouchableOpacity>
+                      {typeDropdownOpen && pricesReady && (
+                        <View style={styles.dropdownMenu}>
+                          {(["fine", "sterling"] as const).map((type) => (
+                            <TouchableOpacity
+                              key={`silver-type-${rowKey}-${type}`}
+                              style={[styles.dropdownItem, { borderBottomWidth: type === "fine" ? 1 : 0 }]}
+                              onPress={() => {
+                                const price =
+                                  type === "sterling"
+                                    ? silverPriceForEntry("sterling")
+                                    : silverPriceForEntry("fine");
+                                const calculatedValue = calculateMetalValueAud(weight, unit, price);
+                                dispatch(
+                                  zakatMetalInput({
+                                    name: "silver",
+                                    key: rowKey,
+                                    karat: type,
+                                    weight,
+                                    value: isNaN(calculatedValue) ? 0 : calculatedValue,
+                                    unit,
+                                    type: "silver",
+                                  })
+                                );
+                                setSilverTypeDropdownKey(null);
+                              }}
+                            >
+                              <Text
+                                style={[
+                                  styles.dropdownItemText,
+                                  silverType === type && styles.dropdownItemTextActive,
+                                ]}
+                              >
+                                {type === "fine" ? "Fine" : "Sterling"}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  </View>
+
+                  <Text style={styles.metalSubLabel}>Weight</Text>
                   <View style={[styles.row, styles.metalInputRowWrap, { alignItems: "stretch" }]}>
                     <View
                       style={[
@@ -463,16 +637,13 @@ export default function ZakatCalculatorScreen() {
                         placeholder="0"
                         onChangeText={(v) => {
                           const w = isNaN(Number(v)) ? 0 : (Number(v) || 0);
-                          const calculatedValue = calculateMetalValue(
-                            w,
-                            unit,
-                            silverPriceAud
-                          );
+                          const price = silverPriceForEntry(s.karat);
+                          const calculatedValue = calculateMetalValueAud(w, unit, price);
                           dispatch(
                             zakatMetalInput({
                               name: "silver",
                               key: rowKey,
-                              karat: s.karat || "1",
+                              karat: s.karat || "fine",
                               weight: w,
                               value: isNaN(calculatedValue) ? 0 : calculatedValue,
                               unit,
@@ -504,16 +675,13 @@ export default function ZakatCalculatorScreen() {
                           <TouchableOpacity
                             style={[styles.dropdownItem, { borderBottomWidth: 1 }]}
                             onPress={() => {
-                              const calculatedValue = calculateMetalValue(
-                                weight,
-                                "gram",
-                                silverPriceAud
-                              );
+                              const price = silverPriceForEntry(s.karat);
+                              const calculatedValue = calculateMetalValueAud(weight, "gram", price);
                               dispatch(
                                 zakatMetalInput({
                                   name: "silver",
                                   key: rowKey,
-                                  karat: s.karat || "1",
+                                  karat: s.karat || "fine",
                                   weight,
                                   value: isNaN(calculatedValue) ? 0 : calculatedValue,
                                   unit: "gram",
@@ -535,16 +703,13 @@ export default function ZakatCalculatorScreen() {
                           <TouchableOpacity
                             style={styles.dropdownItem}
                             onPress={() => {
-                              const calculatedValue = calculateMetalValue(
-                                weight,
-                                "ounce",
-                                silverPriceAud
-                              );
+                              const price = silverPriceForEntry(s.karat);
+                              const calculatedValue = calculateMetalValueAud(weight, "ounce", price);
                               dispatch(
                                 zakatMetalInput({
                                   name: "silver",
                                   key: rowKey,
-                                  karat: s.karat || "1",
+                                  karat: s.karat || "fine",
                                   weight,
                                   value: isNaN(calculatedValue) ? 0 : calculatedValue,
                                   unit: "ounce",
@@ -571,6 +736,7 @@ export default function ZakatCalculatorScreen() {
                         style={styles.metalDeleteInline}
                         onPress={() => {
                           setSilverDropdownKey(null);
+                          setSilverTypeDropdownKey(null);
                           dispatch(zakatMetalRemove({ name: "silver", key: rowKey }));
                         }}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -594,12 +760,13 @@ export default function ZakatCalculatorScreen() {
               style={styles.addMetalRow}
               onPress={() => {
                 setSilverDropdownKey(null);
+                setSilverTypeDropdownKey(null);
                 const key = nextMetalKey(amounts.silver || []);
                 dispatch(
                   zakatMetalInput({
                     name: "silver",
                     key,
-                    karat: "1",
+                    karat: "fine",
                     unit: "gram",
                     weight: 0,
                     value: 0,
@@ -803,19 +970,52 @@ export default function ZakatCalculatorScreen() {
         style={styles.footer}
       >
         <View style={styles.footerRowCompact}>
-          <Text style={styles.footerTitle}>Your estimated Zakat Payment</Text>
-          <Text style={styles.footerAmount}>AUD {isNaN(zakat) ? "0.00" : zakat.toFixed(2)}</Text>
+          <Text style={styles.footerTitle}>
+            {footerStatus === "loading_prices"
+              ? "Zakat estimate"
+              : footerStatus === "below_nisab"
+                ? "No Zakat due"
+                : footerStatus === "empty"
+                  ? "Your estimated Zakat"
+                  : "Your estimated Zakat Payment"}
+          </Text>
+          {footerStatus === "loading_prices" ? (
+            <View style={styles.footerLoadingRow}>
+              <ActivityIndicator size="small" color="#fff" />
+              <Text style={styles.footerAmountSmall}>Loading rates…</Text>
+            </View>
+          ) : (
+            <Text style={styles.footerAmount}>
+              AUD {zakat.toFixed(2)}
+            </Text>
+          )}
         </View>
         <View style={styles.footerRowCompact}>
-          <Text style={styles.footerSub}>Based on 2.5%</Text>
+          <Text style={styles.footerSub}>
+            {footerStatus === "loading_prices"
+              ? "Fetching live gold & silver prices"
+              : footerStatus === "below_nisab"
+                ? `Below silver nisab (${formatPrice(silverNisabAud)}) — 2.5% not due`
+                : footerStatus === "empty"
+                  ? "Enter assets above silver nisab threshold"
+                  : "Based on 2.5% (silver nisab)"}
+          </Text>
           <TouchableOpacity
             style={styles.reviewRow}
             onPress={() => {
               setOverrideZakatAmount(null);
               setSummaryOpen(true);
             }}
+            disabled={footerStatus === "loading_prices"}
           >
-            <Text style={styles.reviewText}>Review Summary</Text>
+            <Text
+              style={[
+                styles.reviewText,
+                footerStatus === "loading_prices" && styles.reviewTextDisabled,
+              ]}
+            >
+              Review Summary
+            </Text>
             <Ionicons name="chevron-forward" size={12} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -980,6 +1180,13 @@ const styles = StyleSheet.create({
   metalEntryBlock: {
     marginBottom: 12,
   },
+  metalSubLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 6,
+    fontFamily: "AlbertSans_600SemiBold",
+  },
   metalInputRowWrap: {
     gap: 8,
   },
@@ -1110,6 +1317,23 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     overflow: "hidden",
   },
+  dropdownMenuScroll: {
+    position: "absolute",
+    top: 48,
+    left: 0,
+    right: 0,
+    maxHeight: 220,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 8,
+    zIndex: 1000,
+  },
   dropdownItem: {
     padding: 14,
     borderBottomColor: "#F3F4F6",
@@ -1157,6 +1381,17 @@ const styles = StyleSheet.create({
     color: "#FFD602",
     fontFamily: "AlbertSans_800ExtraBold",
   },
+  footerAmountSmall: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#fff",
+    fontFamily: "AlbertSans_700Bold",
+  },
+  footerLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   footerSub: {
     fontSize: 11,
     color: "#fff",
@@ -1173,6 +1408,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#FFD602",
     fontFamily: "AlbertSans_700Bold",
+  },
+  reviewTextDisabled: {
+    opacity: 0.5,
   },
 
   navRow: {

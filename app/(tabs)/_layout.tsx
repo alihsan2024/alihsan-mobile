@@ -267,6 +267,20 @@ export default function TabsLayout() {
           href: null,
         }}
       />
+
+      <Tabs.Screen
+        name="qurban"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="qurban-2026"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

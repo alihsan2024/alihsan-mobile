@@ -110,7 +110,6 @@ export type PaymentState = {
   paymentType: "card" | "paypal" | "applepay" | "googlepay";
   cardDetails: any;
   cardComplete: boolean;
-  saveCardForLater?: boolean;
 };
 
 type Props = {
@@ -123,7 +122,7 @@ type Props = {
 export default function PaymentStep({ paymentState, setPaymentState, isPlatformPaySupported = false, hasRecurringItems = false }: Props) {
   const { showToast } = useToast();
   const isIOS = Platform.OS === "ios";
-  const isAndroid = Platform.OS === "android";
+  // const isAndroid = Platform.OS === "android";
   const [cardFieldKey, setCardFieldKey] = useState(0);
 
   // Automatically switch from PayPal to card if recurring items are detected
@@ -191,7 +190,7 @@ export default function PaymentStep({ paymentState, setPaymentState, isPlatformP
         </TouchableOpacity>
       )}
 
-      {/* GOOGLE PAY (Android only) */}
+      {/* GOOGLE PAY (Android only) — hidden until Google Pay is re-enabled
       {isPlatformPaySupported && isAndroid && (
         <TouchableOpacity
           style={[
@@ -221,6 +220,7 @@ export default function PaymentStep({ paymentState, setPaymentState, isPlatformP
           </Text>
         </TouchableOpacity>
       )}
+      */}
 
       {/* Pay with your card */}
       <TouchableOpacity
@@ -269,34 +269,11 @@ export default function PaymentStep({ paymentState, setPaymentState, isPlatformP
 
         <View style={styles.cardFooter}>
           <TouchableOpacity
-            style={styles.checkboxRow}
-            onPress={() =>
-              setPaymentState((s) => ({
-                ...s,
-                paymentType: "card",
-                saveCardForLater: !s.saveCardForLater,
-              }))
-            }
-            activeOpacity={0.7}
-          >
-            <View style={[
-              styles.checkbox,
-              paymentState.saveCardForLater && styles.checkboxChecked,
-            ]}>
-              {paymentState.saveCardForLater && (
-                <Ionicons name="checkmark" size={12} color="#fff" />
-              )}
-            </View>
-            <Text style={styles.checkboxText}>Save this card for later</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
             onPress={() => {
               setPaymentState((s) => ({
                 ...s,
                 cardDetails: null,
                 cardComplete: false,
-                saveCardForLater: false,
               }));
               setCardFieldKey((k) => k + 1);
             }}
@@ -401,35 +378,9 @@ const styles = StyleSheet.create({
 
   cardFooter: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     alignItems: "center",
     marginTop: 10,
-  },
-
-  checkboxRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: "#9CA3AF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxChecked: {
-    backgroundColor: "#264B8B",
-    borderColor: "#264B8B",
-  },
-
-  checkboxText: {
-    fontSize: 11,
-    color: "#6B7280",
-    fontFamily: "AlbertSans_400Regular",
   },
 
   link: {

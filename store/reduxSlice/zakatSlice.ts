@@ -65,8 +65,8 @@ const initialState = {
     cash: 0,
     unit: "AUD",
     bank: 0,
-    silver: [{ karat: "1", unit: "gram", weight: 0, value: 0, key: 0 }],
-    gold: [{ karat: "1", unit: "gram", weight: 0, value: 0, key: 0 }],
+    silver: [{ karat: "fine", unit: "gram", weight: 0, value: 0, key: 0 }],
+    gold: [{ karat: "24", unit: "gram", weight: 0, value: 0, key: 0 }],
     investmentProfit: 0,
     shareResale: 0,
     merchandise: 0,
@@ -79,7 +79,6 @@ export const getMetalPrices = createAsyncThunk(
   "zakat-caculator/get-metal-prices",
   async () => {
     const response = await api.get("/metal-price");
-    console.log("test", response.data.payload);
     return response.data.payload;
   }
 );
@@ -129,7 +128,9 @@ const slice = createSlice({
       const filtered = arr.filter((item: any) => item.key !== action.payload.key);
       if (filtered.length === 0) {
         (state.amounts as any)[name] = [
-          { karat: "1", unit: "gram", weight: 0, value: 0, key: 0 },
+          name === "gold"
+            ? { karat: "24", unit: "gram", weight: 0, value: 0, key: 0 }
+            : { karat: "fine", unit: "gram", weight: 0, value: 0, key: 0 },
         ];
       } else {
         (state.amounts as any)[name] = filtered;
@@ -141,31 +142,38 @@ const slice = createSlice({
     resetZakatInput: () => initialState,
   },
   extraReducers: (builder) => {
-    builder.addCase(getMetalPrices.fulfilled, (state, action) => {
-      state.prices.goldPriceInAud = action.payload.goldPriceInAud;
-      state.prices.goldPriceInUsd = action.payload.goldPriceInUsd;
-      state.prices.price = {
-        ...action.payload.price,
-        goldPriceInAud: Number(action.payload.price.goldPriceInAud) || 0,
-        goldPriceInUsd: Number(action.payload.price.goldPriceInUsd) || 0,
-        silverPriceInAud: Number(action.payload.price.silverPriceInAud) || 0,
-        silverPriceInUsd: Number(action.payload.price.silverPriceInUsd) || 0,
-        todayAud: Number(action.payload.price.todayAud) || 0,
-      };
-      state.prices.silverFinePriceInAud =
-        Number(action.payload.silverFinePriceInAud) || 0;
-      state.prices.silverFinePriceInUsd =
-        Number(action.payload.silverFinePriceInUsd) || 0;
-      state.prices.silverSterlingPriceInAud =
-        typeof action.payload.silverSterlingPriceInAud === "number"
-          ? action.payload.silverSterlingPriceInAud
-          : Number(action.payload.silverSterlingPriceInAud) || 0;
-      state.prices.silverSterlingPriceInUsd =
-        typeof action.payload.silverSterlingPriceInUsd === "number"
-          ? action.payload.silverSterlingPriceInUsd
-          : Number(action.payload.silverSterlingPriceInUsd) || 0;
-      state.prices.loading = false;
-    });
+    builder
+      .addCase(getMetalPrices.pending, (state) => {
+        state.prices.loading = true;
+      })
+      .addCase(getMetalPrices.rejected, (state) => {
+        state.prices.loading = false;
+      })
+      .addCase(getMetalPrices.fulfilled, (state, action) => {
+        state.prices.goldPriceInAud = action.payload.goldPriceInAud;
+        state.prices.goldPriceInUsd = action.payload.goldPriceInUsd;
+        state.prices.price = {
+          ...action.payload.price,
+          goldPriceInAud: Number(action.payload.price.goldPriceInAud) || 0,
+          goldPriceInUsd: Number(action.payload.price.goldPriceInUsd) || 0,
+          silverPriceInAud: Number(action.payload.price.silverPriceInAud) || 0,
+          silverPriceInUsd: Number(action.payload.price.silverPriceInUsd) || 0,
+          todayAud: Number(action.payload.price.todayAud) || 0,
+        };
+        state.prices.silverFinePriceInAud =
+          Number(action.payload.silverFinePriceInAud) || 0;
+        state.prices.silverFinePriceInUsd =
+          Number(action.payload.silverFinePriceInUsd) || 0;
+        state.prices.silverSterlingPriceInAud =
+          typeof action.payload.silverSterlingPriceInAud === "number"
+            ? action.payload.silverSterlingPriceInAud
+            : Number(action.payload.silverSterlingPriceInAud) || 0;
+        state.prices.silverSterlingPriceInUsd =
+          typeof action.payload.silverSterlingPriceInUsd === "number"
+            ? action.payload.silverSterlingPriceInUsd
+            : Number(action.payload.silverSterlingPriceInUsd) || 0;
+        state.prices.loading = false;
+      });
   },
 });
 

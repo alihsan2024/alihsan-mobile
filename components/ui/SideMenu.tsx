@@ -13,9 +13,10 @@ import {
   Switch,
 } from "react-native";
 import { Ionicons, Feather } from "@expo/vector-icons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentProps } from "react";
 import { router } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
 import Constants from "expo-constants";
@@ -33,11 +34,14 @@ const OPEN_MS = 260;
 const CLOSE_MS = 200;
 const SWIPE_CLOSE_THRESHOLD = 120;
 
+type MaterialCommunityIconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
+
 type MenuItem = {
-  icon: keyof typeof Ionicons.glyphMap;
   label: string;
   route: string;
   requiresAuth?: boolean;
+  icon?: keyof typeof Ionicons.glyphMap;
+  materialCommunityIcon?: MaterialCommunityIconName;
 };
 
 const ACCOUNT_ITEMS: MenuItem[] = [
@@ -251,6 +255,7 @@ export default function SideMenu({ visible, onClose }: Props) {
               <MenuRow
                 key={item.route}
                 icon={item.icon}
+                materialCommunityIcon={item.materialCommunityIcon}
                 label={item.label}
                 onPress={() => navigate(item.route)}
                 isLast={idx === arr.length - 1}
@@ -294,6 +299,7 @@ export default function SideMenu({ visible, onClose }: Props) {
               <MenuRow
                 key={item.route}
                 icon={item.icon}
+                materialCommunityIcon={item.materialCommunityIcon}
                 label={item.label}
                 onPress={() => navigate(item.route)}
                 isLast={idx === arr.length - 1}
@@ -337,11 +343,13 @@ function SectionHeading({ children }: { children: string }) {
 
 function MenuRow({
   icon,
+  materialCommunityIcon,
   label,
   onPress,
   isLast,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon?: keyof typeof Ionicons.glyphMap;
+  materialCommunityIcon?: MaterialCommunityIconName;
   label: string;
   onPress: () => void;
   isLast?: boolean;
@@ -353,7 +361,11 @@ function MenuRow({
       style={[styles.menuRow, !isLast && styles.menuRowDivider]}
     >
       <View style={styles.menuIconBox}>
-        <Ionicons name={icon} size={19} color="#2161CD" />
+        {materialCommunityIcon != null ? (
+          <MaterialCommunityIcons name={materialCommunityIcon} size={21} color="#2161CD" />
+        ) : (
+          <Ionicons name={icon!} size={19} color="#2161CD" />
+        )}
       </View>
       <Text style={styles.menuLabel}>{label}</Text>
       <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
