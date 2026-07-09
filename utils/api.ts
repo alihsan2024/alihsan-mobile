@@ -93,6 +93,31 @@ api.interceptors.request.use(
 
 // Import network status setter
 import { setGlobalNetworkStatus } from "@/context/NetworkContext";
+import { router } from "expo-router";
+
+let isHandlingUnauthorized = false;
+
+const forceLogoutAndRedirect = async () => {
+  if (isHandlingUnauthorized) return;
+  isHandlingUnauthorized = true;
+  try {
+    delete api.defaults.headers.common["Authorization"];
+    await secureRemoveItem("loggedIn");
+    await secureRemoveItem("authData");
+    try {
+      const { store } = await import("@/store/store");
+      const { logout } = await import("@/store/reduxSlice/authenticationSlice");
+      store.dispatch(logout());
+    } catch (e) {
+      if (__DEV__) console.error("Failed to reset auth state on 401:", e);
+    }
+    router.replace("/login");
+  } finally {
+    setTimeout(() => {
+      isHandlingUnauthorized = false;
+    }, 1000);
+  }
+};
 
 // Response interceptor for debugging and network detection
 api.interceptors.response.use(
@@ -132,6 +157,14 @@ api.interceptors.response.use(
       console.error("Error Status:", error.response.status);
       console.error("Error Data:", error.response.data);
     }
+
+    if (
+      error.response?.status === 401 &&
+      api.defaults.headers.common["Authorization"]
+    ) {
+      forceLogoutAndRedirect();
+    }
+
     return Promise.reject(error);
   },
 );
