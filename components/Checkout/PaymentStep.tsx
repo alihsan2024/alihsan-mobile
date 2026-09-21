@@ -159,8 +159,8 @@ export default function PaymentStep({ paymentState, setPaymentState, isPlatformP
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Select Payment Method</Text>
 
-      {/* APPLE PAY (iOS only) */}
-      {isPlatformPaySupported && isIOS && (
+      {/* APPLE PAY (iOS only) — hidden until Apple Pay is finished */}
+      {false && isPlatformPaySupported && isIOS && (
         <TouchableOpacity
           style={[
             styles.card,
