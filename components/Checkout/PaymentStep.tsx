@@ -101,7 +101,7 @@
 //   },
 // });
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { CardField } from "@stripe/stripe-react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useToast } from "@/context/ToastContext";
@@ -121,7 +121,7 @@ type Props = {
 
 export default function PaymentStep({ paymentState, setPaymentState, isPlatformPaySupported = false, hasRecurringItems = false }: Props) {
   const { showToast } = useToast();
-  const isIOS = Platform.OS === "ios";
+  // const isIOS = Platform.OS === "ios";
   // const isAndroid = Platform.OS === "android";
   const [cardFieldKey, setCardFieldKey] = useState(0);
 
@@ -159,8 +159,8 @@ export default function PaymentStep({ paymentState, setPaymentState, isPlatformP
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Select Payment Method</Text>
 
-      {/* APPLE PAY (iOS only) — hidden until Apple Pay is finished */}
-      {false && isPlatformPaySupported && isIOS && (
+      {/* APPLE PAY (iOS only) — hidden until Apple Pay is finished
+      {isPlatformPaySupported && isIOS && (
         <TouchableOpacity
           style={[
             styles.card,
@@ -189,6 +189,7 @@ export default function PaymentStep({ paymentState, setPaymentState, isPlatformP
           </Text>
         </TouchableOpacity>
       )}
+      */}
 
       {/* GOOGLE PAY (Android only) — hidden until Google Pay is re-enabled
       {isPlatformPaySupported && isAndroid && (
