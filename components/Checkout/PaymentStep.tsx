@@ -106,6 +106,8 @@ import { CardField } from "@stripe/stripe-react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useToast } from "@/context/ToastContext";
 
+const APPLE_PAY_ENABLED = false;
+
 export type PaymentState = {
   paymentType: "card" | "paypal" | "applepay" | "googlepay";
   cardDetails: any;
@@ -159,8 +161,7 @@ export default function PaymentStep({ paymentState, setPaymentState, isPlatformP
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Select Payment Method</Text>
 
-      {/* APPLE PAY (iOS only) */}
-      {isPlatformPaySupported && isIOS && (
+      {APPLE_PAY_ENABLED && isPlatformPaySupported && isIOS && (
         <TouchableOpacity
           style={[
             styles.card,
