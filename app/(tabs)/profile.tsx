@@ -836,6 +836,9 @@ export default function ProfileScreen() {
                           <View style={styles.orderDetailsList}>
                             {order.items.map((item: any, itemIndex: number) => {
                               const isFee = isProcessingFee(item);
+                              const isAdminFee = `${item?.donationItem || ""} ${item?.notes || ""}`
+                                .toLowerCase()
+                                .includes("admin fee");
                               return (
                                 <View
                                   key={item.id}
@@ -853,7 +856,9 @@ export default function ProfileScreen() {
                                     numberOfLines={1}
                                   >
                                     {isFee
-                                      ? "Processing fee"
+                                      ? isAdminFee
+                                        ? "Admin fee"
+                                        : "Processing fee"
                                       : item?.Campaign?.name
                                         ? item.Campaign.name
                                         : item?.orphan_id
@@ -899,9 +904,22 @@ export default function ProfileScreen() {
 
           {/* Profile Details Section */}
           <View style={styles.profileDetailsSection}>
-            <Text style={styles.profileDetailsSectionTitle}>
-              Profile Details
-            </Text>
+            <View style={styles.profileDetailsHeaderRow}>
+              <Text style={styles.profileDetailsSectionTitle}>
+                Profile Details
+              </Text>
+              <TouchableOpacity
+                style={styles.editProfileButton}
+                onPress={() => router.push("/edit-profile")}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Edit profile"
+                accessibilityHint="Opens a form to update your contact details"
+              >
+                <Ionicons name="create-outline" size={16} color="#2161CD" />
+                <Text style={styles.editProfileButtonText}>Edit</Text>
+              </TouchableOpacity>
+            </View>
             <View style={styles.detailsCard}>
               <View
                 style={[
@@ -1664,12 +1682,30 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 24,
   },
+  profileDetailsHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
   profileDetailsSectionTitle: {
     fontSize: 16,
     fontWeight: "700",
     color: "#111827",
     fontFamily: "AlbertSans_700Bold",
-    marginBottom: 10,
+  },
+  editProfileButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  editProfileButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#2161CD",
+    fontFamily: "AlbertSans_700Bold",
   },
   detailsCard: {
     backgroundColor: "#FAFAFA",

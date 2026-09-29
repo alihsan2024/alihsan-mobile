@@ -229,8 +229,6 @@ export default function BasketScreen() {
   };
 
 
-  // Calculate totals
-  const processingFee = 0.03; // 3%
   const subtotal = basketItems.reduce((sum: number, item: any) => {
     const checkoutType = item.checkoutType || item.Campaign?.checkoutType;
     if (isAuthenticated) {
@@ -252,8 +250,7 @@ export default function BasketScreen() {
       return sum + amount * quantity;
     }
   }, 0);
-  const processingAmount = (subtotal * processingFee).toFixed(2);
-  const total = subtotal + parseFloat(processingAmount);
+  const total = subtotal;
 
   if (isLoading || guestLoading) {
     return (
@@ -532,21 +529,6 @@ export default function BasketScreen() {
             <View style={styles.summaryTopRow}>
               <Text style={styles.summaryLabel}>Total Amount</Text>
               <Text style={styles.summaryAmount}>{formatCurrency(total)}</Text>
-            </View>
-            <View style={styles.summaryDivider} />
-            <View style={styles.summaryDetails}>
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryRowLabel}>Subtotal</Text>
-                <Text style={styles.summaryRowValue}>
-                  {formatCurrency(subtotal)}
-                </Text>
-              </View>
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryRowLabel}>Admin Fee (3%)</Text>
-                <Text style={styles.summaryRowValue}>
-                  {formatCurrency(parseFloat(processingAmount))}
-                </Text>
-              </View>
             </View>
           </LinearGradient>
 
@@ -885,7 +867,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "baseline",
-    marginBottom: 8,
   },
   summaryLabel: {
     fontSize: 12,
@@ -897,30 +878,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#fff",
     fontFamily: "AlbertSans_800ExtraBold",
-  },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.3)",
-    marginBottom: 8,
-  },
-  summaryDetails: {
-    gap: 4,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  summaryRowLabel: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.85)",
-    fontFamily: "AlbertSans_500Medium",
-  },
-  summaryRowValue: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#fff",
-    fontFamily: "AlbertSans_700Bold",
   },
   anonymousCard: {
     backgroundColor: "#F9FAFB",

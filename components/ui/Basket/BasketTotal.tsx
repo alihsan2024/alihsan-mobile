@@ -12,25 +12,16 @@ const Divider = () => <View style={styles.divider} />;
 
 interface BasketTotalProps {
   subTotal: number;
-  processingAmount: number | string;
   total: number;
 }
 
-const BasketTotal = ({
-  subTotal,
-  processingAmount,
-  total,
-}: BasketTotalProps) => {
+const BasketTotal = ({ subTotal, total }: BasketTotalProps) => {
   return (
     <View>
       <Text style={styles.sectionTitle}>Price details</Text>
 
       <View style={styles.priceBox}>
         <Row label="Subtotal" value={`$${formatPrice(subTotal)}`} />
-        <Row
-          label="Admin Fee"
-          value={`$${formatPrice(parseFloat(processingAmount.toString()))}`}
-        />
         <Divider />
         <View style={styles.infoRow}>
           <Text style={styles.infoText}>

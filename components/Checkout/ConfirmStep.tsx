@@ -82,7 +82,6 @@ type Props = {
   summary: {
     items: any[];
     subtotal: number;
-    adminFee: number;
     total: number;
   };
 };
@@ -287,15 +286,6 @@ const ConfirmStep = ({ summary }: Props) => {
             </View>
             <Text style={styles.summaryValue}>
               ${formatPrice(summary.subtotal)}
-            </Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryLabelContainer}>
-              <Text style={styles.summaryLabel}>Processing Fee</Text>
-              <Text style={styles.summarySubtext}>3%</Text>
-            </View>
-            <Text style={styles.summaryValue}>
-              ${formatPrice(summary.adminFee)}
             </Text>
           </View>
           <View style={styles.divider} />

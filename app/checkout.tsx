@@ -27,7 +27,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 type CheckoutSummary = {
   items: any[];
   subtotal: number;
-  adminFee: number;
   total: number;
 };
 
@@ -155,8 +154,6 @@ export default function CheckoutScreen() {
 
   const computeTotals = useCallback(
     (items: any[]) => {
-      const processingFee = 0.03;
-
       const subtotal = items.reduce((sum, item) => {
         const checkoutType =
           item.checkoutType || item.Campaign?.checkoutType;
@@ -176,10 +173,7 @@ export default function CheckoutScreen() {
         );
       }, 0);
 
-      const adminFee = subtotal * processingFee;
-      const total = subtotal + adminFee;
-
-      return { subtotal, adminFee, total };
+      return { subtotal, total: subtotal };
     },
     [isAuthenticated]
   );
@@ -1070,7 +1064,6 @@ export default function CheckoutScreen() {
           disabled={isCheckoutDisabled || isStep1Disabled}
           total={checkoutSummary?.total ?? 0}
           subtotal={checkoutSummary?.subtotal ?? 0}
-          adminFee={checkoutSummary?.adminFee ?? 0}
         />
       </View>
     </StripeProvider>

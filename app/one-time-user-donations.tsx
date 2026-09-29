@@ -364,6 +364,9 @@ const OneTimeUserDonationsScreen = () => {
                       <View style={styles.orderDetailsList}>
                         {order.payments.map((p: Payment, index: number) => {
                           const isFee = isProcessingFee(p);
+                          const isAdminFee = `${(p as any)?.donationItem || ""} ${(p as any)?.notes || ""}`
+                            .toLowerCase()
+                            .includes("admin fee");
                           return (
                             <View
                               key={p.id}
@@ -374,7 +377,9 @@ const OneTimeUserDonationsScreen = () => {
                             >
                               <Text style={[styles.paymentName, isFee && styles.paymentNameFee]} numberOfLines={1}>
                                 {isFee
-                                  ? "Processing fee"
+                                  ? isAdminFee
+                                    ? "Admin fee"
+                                    : "Processing fee"
                                   : p.Campaign?.name
                                   ? p.Campaign.name
                                   : p.orphan_id

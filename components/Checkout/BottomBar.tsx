@@ -18,7 +18,6 @@ type Props = {
   disabled?: boolean;
   total?: number;
   subtotal?: number;
-  adminFee?: number;
 };
 
 export default function BottomBar({
@@ -28,7 +27,6 @@ export default function BottomBar({
   disabled = false,
   total = 0,
   subtotal = 0,
-  adminFee = 0,
 }: Props) {
   const insets = useSafeAreaInsets();
   const isLast = step === 3;
@@ -54,7 +52,7 @@ export default function BottomBar({
 
   const breakdownHeight = animation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 80],
+    outputRange: [0, 48],
   });
 
   const breakdownOpacity = animation.interpolate({
@@ -87,10 +85,6 @@ export default function BottomBar({
           <View style={styles.breakdownRow}>
             <Text style={styles.breakdownLabel}>Subtotal</Text>
             <Text style={styles.breakdownValue}>{formatCurrency(subtotal)}</Text>
-          </View>
-          <View style={styles.breakdownRow}>
-            <Text style={styles.breakdownLabel}>Admin Fee</Text>
-            <Text style={styles.breakdownValue}>{formatCurrency(adminFee)}</Text>
           </View>
         </View>
         <Animated.View
